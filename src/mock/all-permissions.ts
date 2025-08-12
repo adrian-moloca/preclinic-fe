@@ -1,0 +1,15 @@
+export const ALL_PERMISSIONS = [
+  'view_dashboard',
+  'view_patients', 'manage_patients',
+  'view_appointments', 'manage_appointments',
+  'view_prescriptions', 'manage_prescriptions',
+  'view_products', 'manage_products',
+  'request_leaves', 'view_leaves', 'manage_leaves',
+  'view_reviews', 'manage_reviews',
+  'view_settings', 'manage_settings',
+  'manage_users',
+  'view_reports',
+  'delete_data',
+  'access_schedule',
+  'access_ai_assistant',
+];

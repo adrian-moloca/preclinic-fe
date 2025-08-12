@@ -1,0 +1,391 @@
+import {
+  Box,
+  Drawer,
+  IconButton,
+  List,
+  Typography,
+  Fade,
+} from "@mui/material";
+import {
+  Menu as MenuIcon,
+  Dashboard as DashboardIcon,
+  CalendarMonth as CalendarMonthIcon,
+  AccessTime as AccessTimeIcon,
+  Person as PersonIcon,
+  PersonAdd as PersonAddIcon,
+  Settings as SettingsIcon,
+  Medication as MedicationIcon,
+  ExitToApp as ExitToAppIcon,
+  VideoCall as VideoCallIcon,
+  Inventory as InventoryIcon,
+  Reviews as ReviewsIcon,
+  Chat as ChatIcon,
+} from "@mui/icons-material";
+import { FC, useState } from "react";
+import { useAuthContext } from "../../providers/auth/context";
+import UserInfo from "./components/user-info";
+import MenuSection from "./components/menu-section";
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import BusinessIcon from "@mui/icons-material/Business";
+import PrivacyTipIcon from '@mui/icons-material/PrivacyTip';
+import GavelIcon from '@mui/icons-material/Gavel';
+import PaymentsIcon from '@mui/icons-material/Payments';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import FolderIcon from '@mui/icons-material/Folder';
+
+const drawerWidthOpen = 260;
+const drawerWidthClosed = 70;
+
+export const SideDrawer: FC = () => {
+  const [open, setOpen] = useState(true);
+  const { user } = useAuthContext();
+
+  const toggleDrawer = () => setOpen(!open);
+
+  const mainMenuItems = [
+    { 
+      label: "Dashboard", 
+      icon: <DashboardIcon />, 
+      route: "/", 
+      permission: "view_dashboard" 
+    },
+    { 
+      label: "Schedule", 
+      icon: <AccessTimeIcon />, 
+      route: "/schedule", 
+      resource: "schedule" 
+    },
+  ];
+
+  const clinicOperationsItems = [
+    {
+      label: "Patients",
+      icon: <PersonIcon />,
+      resource: "patients",
+      subItems: [
+        { label: "All Patients", icon: <PersonIcon />, route: "/patients/all-patients", permission: "view_patients" },
+        { label: "Add Patient", icon: <PersonAddIcon />, route: "/patients/create", permission: "manage_patients" },
+      ]
+    },
+   {
+    label: "Doctors",
+    icon: <PersonIcon />,
+    resource: "doctors",
+    subItems: [
+      { label: "All Doctors", icon: <PersonIcon />, route: "/doctors/all", permission: "view_doctors" },
+      { label: "Add Doctor", icon: <PersonAddIcon />, route: "/doctors/create", permission: "manage_doctors" }, 
+    ]
+  },
+  {
+    label: "Assistents",
+    icon: <PersonIcon />,
+    resource: "assistents",
+    subItems: [
+      { label: "All Assistents", icon: <PersonIcon />, route: "/assistents/all", permission: "view_assistents" },
+      { label: "Add Assistent", icon: <PersonAddIcon />, route: "/assistents/create", permission: "manage_assistents" },
+    ]
+  },
+    {
+      label: "Appointments",
+      icon: <CalendarMonthIcon />,
+      resource: "appointments",
+      subItems: [
+        { label: "All Appointments", icon: <CalendarMonthIcon />, route: "/appointments/all", permission: "view_appointments" },
+        { label: "Add Appointment", icon: <PersonAddIcon />, route: "/appointments/create", permission: "manage_appointments" },
+        { label: "Online Appointments", icon: <VideoCallIcon />, route: "/appointments/online-appointments", permission: "view_appointments" },
+      ]
+    },
+    {
+      label: "Prescriptions",
+      icon: <MedicationIcon />,
+      resource: "prescriptions",
+      subItems: [
+        { label: "All Prescriptions", icon: <MedicationIcon />, route: "/prescriptions/all", permission: "view_prescriptions" },
+        { label: "Add Prescription", icon: <PersonAddIcon />, route: "/prescriptions/create", permission: "manage_prescriptions" },
+      ]
+    },
+    {
+      label: "Products",
+      icon: <InventoryIcon />,
+      resource: "products",
+      subItems: [
+        { label: "All Products", icon: <InventoryIcon />, route: "/products/all", permission: "view_products" },
+        { label: "Add Product", icon: <PersonAddIcon />, route: "/products/create", permission: "manage_products" }
+      ]
+    },
+    {
+      label: "Reviews",
+      icon: <ReviewsIcon />,
+      resource: "reviews",
+      subItems: [
+        { label: "All Reviews", icon: <ReviewsIcon />, route: "/reviews/all", permission: "view_reviews" }
+      ]
+    },
+    {
+      label: "Services",
+      icon: <MedicalServicesIcon />,
+      resource: "services",
+      subItems: [
+        { label: "All Services", icon: <MedicalServicesIcon />, route: "/services/all", permission: "view_services" },
+        { label: "Add Service", icon: <PersonAddIcon />, route: "/services/create", permission: "manage_services" },
+      ]
+    },
+    {
+      label: "Departments",
+      icon: <BusinessIcon />,
+      resource: "departments",
+      subItems: [
+        { label: "All Departments", icon: <BusinessIcon />, route: "/departments/all", permission: "view_departments" },
+        { label: "Add Department", icon: <PersonAddIcon />, route: "/departments/create", permission: "manage_departments" },
+      ]
+    },
+    {
+      label: "Chat",
+      icon: <ChatIcon />,
+      route: "/chat",
+      permission: "view_chat"
+    }
+  ];
+
+  const staffManagementItems = [
+    {
+      label: "Leaves",
+      icon: <ExitToAppIcon />,
+      resource: "leaves",
+      subItems: [
+        { label: "All Leaves", icon: <ExitToAppIcon />, route: "/leaves/all-leaves", permission: "view_leaves" },
+        { label: "Add Leave", icon: <PersonAddIcon />, route: "/leaves/create", permission: "request_leaves" },
+      ]
+    },
+    {
+      label: "Payroll",
+      icon: <PaymentsIcon />,
+      subItems: [
+        { label: "Add Payroll", icon: <PaymentsIcon />, route: "/payroll/add", permission: "manage_payroll" },
+        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all-payrolls", permission: "view_payrolls" },
+      ]
+    },
+    {
+      label: "Invoices",
+      icon: <ReceiptIcon />,
+      resources: "invoices",
+      subItems: [
+        { label: "Add Invoice", icon: <ReceiptIcon />, route: "/invoices/create", permission: "manage_invoices" },
+        { label: "All Invoices", icon: <ReceiptIcon />, route: "/invoices/all", permission: "view_invoices" },
+      ]
+    }
+  ];
+
+  const administrationItems = [
+    { 
+      label: "Settings", 
+      icon: <SettingsIcon />, 
+      route: "/settings", 
+      permission: "manage_settings" 
+    },
+    {
+      label: "File Manager",
+      icon: <FolderIcon />,
+      route: "/files",
+      permission: "view_files"
+    }
+  ];
+
+  const commonPagesItems = [
+    {
+      label: "Privacy Policy",
+      icon: <PrivacyTipIcon />,
+      route: "/privacy-policy",
+    },
+    {
+      label: "Terms & Conditions",
+      icon: <GavelIcon />,
+      route: "/terms-and-conditions",
+    }
+  ]
+
+  return (
+    <Drawer
+      variant="permanent"
+      open={open}
+      sx={{
+        width: open ? drawerWidthOpen : drawerWidthClosed,
+        flexShrink: 0,
+        whiteSpace: "nowrap",
+        boxSizing: "border-box",
+        "& .MuiDrawer-paper": {
+          width: open ? drawerWidthOpen : drawerWidthClosed,
+          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          overflowX: "hidden",
+          overflowY: "hidden", 
+          borderRight: "none",
+          background: "linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)",
+          boxShadow: "4px 0 20px rgba(0,0,0,0.08)",
+          position: "fixed",
+          height: "100vh", 
+          top: 0,
+          left: 0,
+          zIndex: 1200, 
+          "&:before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "1px",
+            height: "100%",
+            background: "linear-gradient(180deg, transparent 0%, #e0e0e0 50%, transparent 100%)",
+          },
+        },
+      }}
+    >
+      <Box
+        display="flex"
+        justifyContent={open ? "flex-end" : "center"}
+        alignItems="center"
+        p={2}
+        sx={{
+          borderBottom: "1px solid #e0e0e0",
+          background: "#ffffff",
+          position: "sticky", 
+          top: 0,
+          zIndex: 10,
+          flexShrink: 0, 
+          overflow: "hidden",
+          "&:before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+          },
+        }}
+      >
+        <Box sx={{ position: "relative", zIndex: 1 }}>
+          <IconButton
+            onClick={toggleDrawer}
+            sx={{
+              color: "#000",
+              "&:hover": {
+                backgroundColor: "rgba(255,255,255,0.1)",
+                transform: "scale(1.1)",
+              },
+              transition: "all 0.2s ease",
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      <Box sx={{ 
+        position: "sticky", 
+        top: "73px", 
+        zIndex: 9,
+        flexShrink: 0,
+        background: "inherit"
+      }}>
+        <UserInfo user={user} open={open} />
+      </Box>
+
+      <Box sx={{ 
+        flexGrow: 1, 
+        overflowY: 'auto', 
+        overflowX: 'hidden',
+        py: 1,
+        '&::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(0,0,0,0.2)',
+          borderRadius: '3px',
+          '&:hover': {
+            background: 'rgba(0,0,0,0.3)',
+          },
+        },
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'rgba(0,0,0,0.2) transparent',
+      }}>
+        <List sx={{ px: 1 }}>
+          <MenuSection
+            title="Main"
+            items={mainMenuItems}
+            open={open}
+          />
+
+          <MenuSection
+            title="Clinic Operations"
+            items={clinicOperationsItems}
+            open={open}
+            requiredResources={["patients", "appointments", "prescriptions", "products", "reviews"]}
+          />
+
+          <MenuSection
+            title="Staff Management"
+            items={staffManagementItems}
+            open={open}
+            requiredResources={["leaves"]}
+          />
+
+          <MenuSection
+            title="Policy"
+            items={commonPagesItems}
+            open={open}
+          />
+          <MenuSection
+            title="Administration"
+            items={administrationItems}
+            open={open}
+            requiredPermission="manage_settings"
+          />
+        </List>
+      </Box>
+
+      <Box
+        sx={{
+          borderTop: "1px solid #e0e0e0",
+          background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+          p: 2,
+          position: "sticky",
+          bottom: 0,
+          zIndex: 10,
+          flexShrink: 0,
+        }}
+      >
+        <Fade in={open} timeout={300}>
+          <Box>
+            {open && (
+              <Box textAlign="center">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "#666",
+                    display: 'block',
+                    fontWeight: 600,
+                    mb: 0.5,
+                  }}
+                >
+                  Your Clinic Dashboard
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "#999",
+                    display: 'block',
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  v2.1.0 • {new Date().getFullYear()}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Fade>
+      </Box>
+    </Drawer>
+  );
+};
