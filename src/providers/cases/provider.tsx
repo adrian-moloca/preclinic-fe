@@ -13,9 +13,6 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock data - used only if localStorage is empty
-
-
   // Load cases from localStorage on mount
   useEffect(() => {
     setLoading(true);
@@ -24,7 +21,7 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
       if (stored) {
         setCases(JSON.parse(stored));
       } else {
-        setCases(mockCases);
+        setCases([]);
       }
     } catch (err) {
       setError("Failed to load cases from localStorage");
@@ -46,7 +43,7 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
       if (stored) {
         setCases(JSON.parse(stored));
       } else {
-        setCases(mockCases);
+        setCases([]);
       }
     } catch (err) {
       setError('Failed to fetch cases');
@@ -175,5 +172,3 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
     </CasesContext.Provider>
   );
 };
-
-export default CasesProvider;

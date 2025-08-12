@@ -31,6 +31,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAppointmentsContext } from "../../../providers/appointments/context";
 import { usePatientsContext } from "../../../providers/patients/context";
 import { useServicesContext } from "../../../providers/services/context";
+import { useCasesContext } from "../../../providers/cases/context";
 import {
   Add as AddIcon,
   LocalPharmacy as PharmacyIcon,
@@ -81,18 +82,18 @@ interface MedicalCaseProps {
   embedded?: boolean;
 }
 
-export const MedicalCase: FC<MedicalCaseProps> = ({ 
-  appointmentId: propAppointmentId, 
-  onClose, 
-  embedded = false 
+export const MedicalCase: FC<MedicalCaseProps> = ({
+  appointmentId: propAppointmentId,
+  onClose,
+  embedded = false
 }) => {
   const { appointmentId: paramAppointmentId } = useParams<{ appointmentId: string }>();
   const navigate = useNavigate();
   const { appointments } = useAppointmentsContext();
   const { patients } = usePatientsContext();
   const { services } = useServicesContext();
+  const { createCase } = useCasesContext();
 
-  // Use prop appointmentId if provided, otherwise use URL param
   const appointmentId = propAppointmentId || paramAppointmentId;
 
   const [appointment, setAppointment] = useState<any>(null);
@@ -132,7 +133,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
     if (appointmentId && appointments.length > 0) {
       const foundAppointment = appointments.find(apt => apt.id === appointmentId);
       setAppointment(foundAppointment || null);
-      
+
       if (foundAppointment?.patientId) {
         let patientsArray = patients;
         if (!Array.isArray(patients)) {
@@ -141,7 +142,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
             patientsArray = patientsValues[0] as any[];
           }
         }
-        
+
         const foundPatient = patientsArray.find(p => p.id === foundAppointment.patientId);
         setPatient(foundPatient || null);
       }
@@ -172,12 +173,12 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
         ...newPrescription,
         id: Date.now().toString()
       };
-      
+
       setCaseData(prev => ({
         ...prev,
         prescriptions: [...prev.prescriptions, prescriptionWithId]
       }));
-      
+
       setNewPrescription({
         id: '',
         medication: '',
@@ -197,18 +198,24 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
     }));
   };
 
-  const handleSaveCase = () => {
-    // Save logic here
-    console.log('Saving case data:', caseData);
-    
-    if (embedded && onClose) {
-      // If embedded, call onClose instead of navigate
-      alert('Medical case saved successfully!');
-      onClose();
-    } else {
-      // If not embedded, navigate back
-      alert('Medical case saved successfully!');
-      navigate(`/appointments/${appointmentId}`);
+  const handleSaveCase = async () => {
+    if (!appointment || !patient) return;
+    try {
+      await createCase({
+        ...caseData,
+        appointmentId: appointment.id,
+        patientId: patient.id, // <-- ensure patientId is set!
+      });
+      if (embedded && onClose) {
+        alert('Medical case saved successfully!');
+        onClose();
+      } else {
+        alert('Medical case saved successfully!');
+        navigate(`/appointments/${appointmentId}`);
+      }
+    } catch (error) {
+      alert('Failed to save medical case. Please try again.');
+      console.error('Error saving case:', error);
     }
   };
 
@@ -227,16 +234,16 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
             </Typography>
           </Box>
           <Stack direction="row" spacing={2}>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSaveCase}
             >
               Save Case
             </Button>
             {onClose && (
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 onClick={onClose}
               >
                 Close
@@ -259,14 +266,14 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={() => navigate(`/appointments/${appointmentId}`)}
           >
             Back to Appointment
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSaveCase}
           >
@@ -416,7 +423,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                     Add Service
                   </Button>
                 </Box>
-                
+
                 {caseData.services.length > 0 && (
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
@@ -446,8 +453,8 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                               ${service.price.toFixed(2)}
                             </TableCell>
                             <TableCell align="center">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 color="error"
                                 onClick={() => handleRemoveService(service.id)}
                               >
@@ -483,7 +490,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                     Add Prescription
                   </Button>
                 </Box>
-                
+
                 {caseData.prescriptions.length > 0 && (
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
@@ -506,8 +513,8 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                             <TableCell>{prescription.duration}</TableCell>
                             <TableCell>{prescription.instructions}</TableCell>
                             <TableCell align="center">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 color="error"
                                 onClick={() => handleRemovePrescription(prescription.id)}
                               >
@@ -539,7 +546,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                     fullWidth
                     placeholder="Enter primary and secondary diagnoses..."
                   />
-                  
+
                   <TextField
                     label="Treatment Plan"
                     multiline
@@ -549,7 +556,7 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                     fullWidth
                     placeholder="Enter detailed treatment plan..."
                   />
-                  
+
                   <TextField
                     label="Additional Notes"
                     multiline
@@ -573,8 +580,8 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
           <Grid container spacing={2} sx={{ mt: 1 }}>
             {services.map((service) => (
               <Grid key={service.id}>
-                <Card 
-                  sx={{ 
+                <Card
+                  sx={{
                     cursor: 'pointer',
                     border: selectedService?.id === service.id ? '2px solid #1976d2' : '1px solid #e0e0e0'
                   }}
@@ -588,7 +595,6 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
                       {service.description}
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                      {/* <Chip label={service.category || 'General'} size="small" /> */}
                       <Typography variant="h6" color="primary">
                         ${service.price.toFixed(2)}
                       </Typography>
@@ -601,8 +607,8 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenServiceDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAddService} 
+          <Button
+            onClick={handleAddService}
             variant="contained"
             disabled={!selectedService}
           >
@@ -658,8 +664,8 @@ export const MedicalCase: FC<MedicalCaseProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenPrescriptionDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAddPrescription} 
+          <Button
+            onClick={handleAddPrescription}
             variant="contained"
             disabled={!newPrescription.medication || !newPrescription.dosage}
           >
