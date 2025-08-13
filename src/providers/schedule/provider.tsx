@@ -51,7 +51,6 @@ export const ScheduleProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }));
   }, [currentRole]);
 
-  // ✅ Enhanced updateSchedule with immediate state update
   const updateSchedule = useCallback((day: string, updatedEntry: ScheduleEntry, role?: string) => {
     const targetRole = role || currentRole;
     if (!targetRole) {
@@ -59,9 +58,7 @@ export const ScheduleProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return;
     }
 
-    console.log('🔄 Provider: Updating schedule for role:', targetRole, 'day:', day, 'entry:', updatedEntry);
 
-    // ✅ Use functional update to ensure we get the latest state
     setRoleSchedules((prev) => {
       const newState = {
         ...prev,
@@ -73,7 +70,6 @@ export const ScheduleProvider: FC<{ children: ReactNode }> = ({ children }) => {
         },
       };
       
-      console.log('🔄 Provider: New state after update:', newState);
       return newState;
     });
   }, [currentRole]);
