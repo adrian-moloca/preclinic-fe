@@ -1,101 +1,108 @@
 import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
-import { IServices, ServicesContext } from '../services';
+import { IDepartments } from './types';
+import { DepartmentsContext } from './context';
 
-const LOCAL_STORAGE_KEY = 'services';
-
-export const MOCK_SERVICES: IServices[] = [
+// These IDs must match the mock doctors and assistents from their providers!
+export const MOCK_DEPARTMENTS: IDepartments[] = [
   {
-    id: 's1',
-    name: 'Cardiology Consultation',
-    description: 'Specialist consultation for heart and vascular conditions.',
-    price: 200,
-    duration: 30,
+    id: 'dep1',
+    name: 'Cardiology',
+    description: 'Department specializing in heart and vascular care.',
+    createdAt: '2025-08-01T09:00:00.000Z',
     status: 'active',
-    department: 'Cardiology',
-    products: ['p1', 'p3']
+    doctors: ['d1'],
+    assistants: ['as1']
   },
   {
-    id: 's2',
-    name: 'Pediatric Checkup',
-    description: 'Routine health check for children.',
-    price: 150,
-    duration: 25,
+    id: 'dep2',
+    name: 'Pediatrics',
+    description: 'Department for children\'s health and development.',
+    createdAt: '2025-08-01T09:00:00.000Z',
     status: 'active',
-    department: 'Pediatrics',
-    products: ['p2']
+    doctors: ['d2'],
+    assistants: ['as2']
   },
   {
-    id: 's3',
-    name: 'Dermatology Skin Exam',
-    description: 'Comprehensive skin examination and advice.',
-    price: 180,
-    duration: 20,
+    id: 'dep3',
+    name: 'Dermatology',
+    description: 'Department focused on skin conditions and treatments.',
+    createdAt: '2025-08-01T09:00:00.000Z',
     status: 'active',
-    department: 'Dermatology',
-    products: []
+    doctors: ['d3'],
+    assistants: ['as3']
   }
 ];
 
-export const ServicesProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [services, setServices] = useState<IServices[]>(MOCK_SERVICES);
+const LOCAL_STORAGE_KEY = 'departments';
+
+export const DepartmentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [departments, setDepartments] = useState<IDepartments[]>(MOCK_DEPARTMENTS);
 
   useEffect(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Always include mock services
+        // Always include mock departments
         const merged = [
-          ...MOCK_SERVICES,
-          ...parsed.filter((s: IServices) => !MOCK_SERVICES.some(ms => ms.id === s.id))
+          ...MOCK_DEPARTMENTS,
+          ...parsed.filter((d: IDepartments) => !MOCK_DEPARTMENTS.some(md => md.id === d.id))
         ];
-        setServices(merged);
+        setDepartments(merged);
       } catch {
-        console.warn('Failed to parse services from localStorage');
+        console.warn('Failed to parse departments from localStorage');
       }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(services));
-  }, [services]);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(departments));
+  }, [departments]);
 
-  const addService = useCallback((entry: IServices) => {
-    setServices(prev => [...prev, entry]);
+  const addDepartment = useCallback((entry: IDepartments) => {
+    setDepartments(prev => [...prev, entry]);
   }, []);
 
-  const updateService = useCallback((entry: IServices) => {
-    setServices(prev =>
-      prev.map(s => (s.id === entry.id ? entry : s))
+  const updateDepartment = useCallback((id: string, updatedDepartment: IDepartments) => {
+    setDepartments(prev =>
+      prev.map(entry => (entry.id === id ? updatedDepartment : entry))
     );
   }, []);
 
-  const deleteService = useCallback((id: string) => {
-    // Prevent deleting mock services
-    if (MOCK_SERVICES.some(ms => ms.id === id)) {
-      console.warn("❌ Cannot delete mock service:", id);
+  const deleteDepartment = useCallback((id: string) => {
+    // Prevent deleting mock departments
+    if (MOCK_DEPARTMENTS.some(md => md.id === id)) {
+      console.warn("❌ Cannot delete mock department:", id);
       return;
     }
-    setServices(prev => prev.filter(s => s.id !== id));
+    setDepartments(prev => {
+      const filtered = prev.filter(entry => entry.id !== id);
+      if (filtered.length !== prev.length) {
+        console.log("✅ Deleted department with ID:", id);
+      } else {
+        console.warn("❌ Department not found:", id);
+      }
+      return filtered;
+    });
   }, []);
 
-  const resetServices = useCallback(() => {
+  const resetDepartments = useCallback(() => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setServices(MOCK_SERVICES);
+    setDepartments(MOCK_DEPARTMENTS);
   }, []);
 
   return (
-    <ServicesContext.Provider
+    <DepartmentsContext.Provider
       value={{
-        services,
-        setServices,
-        addService,
-        updateService,
-        deleteService,
-        resetServices,
+        departments,
+        setDepartments,
+        addDepartment,
+        updateDepartment,
+        deleteDepartment,
+        resetDepartments,
       }}
     >
       {children}
-    </ServicesContext.Provider>
+    </DepartmentsContext.Provider>
   );
 };
