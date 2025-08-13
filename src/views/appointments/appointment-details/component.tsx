@@ -30,6 +30,7 @@ import {
   Close as CloseIcon
 } from "@mui/icons-material";
 import MedicalCase from "../../../components/patient-casies/create-case";
+import { useCasesContext } from "../../../providers/cases/context";
 
 interface Patient {
   id: string;
@@ -63,12 +64,17 @@ export const AppointmentDetails: FC = () => {
   const navigate = useNavigate();
   const { appointments } = useAppointmentsContext();
   const { patients } = usePatientsContext();
-  
+  const { cases } = useCasesContext();
   const appointmentId = params.appointmentId || params.id || params.appointmentid;
   
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [showMedicalCase, setShowMedicalCase] = useState(false);
+
+  // Find the medical case for this appointment
+  const medicalCase = cases.find(
+    (c) => String(c.appointmentId) === String(appointmentId)
+  );
 
   useEffect(() => {
     if (appointmentId && appointments.length > 0) {
@@ -395,36 +401,62 @@ export const AppointmentDetails: FC = () => {
                   <Typography variant="h6" gutterBottom>
                     Medical Information
                   </Typography>
-                  
                   <Divider sx={{ mb: 2 }} />
-                  
                   <Grid container spacing={3}>
                     <Grid>
                       <Typography variant="subtitle2" gutterBottom>
                         Medical History:
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {patient.medicalHistory || 'No medical history recorded'}
+                        {medicalCase?.notes ||
+                          patient.medicalHistory ||
+                          "No medical history recorded"}
                       </Typography>
                     </Grid>
-                    
                     <Grid>
                       <Typography variant="subtitle2" gutterBottom>
                         Known Allergies:
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {patient.allergies || 'No known allergies'}
+                        {patient.allergies || "No known allergies"}
                       </Typography>
                     </Grid>
-                    
                     <Grid>
                       <Typography variant="subtitle2" gutterBottom>
                         Current Medications:
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {patient.currentMedications || 'No current medications'}
+                        {patient.currentMedications || "No current medications"}
                       </Typography>
                     </Grid>
+                    {medicalCase && (
+                      <>
+                        <Grid>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Diagnosis:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {medicalCase.diagnosis || "No diagnosis recorded"}
+                          </Typography>
+                        </Grid>
+                        <Grid>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Treatment Plan:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {medicalCase.treatmentPlan || "No treatment plan recorded"}
+                          </Typography>
+                        </Grid>
+                        <Grid>
+                          <Typography variant="subtitle2" gutterBottom>
+                            Vital Signs:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            BP: {medicalCase.vitalSigns?.bloodPressure || "-"}, HR: {medicalCase.vitalSigns?.heartRate || "-"}, Temp: {medicalCase.vitalSigns?.temperature || "-"}, Weight: {medicalCase.vitalSigns?.weight || "-"}, Height: {medicalCase.vitalSigns?.height || "-"}
+                          </Typography>
+                        </Grid>
+                      </>
+                    )}
                   </Grid>
                 </CardContent>
               </Card>

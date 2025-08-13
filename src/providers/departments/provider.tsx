@@ -1,66 +1,101 @@
 import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
-import { IDepartments } from './types';
-import { DepartmentsContext } from './context';
+import { IServices, ServicesContext } from '../services';
 
-const LOCAL_STORAGE_KEY = 'departments';
+const LOCAL_STORAGE_KEY = 'services';
 
-export const DepartmentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [departments, setDepartments] = useState<IDepartments[]>([]);
+export const MOCK_SERVICES: IServices[] = [
+  {
+    id: 's1',
+    name: 'Cardiology Consultation',
+    description: 'Specialist consultation for heart and vascular conditions.',
+    price: 200,
+    duration: 30,
+    status: 'active',
+    department: 'Cardiology',
+    products: ['p1', 'p3']
+  },
+  {
+    id: 's2',
+    name: 'Pediatric Checkup',
+    description: 'Routine health check for children.',
+    price: 150,
+    duration: 25,
+    status: 'active',
+    department: 'Pediatrics',
+    products: ['p2']
+  },
+  {
+    id: 's3',
+    name: 'Dermatology Skin Exam',
+    description: 'Comprehensive skin examination and advice.',
+    price: 180,
+    duration: 20,
+    status: 'active',
+    department: 'Dermatology',
+    products: []
+  }
+];
+
+export const ServicesProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [services, setServices] = useState<IServices[]>(MOCK_SERVICES);
 
   useEffect(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
-        setDepartments(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        // Always include mock services
+        const merged = [
+          ...MOCK_SERVICES,
+          ...parsed.filter((s: IServices) => !MOCK_SERVICES.some(ms => ms.id === s.id))
+        ];
+        setServices(merged);
       } catch {
-        console.warn('Failed to parse departments from localStorage');
+        console.warn('Failed to parse services from localStorage');
       }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(departments));
-  }, [departments]);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(services));
+  }, [services]);
 
-  const addDepartment = useCallback((entry: IDepartments) => {
-    setDepartments(prev => [...prev, entry]);
+  const addService = useCallback((entry: IServices) => {
+    setServices(prev => [...prev, entry]);
   }, []);
 
-  const updateDepartment = useCallback((id: string, updatedDepartment: IDepartments) => {
-    setDepartments(prev =>
-      prev.map(entry => (entry.id === id ? updatedDepartment : entry))
+  const updateService = useCallback((entry: IServices) => {
+    setServices(prev =>
+      prev.map(s => (s.id === entry.id ? entry : s))
     );
   }, []);
 
-  const deleteDepartment = useCallback((id: string) => {
-    setDepartments(prev => {
-      const filtered = prev.filter(entry => entry.id !== id);
-      if (filtered.length !== prev.length) {
-        console.log("✅ Deleted department with ID:", id);
-      } else {
-        console.warn("❌ Department not found:", id);
-      }
-      return filtered;
-    });
+  const deleteService = useCallback((id: string) => {
+    // Prevent deleting mock services
+    if (MOCK_SERVICES.some(ms => ms.id === id)) {
+      console.warn("❌ Cannot delete mock service:", id);
+      return;
+    }
+    setServices(prev => prev.filter(s => s.id !== id));
   }, []);
 
-  const resetDepartments = useCallback(() => {
+  const resetServices = useCallback(() => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setDepartments([]);
+    setServices(MOCK_SERVICES);
   }, []);
 
   return (
-    <DepartmentsContext.Provider
+    <ServicesContext.Provider
       value={{
-        departments,
-        setDepartments,
-        addDepartment,
-        updateDepartment,
-        deleteDepartment,
-        resetDepartments,
+        services,
+        setServices,
+        addService,
+        updateService,
+        deleteService,
+        resetServices,
       }}
     >
       {children}
-    </DepartmentsContext.Provider>
+    </ServicesContext.Provider>
   );
 };
