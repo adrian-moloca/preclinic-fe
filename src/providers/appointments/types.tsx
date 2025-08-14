@@ -1,3 +1,5 @@
+import { IDepartments } from "../departments";
+
 export type AppointmentsEntry = {
   id: string;
   patients: string[];
@@ -8,6 +10,7 @@ export type AppointmentsEntry = {
   reason: string;
   type: string;
   status: string;
+  department: IDepartments;
 };
 
 export interface IAppointmentsContext {

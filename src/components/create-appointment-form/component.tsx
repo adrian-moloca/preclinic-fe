@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 import { FormFieldWrapper } from "../create-patient-form/style";
 import { useAppointmentsContext } from "../../providers/appointments";
 import { usePatientsContext } from "../../providers/patients";
+import { IDepartments, useDepartmentsContext } from "../../providers/departments";
 import { useNavigate } from "react-router-dom";
 import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
 
@@ -30,6 +31,7 @@ interface Appointment {
     time: string;
     reason: string;
     status?: string;
+    department?: IDepartments;
 }
 
 const appointmentTypes = [
@@ -39,7 +41,7 @@ const appointmentTypes = [
 
 const consultationTypes = [
     "consultation",
-    "follow-up", 
+    "follow-up",
     "emergency",
     "routine",
     "procedure",
@@ -58,12 +60,19 @@ const appointmentStatuses = [
 export const CreateAppointmentForm: FC = () => {
     const { addAppointment } = useAppointmentsContext();
     const { patients } = usePatientsContext();
+    const { departments } = useDepartmentsContext(); // <-- get departments
     const navigate = useNavigate();
 
     const patientsArray: Patient[] = Array.isArray(patients)
         ? (patients as Patient[])
         : Array.isArray((Object.values(patients)[0] as Patient[]))
             ? (Object.values(patients)[0] as Patient[])
+            : [];
+
+    const departmentsArray: IDepartments[] = Array.isArray(departments)
+        ? departments
+        : Array.isArray((Object.values(departments)[0] as IDepartments[]))
+            ? (Object.values(departments)[0] as IDepartments[])
             : [];
 
     const generateId = () => uuidv4();
@@ -77,6 +86,7 @@ export const CreateAppointmentForm: FC = () => {
         time: "",
         reason: "",
         status: "scheduled",
+        department: undefined,
     });
 
     const [errors, setErrors] = useState({
@@ -87,9 +97,10 @@ export const CreateAppointmentForm: FC = () => {
         time: false,
         reason: false,
         status: false,
+        department: false,
     });
 
-    const handleChange = (field: keyof Appointment, value: string) => {
+    const handleChange = (field: keyof Appointment, value: any) => {
         setAppointment((prev) => ({
             ...prev,
             [field]: value,
@@ -101,6 +112,11 @@ export const CreateAppointmentForm: FC = () => {
         }));
     };
 
+    const handleDepartmentChange = (departmentId: string) => {
+        const selectedDepartment = departmentsArray.find(dep => dep.id === departmentId);
+        handleChange("department", selectedDepartment || undefined);
+    };
+
     const handleSubmit = () => {
         const newErrors = {
             patientId: appointment.patientId === "",
@@ -110,6 +126,7 @@ export const CreateAppointmentForm: FC = () => {
             time: appointment.time === "",
             reason: appointment.reason === "",
             status: appointment.status === "",
+            department: !appointment.department,
         };
 
         const hasErrors = Object.values(newErrors).some(Boolean);
@@ -119,11 +136,14 @@ export const CreateAppointmentForm: FC = () => {
             return;
         }
 
-        addAppointment({
-            ...appointment,
-            patients: [appointment.patientId],
-            status: appointment.status || "scheduled",
-        });
+        if (appointment.department) {
+            addAppointment({
+                ...appointment,
+                patients: [appointment.patientId],
+                status: appointment.status || "scheduled",
+                department: appointment.department,
+            });
+        }
 
         setAppointment({
             id: generateId(),
@@ -134,6 +154,7 @@ export const CreateAppointmentForm: FC = () => {
             time: "",
             reason: "",
             status: "scheduled",
+            department: undefined,
         });
 
         navigate("/appointments/all");
@@ -146,7 +167,8 @@ export const CreateAppointmentForm: FC = () => {
         appointment.date !== "" &&
         appointment.time !== "" &&
         appointment.reason !== "" &&
-        appointment.status !== "";
+        appointment.status !== "" &&
+        !!appointment.department;
 
     const menuProps = {
         PaperProps: {
@@ -220,6 +242,31 @@ export const CreateAppointmentForm: FC = () => {
                                 ))
                             ) : (
                                 <MenuItem disabled>No patients available</MenuItem>
+                            )}
+                        </TextField>
+
+                        <TextField
+                            select
+                            label="Department"
+                            value={appointment.department?.id || ""}
+                            onChange={(e) => handleDepartmentChange(e.target.value)}
+                            error={errors.department}
+                            helperText={errors.department && "Please select a department"}
+                            fullWidth
+                            sx={{ width: 500, marginY: 1 }}
+                            required
+                            SelectProps={{
+                                MenuProps: menuProps,
+                            }}
+                        >
+                            {departmentsArray.length > 0 ? (
+                                departmentsArray.map((dep: IDepartments) => (
+                                    <MenuItem key={dep.id} value={dep.id}>
+                                        {dep.name}
+                                    </MenuItem>
+                                ))
+                            ) : (
+                                <MenuItem disabled>No departments available</MenuItem>
                             )}
                         </TextField>
 

@@ -1,6 +1,7 @@
 import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
 import { AppointmentsEntry } from './types';
 import { AppointmentsContext } from './context';
+import { IDepartments } from '../departments';
 
 const LOCAL_STORAGE_KEY = 'appointments';
 
@@ -15,6 +16,7 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     time: '09:00',
     reason: 'Routine checkup',
     status: 'scheduled',
+    department: { id: 'd1', name: 'Cardiology' } as IDepartments, 
   },
   {
     id: 'a2',
@@ -26,6 +28,7 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     time: '14:30',
     reason: 'Asthma follow-up',
     status: 'confirmed',
+    department: { id: 'd2', name: 'Pediatrics' } as IDepartments,
   },
   {
     id: 'a3',
@@ -37,6 +40,7 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     time: '11:15',
     reason: 'Medication review',
     status: 'completed',
+    department: { id: 'd3', name: 'Dermatology' } as IDepartments,
   }
 ];
 
