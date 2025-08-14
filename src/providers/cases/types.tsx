@@ -1,9 +1,29 @@
+import { IInvoice } from "../invoices";
+
 export interface Service {
   id: string;
   name: string;
   description: string;
   price: number;
   category?: string;
+}
+
+export interface CheckIn {
+  id: string;
+  patientId: string;
+  appointmentId: string;
+  checkInTime: string;
+  symptoms: string[];
+  notes?: string;
+}
+
+export interface CheckOut {
+  id: string;
+  patientId: string;
+  appointmentId: string;
+  checkOutTime: string;
+  notes?: string;
+  billing: IInvoice;
 }
 
 export interface PrescriptionItem {
@@ -21,6 +41,10 @@ export interface VitalSigns {
   temperature: string;
   weight: string;
   height: string;
+}
+
+export interface BillingHistory {
+  billingHistory: IInvoice[];
 }
 
 export interface Case {
@@ -41,6 +65,9 @@ export interface Case {
   createdAt: string;
   updatedAt: string;
   totalAmount: number;
+  checkIn: CheckIn;
+  checkOut: CheckOut;
+  billingHistory: BillingHistory;
 }
 
 export interface CreateCaseData {
@@ -55,6 +82,9 @@ export interface CreateCaseData {
   symptoms: string[];
   followUpRequired: boolean;
   followUpDate: string;
+  checkIn: CheckIn;
+  checkOut: CheckOut;
+  billingHistory: BillingHistory;
 }
 
 export interface UpdateCaseData extends Partial<CreateCaseData> {

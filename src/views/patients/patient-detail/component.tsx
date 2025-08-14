@@ -6,6 +6,10 @@ import {
   CardContent,
   Divider,
   Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  Tooltip
 } from "@mui/material";
 import { FC, useState } from "react";
 import { usePatientsContext } from "../../../providers/patients";
@@ -13,6 +17,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { PatientDetailsWrapper } from "./style";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import InfoIcon from "@mui/icons-material/Info";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteModal from "../../../components/delete-modal";
 import { useCasesContext } from "../../../providers/cases/context";
 import ReusableTable from "../../../components/table";
@@ -20,40 +26,79 @@ import ReusableTable from "../../../components/table";
 export const PatientDetails: FC = () => {
   const { id } = useParams();
   const { patients, deletePatient } = usePatientsContext();
-  const { getCasesByPatientId } = useCasesContext();
+  const { getCasesByPatientId, deleteCase } = useCasesContext();
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+
   const allPatients = Object.values(patients).flat();
   const patient = allPatients.find((p) => p.id === id);
 
-  // Get all cases for this patient
   const patientCases = patient ? getCasesByPatientId(patient.id) : [];
 
-  // Debug log
-  console.log("Patient ID:", patient?.id);
-  console.log("Cases found for patient:", patientCases);
-
-  // Define columns for the table
   const caseColumns = [
     { id: "id", label: "Case ID" },
     { id: "appointmentId", label: "Appointment ID" },
     { id: "diagnosis", label: "Diagnosis" },
     { id: "status", label: "Status" },
     { id: "createdAt", label: "Created At" },
-    { id: "totalAmount", label: "Total (€)" }
+    { id: "totalAmount", label: "Total (€)" },
+    { id: "actions", label: "Actions" }
   ];
 
-  // Map cases to rows for the table
   const caseRows = patientCases.map(c => ({
     id: c.id,
     appointmentId: c.appointmentId,
     diagnosis: c.diagnosis,
     status: c.status,
     createdAt: new Date(c.createdAt).toLocaleDateString(),
-    totalAmount: c.totalAmount
+    totalAmount: c.totalAmount,
+    actions: (
+      <Box display="flex" alignItems="center">
+        <Tooltip title="View Details">
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/cases/details/${c.id}`)}
+            size="small"
+          >
+            <InfoIcon />
+          </IconButton>
+        </Tooltip>
+        <IconButton
+          color="inherit"
+          onClick={(e) => {
+            setAnchorEl(e.currentTarget);
+            setSelectedCaseId(c.id);
+          }}
+          size="small"
+        >
+          <MoreVertIcon />
+        </IconButton>
+      </Box>
+    )
   }));
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedCaseId(null);
+  };
+
+  const handleEditCase = () => {
+    if (selectedCaseId) {
+      navigate(`/cases/edit/${selectedCaseId}`);
+      handleMenuClose();
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    if (selectedCaseId) {
+      await deleteCase(selectedCaseId);
+      handleMenuClose();
+    }
+  };
 
   const handleDeleteClick = () => {
     if (patient) {
@@ -185,13 +230,28 @@ export const PatientDetails: FC = () => {
         </CardContent>
       </Card>
 
-      {/* Cases Table */}
       <Box mt={4}>
         <Typography variant="h5" gutterBottom>
           Medical Cases
         </Typography>
         {caseRows.length > 0 ? (
-          <ReusableTable columns={caseColumns} data={caseRows} />
+          <>
+            <ReusableTable columns={caseColumns} data={caseRows} />
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MenuItem onClick={handleEditCase}>
+                <EditIcon fontSize="small" sx={{ mr: 1 }} /> Edit
+              </MenuItem>
+              <MenuItem onClick={handleDeleteCase}>
+                <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Delete
+              </MenuItem>
+            </Menu>
+          </>
         ) : (
           <Typography color="text.secondary" mt={2}>
             No cases found for this patient.

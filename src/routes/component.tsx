@@ -66,6 +66,8 @@ const EditInvoice = lazy(() => import("../views/invoice/edit-invoice/index"));
 const InvoiceDetails = lazy(() => import("../views/invoice/invoice-details/index"));
 const LocalFileManager = lazy(() => import("../views/file-manager/index"));
 const AppointmentDetails = lazy(() => import("../views/appointments/appointment-details/index"));
+const CaseDetails = lazy(() => import("../views/cases/case-details/index"));
+const EditCase = lazy(() => import("../views/cases/edit-case/index"));
 
 export const Routing: FC = () => {
   return (
@@ -109,6 +111,18 @@ export const Routing: FC = () => {
         <Route path="/files" element={
           <ProtectedRoute requiredResource="files">
             <LocalFileManager />
+          </ProtectedRoute>
+        } />
+
+        {/* Case routes */}
+        <Route path="/cases/details/:id" element={
+          <ProtectedRoute requiredPermission="view_cases">
+            <CaseDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/cases/edit/:id" element={
+          <ProtectedRoute requiredPermission="manage_cases">
+            <EditCase />
           </ProtectedRoute>
         } />
 

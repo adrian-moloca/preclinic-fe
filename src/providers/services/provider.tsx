@@ -4,14 +4,52 @@ import { ServicesContext } from './context';
 
 const LOCAL_STORAGE_KEY = 'services';
 
+export const MOCK_SERVICES: IServices[] = [
+  {
+    id: 's1',
+    name: 'Cardiology Consultation',
+    description: 'Specialist consultation for heart and vascular conditions.',
+    price: 200,
+    duration: 30,
+    status: 'active',
+    department: 'Cardiology',
+    products: ['p1', 'p3']
+  },
+  {
+    id: 's2',
+    name: 'Pediatric Checkup',
+    description: 'Routine health check for children.',
+    price: 150,
+    duration: 25,
+    status: 'active',
+    department: 'Pediatrics',
+    products: ['p2']
+  },
+  {
+    id: 's3',
+    name: 'Dermatology Skin Exam',
+    description: 'Comprehensive skin examination and advice.',
+    price: 180,
+    duration: 20,
+    status: 'active',
+    department: 'Dermatology',
+    products: []
+  }
+];
+
 export const ServicesProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [services, setServices] = useState<IServices[]>([]);
+  const [services, setServices] = useState<IServices[]>(MOCK_SERVICES);
 
   useEffect(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
-        setServices(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const merged = [
+          ...MOCK_SERVICES,
+          ...parsed.filter((s: IServices) => !MOCK_SERVICES.some(ms => ms.id === s.id))
+        ];
+        setServices(merged);
       } catch {
         console.warn('Failed to parse services from localStorage');
       }
@@ -26,27 +64,23 @@ export const ServicesProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setServices(prev => [...prev, entry]);
   }, []);
 
-  const updateService = useCallback((updatedEntry: IServices) => {
+  const updateService = useCallback((entry: IServices) => {
     setServices(prev =>
-      prev.map(entry => (entry.id === updatedEntry.id ? updatedEntry : entry))
+      prev.map(s => (s.id === entry.id ? entry : s))
     );
   }, []);
 
   const deleteService = useCallback((id: string) => {
-    setServices(prev => {
-      const filtered = prev.filter(entry => entry.id !== id);
-      if (filtered.length !== prev.length) {
-        console.log("✅ Deleted service with ID:", id);
-      } else {
-        console.warn("❌ Service not found:", id);
-      }
-      return filtered;
-    });
+    if (MOCK_SERVICES.some(ms => ms.id === id)) {
+      console.warn("❌ Cannot delete mock service:", id);
+      return;
+    }
+    setServices(prev => prev.filter(s => s.id !== id));
   }, []);
 
   const resetServices = useCallback(() => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setServices([]);
+    setServices(MOCK_SERVICES);
   }, []);
 
   return (

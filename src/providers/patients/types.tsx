@@ -13,6 +13,9 @@ export type PatientsEntry = {
   city: string;
   address: string;
   zipCode: string;
+  medicalHistory?: string;
+  allergies?: string;
+  currentMedications?: string;
 };
 
 export interface IPatientsContext {
