@@ -30,6 +30,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useCasesContext } from "../../../providers/cases/context";
 import { usePatientsContext } from "../../../providers/patients";
 import { useAppointmentsContext } from "../../../providers/appointments";
+import { IInvoice } from "../../../providers/invoices/types";
 
 export const CaseDetails: FC = () => {
   const params = useParams();
@@ -135,6 +136,104 @@ export const CaseDetails: FC = () => {
                 ? `${appointment.date} ${appointment.time}`
                 : medicalCase.appointmentId}
             </Typography>
+
+            {/* --- Check-In Section --- */}
+            <Divider />
+            <Typography variant="subtitle1" fontWeight={600}>
+              Check-In Information
+            </Typography>
+            <List dense>
+              <ListItem>
+                <strong>Check-In Time:</strong>{" "}
+                {medicalCase.checkIn?.checkInTime
+                  ? new Date(medicalCase.checkIn.checkInTime).toLocaleString()
+                  : "-"}
+              </ListItem>
+              <ListItem>
+                <strong>Symptoms:</strong>{" "}
+                {medicalCase.checkIn?.symptoms && medicalCase.checkIn.symptoms.length > 0
+                  ? medicalCase.checkIn.symptoms.join(", ")
+                  : "-"}
+              </ListItem>
+              <ListItem>
+                <strong>Notes:</strong>{" "}
+                {medicalCase.checkIn?.notes || "-"}
+              </ListItem>
+            </List>
+
+            {/* --- Check-Out Section --- */}
+            <Divider />
+            <Typography variant="subtitle1" fontWeight={600}>
+              Check-Out Information
+            </Typography>
+            <List dense>
+              <ListItem>
+                <strong>Check-Out Time:</strong>{" "}
+                {medicalCase.checkOut?.checkOutTime
+                  ? new Date(medicalCase.checkOut.checkOutTime).toLocaleString()
+                  : "-"}
+              </ListItem>
+              <ListItem>
+                <strong>Notes:</strong>{" "}
+                {medicalCase.checkOut?.notes || "-"}
+              </ListItem>
+              <ListItem>
+                <strong>Billing:</strong>{" "}
+                {medicalCase.checkOut?.billing ? (
+                  <>
+                    <Typography variant="body2">
+                      Invoice #{medicalCase.checkOut.billing.id}
+                    </Typography>
+                    <Typography variant="body2">
+                      Amount: {medicalCase.checkOut.billing.amount} RON
+                    </Typography>
+                    <Typography variant="body2">
+                      Status: {medicalCase.checkOut.billing.paymentStatus}
+                    </Typography>
+                  </>
+                ) : (
+                  "-"
+                )}
+              </ListItem>
+            </List>
+
+            {/* --- Billing History Section --- */}
+            <Divider />
+            <Typography variant="subtitle1" fontWeight={600}>
+              Billing History
+            </Typography>
+            {medicalCase.billingHistory?.billingHistory &&
+            medicalCase.billingHistory.billingHistory.length > 0 ? (
+              <TableContainer component={Paper} sx={{ mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Invoice ID</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {medicalCase.billingHistory.billingHistory.map((invoice: IInvoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell>{invoice.id}</TableCell>
+                        <TableCell>
+                          {invoice.invoiceDate
+                            ? new Date(invoice.invoiceDate).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                        <TableCell>{invoice.amount} RON</TableCell>
+                        <TableCell>{invoice.paymentStatus}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography color="text.secondary">No billing history.</Typography>
+            )}
+
             <Divider />
             <Typography variant="subtitle1">
               <strong>Diagnosis:</strong> {medicalCase.diagnosis || "-"}

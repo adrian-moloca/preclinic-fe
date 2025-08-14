@@ -232,7 +232,7 @@ export const AddInvoiceForm: FC = () => {
         } as IInvoice;
 
         addInvoice(invoice);
-        navigate("/invoices/all");
+        // navigate("/invoices/all");
     };
 
     return (

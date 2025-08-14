@@ -49,7 +49,26 @@ export const MOCK_CASES: Case[] = [
     status: 'completed',
     createdAt: '2025-08-13T09:00:00.000Z',
     updatedAt: '2025-08-13T09:00:00.000Z',
-    totalAmount: 200
+    totalAmount: 200,
+    checkIn: {
+      id: 'checkin1',
+      patientId: '1',
+      appointmentId: 'a1',
+      checkInTime: '2025-08-13T08:45:00.000Z',
+      symptoms: ['Fatigue', 'Increased thirst'],
+      notes: 'Patient arrived on time.'
+    },
+    checkOut: {
+      id: 'checkout1',
+      patientId: '1',
+      appointmentId: 'a1',
+      checkOutTime: '2025-08-13T09:30:00.000Z',
+      notes: 'Patient left after consultation.',
+      billing: {} as any // Replace with a valid IInvoice object if available
+    },
+    billingHistory: {
+      billingHistory: []
+    }
   },
   {
     id: 'case2',
@@ -91,7 +110,26 @@ export const MOCK_CASES: Case[] = [
     status: 'completed',
     createdAt: '2025-08-13T10:00:00.000Z',
     updatedAt: '2025-08-13T10:00:00.000Z',
-    totalAmount: 150
+    totalAmount: 150,
+    checkIn: {
+      id: 'checkin2',
+      patientId: '2',
+      appointmentId: 'a2',
+      checkInTime: '2025-08-13T09:45:00.000Z',
+      symptoms: ['Cough', 'Shortness of breath'],
+      notes: 'Patient arrived early.'
+    },
+    checkOut: {
+      id: 'checkout2',
+      patientId: '2',
+      appointmentId: 'a2',
+      checkOutTime: '2025-08-13T10:30:00.000Z',
+      notes: 'Patient left after checkup.',
+      billing: {} as any
+    },
+    billingHistory: {
+      billingHistory: []
+    }
   },
   {
     id: 'case3',
@@ -133,7 +171,26 @@ export const MOCK_CASES: Case[] = [
     status: 'completed',
     createdAt: '2025-08-13T11:00:00.000Z',
     updatedAt: '2025-08-13T11:00:00.000Z',
-    totalAmount: 180
+    totalAmount: 180,
+    checkIn: {
+      id: 'checkin3',
+      patientId: '3',
+      appointmentId: 'a3',
+      checkInTime: '2025-08-13T10:45:00.000Z',
+      symptoms: ['Itching', 'Redness'],
+      notes: 'Patient arrived for skin exam.'
+    },
+    checkOut: {
+      id: 'checkout3',
+      patientId: '3',
+      appointmentId: 'a3',
+      checkOutTime: '2025-08-13T11:30:00.000Z',
+      notes: 'Patient left after exam.',
+      billing: {} as any
+    },
+    billingHistory: {
+      billingHistory: []
+    }
   }
 ];
 
@@ -142,14 +199,12 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load cases from localStorage on mount
   useEffect(() => {
     setLoading(true);
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Always include mock cases
         const merged = [
           ...MOCK_CASES,
           ...parsed.filter((c: Case) => !MOCK_CASES.some(mc => mc.id === c.id))
@@ -165,7 +220,6 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Save cases to localStorage whenever cases change
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cases));
   }, [cases]);
@@ -177,7 +231,6 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Always include mock cases
         const merged = [
           ...MOCK_CASES,
           ...parsed.filter((c: Case) => !MOCK_CASES.some(mc => mc.id === c.id))
@@ -218,7 +271,8 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
         status: "completed",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        totalAmount: calculateCaseTotal(caseData.services)
+        totalAmount: calculateCaseTotal(caseData.services),
+        billingHistory: { billingHistory: [] }
       };
 
       setCases(prev => [...prev, newCase]);
@@ -246,7 +300,8 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
         ...existingCase,
         ...caseData,
         updatedAt: new Date().toISOString(),
-        totalAmount: caseData.services ? calculateCaseTotal(caseData.services) : existingCase.totalAmount
+        totalAmount: caseData.services ? calculateCaseTotal(caseData.services) : existingCase.totalAmount,
+        billingHistory: caseData.billingHistory || existingCase.billingHistory
       };
 
       setCases(prev => prev.map(case_ => case_.id === id ? updatedCase : case_));
@@ -264,7 +319,6 @@ export const CasesProvider: React.FC<CasesProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      // Prevent deleting mock cases
       if (MOCK_CASES.some(mc => mc.id === id)) {
         console.warn("❌ Cannot delete mock case:", id);
         return;

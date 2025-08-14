@@ -509,9 +509,9 @@ export const AppointmentDetails: FC = () => {
           </Box>
           <MedicalCase 
             appointmentId={appointmentId!}
-            onClose={handleCloseMedicalCase}
-            embedded={true}
-          />
+            onClose={handleCloseMedicalCase} 
+            patientId={""}         
+             />
         </Box>
       )}
     </Box>
