@@ -1,3 +1,4 @@
+// src/components/patient-casies/create-case/component.tsx
 import React, { useState } from "react";
 import { Box, Button, Stack, Paper } from "@mui/material";
 import CheckInForm from "./components/check-in-form";
@@ -36,7 +37,6 @@ export const MedicalCase: React.FC<CaseMenuProps> = ({
 
   // Step 3: Save check-out data and create the case in context
   const handleCheckOutSubmit = async (data: any) => {
-
     // Compose the case data
     const caseToCreate = {
       appointmentId,
@@ -111,6 +111,8 @@ export const MedicalCase: React.FC<CaseMenuProps> = ({
           <CheckOutForm
             patientId={patientId}
             appointmentId={appointmentId}
+            checkInData={checkInData}
+            medicalCaseData={medicalCaseData}
             onSubmit={handleCheckOutSubmit}
           />
         )}

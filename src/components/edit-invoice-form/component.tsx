@@ -174,8 +174,7 @@ export const EditInvoiceForm: FC = () => {
         }
     }, [selectedPatient, appointmentsArray]);
 
-    const handlePatientChange = (patientId: string) => {
-        const patient = patientsArray.find(p => p.id === patientId);
+    const handlePatientChange = (patient: PatientsEntry | null) => {
         if (patient) {
             setSelectedPatient(patient);
             setFormData(prev => ({
@@ -194,22 +193,31 @@ export const EditInvoiceForm: FC = () => {
                 email: ""
             }));
             setAppointmentFilter("");
+        } else {
+            setSelectedPatient(null);
+            setFormData(prev => ({
+                ...prev,
+                patientId: "",
+                patientName: "",
+                email: "",
+                patientAddress: "",
+                billingAddress: "",
+                appointment: ""
+            }));
         }
     };
 
-    const handleInputChange = (field: keyof IInvoice) => (
-        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: unknown } }
-    ) => {
-        const value = event.target.value as string;
+    const handleInputChange = (field: keyof IInvoice) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const value = event.target.value;
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
-        
-        if (errors[field]) {
+
+        if (errors[field as string]) {
             setErrors(prev => ({
                 ...prev,
-                [field]: ""
+                [field as string]: ""
             }));
         }
     };
@@ -323,7 +331,9 @@ export const EditInvoiceForm: FC = () => {
                 <InvoiceBasicInfo
                     formData={formData}
                     errors={errors}
-                    onInputChange={handleInputChange}
+                    onInputChange={(field: string, value: string) => {
+                        handleInputChange(field as keyof IInvoice)({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                    }}
                     isEdit={true}
                 />
 
@@ -335,7 +345,9 @@ export const EditInvoiceForm: FC = () => {
                     appointmentFilter={appointmentFilter}
                     errors={errors}
                     onPatientChange={handlePatientChange}
-                    onInputChange={handleInputChange}
+                    onInputChange={(field: string, value: string) => {
+                        handleInputChange(field as keyof IInvoice)({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                    }}
                     onAppointmentFilterChange={setAppointmentFilter}
                 />
 
@@ -343,7 +355,9 @@ export const EditInvoiceForm: FC = () => {
                     formData={formData}
                     departmentsArray={departmentsArray}
                     errors={errors}
-                    onInputChange={handleInputChange}
+                    onInputChange={(field: string, value: string) => {
+                        handleInputChange(field as keyof IInvoice)({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                    }}
                 />
 
                 <ProductsSection

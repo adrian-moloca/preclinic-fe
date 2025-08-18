@@ -5,7 +5,7 @@ import { IInvoice } from "../../../../providers/invoices";
 interface InvoiceBasicInfoProps {
     formData: Partial<IInvoice>;
     errors: Record<string, string>;
-    onInputChange: (field: keyof IInvoice) => (event: any) => void;
+    onInputChange: (field: string, value: string) => void;
     isEdit?: boolean;
 }
 
@@ -27,7 +27,7 @@ export const InvoiceBasicInfo: FC<InvoiceBasicInfoProps> = ({
                             fullWidth
                             label="Invoice Number"
                             value={formData.invoiceNumber}
-                            onChange={onInputChange("invoiceNumber")}
+                            onChange={(e) => onInputChange("invoiceNumber", e.target.value)}
                             disabled
                             variant="outlined"
                             sx={{ width: "340px" }}
@@ -40,7 +40,7 @@ export const InvoiceBasicInfo: FC<InvoiceBasicInfoProps> = ({
                             label="Invoice Date"
                             type="date"
                             value={formData.invoiceDate}
-                            onChange={onInputChange("invoiceDate")}
+                            onChange={(e) => onInputChange("invoiceDate", e.target.value)}
                             InputLabelProps={{ shrink: true }}
                             error={!!errors.invoiceDate}
                             helperText={errors.invoiceDate}
@@ -54,7 +54,7 @@ export const InvoiceBasicInfo: FC<InvoiceBasicInfoProps> = ({
                             label="Due Date"
                             type="date"
                             value={formData.dueDate}
-                            onChange={onInputChange("dueDate")}
+                            onChange={(e) => onInputChange("dueDate", e.target.value)}
                             InputLabelProps={{ shrink: true }}
                             error={!!errors.dueDate}
                             helperText={errors.dueDate}

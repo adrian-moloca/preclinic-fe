@@ -1,3 +1,4 @@
+// src/components/patient-casies/create-case/components/check-in-form/component.tsx
 import React, { useState } from "react";
 import { Box, TextField, Button, Stack, Typography, Chip } from "@mui/material";
 
@@ -89,6 +90,7 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
               }
             }}
             helperText="Press Enter or use comma to add multiple symptoms"
+            fullWidth
           />
           <Button
             variant="outlined"

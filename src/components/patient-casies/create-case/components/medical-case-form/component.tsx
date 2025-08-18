@@ -1,3 +1,4 @@
+// src/components/patient-casies/create-case/components/medical-case-form/component.tsx
 import React, { useState, useEffect } from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { FC } from "react";
@@ -125,17 +126,44 @@ export const MedicalCaseForm: FC<any> = ({
 
   const handleSaveCase = () => {
     if (!appointment || !patient) return;
+    
+    // Include complete patient and appointment data in the saved case data
+    const completeCaseData = {
+      ...caseData,
+      appointmentId: appointment.id,
+      patientId: patient.id,
+      // Include full patient data for invoice pre-filling
+      patient: {
+        id: patient.id,
+        firstName: patient.firstName,
+        lastName: patient.lastName,
+        email: patient.email,
+        phoneNumber: patient.phoneNumber,
+        address: patient.address,
+        birthDate: patient.birthDate,
+        gender: patient.gender
+      },
+      // Include full appointment data
+      appointment: {
+        id: appointment.id,
+        patientId: appointment.patientId,
+        doctorId: appointment.doctorId,
+        date: appointment.date,
+        time: appointment.time,
+        duration: appointment.duration,
+        status: appointment.status,
+        reason: appointment.reason,
+        type: appointment.type
+      }
+    };
+
     if (onSave) {
-      onSave({
-        ...caseData,
-        appointmentId: appointment.id,
-        patientId: patient.id,
-      });
+      onSave(completeCaseData);
     }
   };
 
   const calculateTotal = () => {
-    return caseData.services.reduce((total: number, service: any) => total + service.price, 0);
+    return caseData.services.reduce((total: number, service: any) => total + (service.price || 0), 0);
   };
 
   if (!appointment || !patient) {
@@ -150,7 +178,10 @@ export const MedicalCaseForm: FC<any> = ({
     <Box sx={{ p: embedded ? 0 : 3, maxWidth: 1400, margin: '0 auto' }}>
       <Stack spacing={3}>
         <PatientSummary patient={patient} />
-        <VitalSignsForm vitalSigns={caseData.vitalSigns} setVitalSigns={vs => setCaseData((prev: typeof caseData) => ({ ...prev, vitalSigns: vs }))} />
+        <VitalSignsForm 
+          vitalSigns={caseData.vitalSigns} 
+          setVitalSigns={vs => setCaseData((prev: typeof caseData) => ({ ...prev, vitalSigns: vs }))} 
+        />
         <ServicesSection
           services={caseData.services}
           servicesList={services}
@@ -187,8 +218,8 @@ export const MedicalCaseForm: FC<any> = ({
           >
             Save Case
           </Button>
-          </Box>
-        </Stack>
-      </Box>
+        </Box>
+      </Stack>
+    </Box>
   );
 };

@@ -7,7 +7,7 @@ interface DepartmentPaymentInfoProps {
     formData: Partial<IInvoice>;
     departmentsArray: DepartmentEntry[];
     errors: Record<string, string>;
-    onInputChange: (field: keyof IInvoice) => (event: any) => void;
+    onInputChange: (field: string, value: string) => void;
 }
 
 export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
@@ -29,7 +29,7 @@ export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
                             fullWidth
                             label="Department"
                             value={formData.department}
-                            onChange={onInputChange("department")}
+                            onChange={(e) => onInputChange("department", e.target.value)}
                             error={!!errors.department}
                             helperText={errors.department}
                             variant="outlined"
@@ -56,7 +56,7 @@ export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
                             fullWidth
                             label="Payment Method"
                             value={formData.paymentMethod}
-                            onChange={onInputChange("paymentMethod")}
+                            onChange={(e) => onInputChange("paymentMethod", e.target.value)}
                             error={!!errors.paymentMethod}
                             helperText={errors.paymentMethod}
                             variant="outlined"
@@ -76,7 +76,7 @@ export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
                             fullWidth
                             label="Payment Status"
                             value={formData.paymentStatus}
-                            onChange={onInputChange("paymentStatus")}
+                            onChange={(e) => onInputChange("paymentStatus", e.target.value)}
                             variant="outlined"
                             sx={{ width: 250 }}
                         >
@@ -93,7 +93,7 @@ export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
                             label="Tax (%)"
                             type="number"
                             value={formData.tax}
-                            onChange={onInputChange("tax")}
+                            onChange={(e) => onInputChange("tax", e.target.value)}
                             inputProps={{ min: 0, max: 100, step: 0.1 }}
                             variant="outlined"
                             sx={{ width: 250 }}
