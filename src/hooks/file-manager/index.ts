@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { FileCategory, FileItem, FolderItem } from "../../views/file-manager/components/types";
+import Tesseract from 'tesseract.js';
+import { PDFDocument } from 'pdf-lib';
+import jsPDF from 'jspdf';
+import { AccessLogEntry, ExtractedMedicalData, FileCategory, FileItem, FolderItem, SearchFilters } from "../../views/file-manager/components/types";
 import { usePatientsContext } from "../../providers/patients";
 
 const PAGE_SIZE = 15;
@@ -25,7 +28,6 @@ interface UndoAction {
 }
 
 export function useFileManager() {
-  // Core state
   const [files, setFiles] = useState<FileItem[]>(() => {
     try {
       const stored = localStorage.getItem("enhanced_files");
@@ -55,12 +57,10 @@ export function useFileManager() {
     }
   });
 
-  // Navigation state
   const [currentFolderId, setCurrentFolderId] = useState<string>('root');
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   
-  // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<FileCategory | 'all'>('all');
   const [patientFilter, setPatientFilter] = useState<string | null>(null);
@@ -68,18 +68,25 @@ export function useFileManager() {
   const [showOnlyShared, setShowOnlyShared] = useState(false);
   const [showOnlyConfidential, setShowOnlyConfidential] = useState(false);
   
-  // Sort state
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("search_history") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  
   const [sortBy, setSortBy] = useState<"name" | "date" | "size" | "category" | "patient">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Action state
   const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
   const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuFileId, setMenuFileId] = useState<string>("");
   
-  // Dialog state
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [moveFilesOpen, setMoveFilesOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -89,15 +96,26 @@ export function useFileManager() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
-  // Working state for dialogs - FIXED NAMING CONFLICT
+  const [ocrDialogOpen, setOcrDialogOpen] = useState(false);
+  const [fileProcessingOpen, setFileProcessingOpen] = useState(false);
+  const [mobileIntegrationsOpen, setMobileIntegrationsOpen] = useState(false);
+  const [securityDashboardOpen, setSecurityDashboardOpen] = useState(false);
+  
   const [editingFile, setEditingFile] = useState<FileItem | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<FileItem>>({});
-  const [currentPreviewFile, setCurrentPreviewFile] = useState<FileItem | null>(null); // CHANGED FROM previewFile
+  const [currentPreviewFile, setCurrentPreviewFile] = useState<FileItem | null>(null);
   const [selectedFileForHistory, setSelectedFileForHistory] = useState<FileItem | null>(null);
   const [shareUsers, setShareUsers] = useState<string[]>([]);
   const [shareNote, setShareNote] = useState('');
   
-  // Form state
+  const [ocrProgress, setOcrProgress] = useState<{ [fileId: string]: number }>({});
+  const [processingQueue] = useState<string[]>([]);
+  const [selectedFilesForProcessing, setSelectedFilesForProcessing] = useState<string[]>([]);
+  
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [currentRecording, setCurrentRecording] = useState<MediaRecorder | null>(null);
+  
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedPatientForUpload, setSelectedPatientForUpload] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<FileCategory>('other');
@@ -109,10 +127,11 @@ export function useFileManager() {
   const dragCounter = useRef(0);
   const [dragging, setDragging] = useState(false);
 
-  // Get patients for linking
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const { patients } = usePatientsContext();
 
-  // Save to localStorage
   useEffect(() => {
     localStorage.setItem("enhanced_files", JSON.stringify(files));
   }, [files]);
@@ -121,42 +140,67 @@ export function useFileManager() {
     localStorage.setItem("file_folders", JSON.stringify(folders));
   }, [folders]);
 
-  // Get current folder
+  useEffect(() => {
+    localStorage.setItem("search_history", JSON.stringify(searchHistory));
+  }, [searchHistory]);
+
   const currentFolder = folders.find(f => f.id === currentFolderId) || folders[0];
   
-  // Get folder breadcrumbs
   const breadcrumbs = useMemo(() => {
     const crumbs: FolderItem[] = [];
-    let current: FolderItem | null = currentFolder;
+    let current = currentFolder;
     
     while (current && current.id !== 'root') {
       crumbs.unshift(current);
-      const parentId: string | null | undefined = current.parentId;
-      current = folders.find(f => f.id === parentId) || null;
+      const parentId = current.parentId;
+      const parent = folders.find(f => f.id === parentId);
+      if (!parent) break;
+      current = parent;
     }
     
     return crumbs;
   }, [currentFolder, folders]);
 
-  // Filter and sort files
   const filteredFiles = useMemo(() => {
     return files.filter(file => {
       if (file.folderId !== currentFolderId) return false;
-      if (searchTerm && !file.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !file.description?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !file.patientName?.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
+      
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = file.name.toLowerCase().includes(searchLower);
+        const matchesDescription = file.description?.toLowerCase().includes(searchLower);
+        const matchesPatient = file.patientName?.toLowerCase().includes(searchLower);
+        const matchesOCR = file.ocrText?.toLowerCase().includes(searchLower);
+        
+        if (!matchesName && !matchesDescription && !matchesPatient && !matchesOCR) {
+          return false;
+        }
       }
+      
+      if (searchFilters.categoryFilter && searchFilters.categoryFilter !== 'all' && file.category !== searchFilters.categoryFilter) return false;
+      if (searchFilters.patientFilter && file.patientId !== searchFilters.patientFilter) return false;
+      if (searchFilters.hasOCR !== undefined && (!!file.ocrText) !== searchFilters.hasOCR) return false;
+      if (searchFilters.isConfidential !== undefined && file.isConfidential !== searchFilters.isConfidential) return false;
+      if (searchFilters.isShared !== undefined && (file.sharedWith.length > 0) !== searchFilters.isShared) return false;
+      
+      if (searchFilters.dateRange) {
+        const fileDate = new Date(file.date);
+        if (fileDate < searchFilters.dateRange.start || fileDate > searchFilters.dateRange.end) return false;
+      }
+      
+      if (searchFilters.sizeRange) {
+        if (file.size < searchFilters.sizeRange.min || file.size > searchFilters.sizeRange.max) return false;
+      }
+      
       if (categoryFilter !== 'all' && file.category !== categoryFilter) return false;
       if (patientFilter && file.patientId !== patientFilter) return false;
-      if (tagFilter && !file.tags.some((tag: string) => tag.toLowerCase().includes(tagFilter.toLowerCase()))) {
-        return false;
-      }
+      if (tagFilter && !file.tags.some(tag => tag.toLowerCase().includes(tagFilter.toLowerCase()))) return false;
       if (showOnlyShared && file.sharedWith.length === 0) return false;
       if (showOnlyConfidential && !file.isConfidential) return false;
+      
       return true;
     });
-  }, [files, currentFolderId, searchTerm, categoryFilter, patientFilter, tagFilter, showOnlyShared, showOnlyConfidential]);
+  }, [files, currentFolderId, searchTerm, categoryFilter, patientFilter, tagFilter, showOnlyShared, showOnlyConfidential, searchFilters]);
 
   const sortedFiles = useMemo(() => {
     return [...filteredFiles].sort((a, b) => {
@@ -182,17 +226,14 @@ export function useFileManager() {
     });
   }, [filteredFiles, sortBy, sortDir]);
 
-  // Pagination
   const totalPages = Math.ceil(sortedFiles.length / PAGE_SIZE);
   const pageFiles = sortedFiles.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
 
-  // Get folders in current directory
   const currentFolders = folders.filter(f => f.parentId === currentFolderId);
 
-  // Utility functions
   function getFileIcon(fileType: string) {
     if (fileType.startsWith("image/")) return 'Image';
     if (fileType === "application/pdf") return 'PictureAsPdf';
@@ -221,8 +262,410 @@ export function useFileManager() {
     };
   }
 
-  // Working Action Functions
+  function logFileAccess(fileId: string, action: 'view' | 'download' | 'edit' | 'share' | 'delete') {
+    const timestamp = new Date().toISOString();
+    const logEntry: AccessLogEntry = {
+      timestamp,
+      action,
+      userId: 'current-user',
+      userAgent: navigator.userAgent,
+      location: window.location.href
+    };
+
+    setFiles(prev => prev.map(f => {
+      if (f.id === fileId) {
+        const newAccessLog = [...(f.accessLog || []), logEntry];
+        return {
+          ...f,
+          accessLog: newAccessLog.slice(-50),
+          lastAccessed: timestamp,
+          accessCount: (f.accessCount || 0) + 1
+        };
+      }
+      return f;
+    }));
+  }
+
+  async function processFileWithOCR(fileId: string, language: string = 'eng') {
+    const file = files.find(f => f.id === fileId);
+    if (!file || !file.fileObject) return;
+
+    setFiles(prev => prev.map(f => 
+      f.id === fileId ? { ...f, processingStatus: 'processing', isOcrProcessed: false } : f
+    ));
+
+    try {
+      const result = await Tesseract.recognize(file.fileObject, language, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            setOcrProgress(prev => ({ ...prev, [fileId]: m.progress }));
+          }
+        }
+      });
+
+      const extractedData = extractMedicalDataFromText(result.data.text);
+
+      setFiles(prev => prev.map(f => {
+        if (f.id === fileId) {
+          return {
+            ...f,
+            ocrText: result.data.text,
+            isOcrProcessed: true,
+            ocrLanguage: language,
+            extractedData,
+            processingStatus: 'completed',
+            patientName: extractedData.patientName || f.patientName,
+            description: f.description || `OCR processed: ${extractedData.patientName || 'Document'}`
+          };
+        }
+        return f;
+      }));
+
+      setOcrProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[fileId];
+        return newProgress;
+      });
+
+    } catch (error) {
+      console.error('OCR processing failed:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === fileId ? { ...f, processingStatus: 'failed' } : f
+      ));
+    }
+  }
+
+  function extractMedicalDataFromText(text: string): ExtractedMedicalData {
+    const extractedData: ExtractedMedicalData = {};
+
+    const patterns = {
+      patientName: /Patient:?\s*([A-Za-z\s]+)/i,
+      dateOfBirth: /(?:DOB|Date of Birth):?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i,
+      medicalRecordNumber: /(?:MRN|Medical Record):?\s*([A-Z0-9]+)/i,
+      doctorName: /(?:Dr\.|Doctor|Physician):?\s*([A-Za-z\s]+)/i,
+      facilityName: /(?:Hospital|Clinic|Medical Center):?\s*([A-Za-z\s]+)/i
+    };
+
+    Object.entries(patterns).forEach(([key, pattern]) => {
+      const match = text.match(pattern);
+      if (match) {
+        extractedData[key as keyof ExtractedMedicalData] = match[1].trim();
+      }
+    });
+
+    const medicationPatterns = /(?:medication|drug|prescription):?\s*([A-Za-z\s,]+)/gi;
+    const medications: string[] = [];
+    let medicationMatch;
+    while ((medicationMatch = medicationPatterns.exec(text)) !== null) {
+      medications.push(medicationMatch[1].trim());
+    }
+    if (medications.length > 0) {
+      extractedData.medications = medications;
+    }
+
+    const testResultPatterns = /(?:result|value|level):?\s*([0-9.]+\s*[A-Za-z/]*)/gi;
+    const testResults: string[] = [];
+    let testMatch;
+    while ((testMatch = testResultPatterns.exec(text)) !== null) {
+      testResults.push(testMatch[0].trim());
+    }
+    if (testResults.length > 0) {
+      extractedData.testResults = testResults;
+    }
+
+    return extractedData;
+  }
+
+async function mergePDFs(fileIds: string[]) {
+  const pdfFiles = files.filter(f => fileIds.includes(f.id) && f.type === 'application/pdf');
+  if (pdfFiles.length < 2) return;
+
+  try {
+    const mergedPdf = await PDFDocument.create();
+
+    for (const file of pdfFiles) {
+      if (file.fileObject) {
+        const arrayBuffer = await file.fileObject.arrayBuffer();
+        const pdf = await PDFDocument.load(arrayBuffer);
+        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      }
+    }
+
+    const pdfBytes = await mergedPdf.save();
+    
+    const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+    
+    const file = new File([blob], `merged-${Date.now()}.pdf`, { type: 'application/pdf' });
+
+    const mergedFileItem: FileItem = {
+      id: crypto.randomUUID(),
+      name: `Merged-${pdfFiles.map(f => f.name.split('.')[0]).join('-')}.pdf`,
+      size: blob.size,
+      date: new Date().toISOString(),
+      type: 'application/pdf',
+      content: null,
+      isFolder: false,
+      folderId: currentFolderId,
+      fileObject: file,
+      category: 'medical_reports',
+      tags: ['merged', 'pdf'],
+      version: 1,
+      versions: [{
+        id: crypto.randomUUID(),
+        version: 1,
+        date: new Date().toISOString(),
+        uploadedBy: 'Current User',
+        changes: `Merged from ${pdfFiles.length} PDFs`,
+        fileSize: blob.size
+      }],
+      sharedWith: [],
+      isTemplate: false,
+      description: `Merged PDF from: ${pdfFiles.map(f => f.name).join(', ')}`,
+      priority: 'medium',
+      isConfidential: false,
+      processedFrom: 'pdf_merge',
+      originalFileId: fileIds[0],
+      accessLog: [],
+      accessCount: 0
+    };
+
+    setFiles(prev => [...prev, mergedFileItem]);
+  } catch (error) {
+    console.error('PDF merge failed:', error);
+  }
+}
+
+  async function convertImageToPDF(fileIds: string[]) {
+    const imageFiles = files.filter(f => fileIds.includes(f.id) && f.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    const pdf = new jsPDF();
+    
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      if (file.content) {
+        if (i > 0) pdf.addPage();
+        
+        const img = new Image();
+        img.src = file.content;
+        
+        await new Promise(resolve => {
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d')!;
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            resolve(true);
+          };
+        });
+      }
+    }
+
+    const pdfBlob = pdf.output('blob');
+    const pdfFile = new File([pdfBlob], `converted-${Date.now()}.pdf`, { type: 'application/pdf' });
+
+    const convertedFileItem: FileItem = {
+      id: crypto.randomUUID(),
+      name: `Converted-${imageFiles.map(f => f.name.split('.')[0]).join('-')}.pdf`,
+      size: pdfBlob.size,
+      date: new Date().toISOString(),
+      type: 'application/pdf',
+      content: null,
+      isFolder: false,
+      folderId: currentFolderId,
+      fileObject: pdfFile,
+      category: 'medical_reports',
+      tags: ['converted', 'pdf'],
+      version: 1,
+      versions: [{
+        id: crypto.randomUUID(),
+        version: 1,
+        date: new Date().toISOString(),
+        uploadedBy: 'Current User',
+        changes: `Converted from ${imageFiles.length} images`,
+        fileSize: pdfBlob.size
+      }],
+      sharedWith: [],
+      isTemplate: false,
+      description: `Converted PDF from: ${imageFiles.map(f => f.name).join(', ')}`,
+      priority: 'medium',
+      isConfidential: false,
+      processedFrom: 'image_to_pdf',
+      originalFileId: fileIds[0]
+    };
+
+    setFiles(prev => [...prev, convertedFileItem]);
+  }
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+  }
+
+  function capturePhoto() {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d')!;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const timestamp = new Date().toISOString();
+        const file = new File([blob], `capture-${timestamp}.jpg`, { type: 'image/jpeg' });
+        
+        const capturedFileItem: FileItem = {
+          id: crypto.randomUUID(),
+          name: `Camera-Capture-${new Date().toLocaleDateString()}.jpg`,
+          size: blob.size,
+          date: timestamp,
+          type: 'image/jpeg',
+          content: canvas.toDataURL(),
+          isFolder: false,
+          folderId: currentFolderId,
+          fileObject: file,
+          category: 'imaging',
+          tags: ['camera', 'mobile'],
+          version: 1,
+          versions: [{
+            id: crypto.randomUUID(),
+            version: 1,
+            date: timestamp,
+            uploadedBy: 'Current User',
+            changes: 'Captured via mobile camera',
+            fileSize: blob.size
+          }],
+          sharedWith: [],
+          isTemplate: false,
+          description: 'Document captured using mobile camera',
+          priority: 'medium',
+          isConfidential: false,
+          processedFrom: 'camera_capture'
+        };
+
+        setFiles(prev => [...prev, capturedFileItem]);
+        stopCamera();
+      }
+    }, 'image/jpeg', 0.95);
+  }
+
+  async function startVoiceRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.wav`, { type: 'audio/wav' });
+        
+        const voiceNoteFile: FileItem = {
+          id: crypto.randomUUID(),
+          name: `Voice-Note-${new Date().toLocaleDateString()}.wav`,
+          size: audioBlob.size,
+          date: new Date().toISOString(),
+          type: 'audio/wav',
+          content: null,
+          isFolder: false,
+          folderId: currentFolderId,
+          fileObject: audioFile,
+          category: 'other',
+          tags: ['voice', 'recording'],
+          version: 1,
+          versions: [{
+            id: crypto.randomUUID(),
+            version: 1,
+            date: new Date().toISOString(),
+            uploadedBy: 'Current User',
+            changes: 'Voice note recorded',
+            fileSize: audioBlob.size
+          }],
+          sharedWith: [],
+          isTemplate: false,
+          description: 'Voice note recording',
+          priority: 'medium',
+          isConfidential: false,
+          processedFrom: 'voice_recording'
+        };
+
+        setFiles(prev => [...prev, voiceNoteFile]);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      setCurrentRecording(mediaRecorder);
+      setIsRecording(true);
+      mediaRecorder.start();
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Unable to access microphone. Please check permissions.');
+    }
+  }
+
+  function stopVoiceRecording() {
+    if (currentRecording && isRecording) {
+      currentRecording.stop();
+      setCurrentRecording(null);
+      setIsRecording(false);
+    }
+  }
+
+  function performAdvancedSearch(filters: SearchFilters) {
+    setSearchFilters(filters);
+    setCurrentPage(1);
+    
+    if (filters.textSearch && !searchHistory.includes(filters.textSearch)) {
+      setSearchHistory(prev => [filters.textSearch!, ...prev.slice(0, 9)]);
+    }
+  }
+
+  function clearSearch() {
+    setSearchTerm('');
+    setSearchFilters({});
+    setCategoryFilter('all');
+    setPatientFilter(null);
+    setTagFilter('');
+    setShowOnlyShared(false);
+    setShowOnlyConfidential(false);
+    setCurrentPage(1);
+  }
+
   function openEditDialog(fileId: string) {
+    logFileAccess(fileId, 'edit');
+    
     const file = files.find(f => f.id === fileId);
     if (!file) return;
     
@@ -283,18 +726,23 @@ export function useFileManager() {
         changes: 'Duplicated from original file',
         fileSize: file.size
       }],
-      sharedWith: []
+      sharedWith: [],
+      accessLog: [],
+      accessCount: 0,
+      originalFileId: file.id,
+      processedFrom: 'duplicate'
     };
     
     setFiles(prev => [...prev, duplicatedFile]);
   }
 
-  // FIXED FUNCTION - This is the function that should be passed to context menu
   function previewFile(fileId: string) {
+    logFileAccess(fileId, 'view');
+    
     const file = files.find(f => f.id === fileId);
     if (!file) return;
     
-    setCurrentPreviewFile(file); // CHANGED FROM setPreviewFile
+    setCurrentPreviewFile(file);
     setPreviewDialogOpen(true);
   }
 
@@ -351,7 +799,11 @@ export function useFileManager() {
             changes: 'File updated',
             fileSize: file.size
           }
-        ]
+        ],
+        ocrText: undefined,
+        isOcrProcessed: false,
+        extractedData: undefined,
+        processingStatus: undefined
       };
       
       setFiles(prev => 
@@ -375,6 +827,8 @@ export function useFileManager() {
   function shareFile() {
     if (!menuFileId) return;
     
+    logFileAccess(menuFileId, 'share');
+    
     setFiles(prev =>
       prev.map(f =>
         f.id === menuFileId
@@ -390,6 +844,8 @@ export function useFileManager() {
   }
 
   function downloadSingleFile(fileId: string) {
+    logFileAccess(fileId, 'download');
+    
     const file = files.find(f => f.id === fileId);
     if (!file || !file.fileObject) return;
     
@@ -409,7 +865,6 @@ export function useFileManager() {
     );
   }
 
-  // File upload with enhanced metadata
   async function addFiles(fileList: FileList) {
     setLoading(true);
     const now = new Date().toISOString();
@@ -441,21 +896,29 @@ export function useFileManager() {
       isTemplate: false,
       description: fileDescription,
       priority: 'medium',
-      isConfidential
+      isConfidential,
+      accessLog: [],
+      accessCount: 0,
+      processingStatus: 'pending'
     }));
 
-    // Process files for preview
     const processPromises = newFiles.map(async (fileObj) => {
       if (fileObj.type.startsWith("image/") || fileObj.type === "application/pdf") {
         return new Promise<void>((resolve) => {
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
             if (e.target?.result) {
               setFiles(prevFiles =>
                 prevFiles.map(f =>
                   f.id === fileObj.id ? { ...f, content: e.target!.result as string } : f
                 )
               );
+
+              if (fileObj.type.startsWith("image/")) {
+                setTimeout(() => {
+                  processFileWithOCR(fileObj.id);
+                }, 1000);
+              }
             }
             resolve();
           };
@@ -468,7 +931,6 @@ export function useFileManager() {
     setFiles(old => [...old, ...newFiles]);
     await Promise.all(processPromises);
     
-    // Reset form
     setSelectedPatientForUpload(null);
     setSelectedCategory('other');
     setFileTags('');
@@ -478,7 +940,6 @@ export function useFileManager() {
     setLoading(false);
   }
 
-  // Create new folder
   function createFolder() {
     if (!newFolderName.trim()) return;
     
@@ -498,7 +959,6 @@ export function useFileManager() {
     setCreateFolderOpen(false);
   }
 
-  // Move files to folder
   function moveSelectedFiles(targetFolderId: string) {
     const filesToMove = files.filter(f => selectedFiles.has(f.id));
     
@@ -518,7 +978,6 @@ export function useFileManager() {
     setMoveFilesOpen(false);
   }
 
-  // Bulk edit selected files
   function bulkEditFiles(updates: Partial<FileItem>) {
     setFiles(prev => 
       prev.map(f => 
@@ -530,16 +989,19 @@ export function useFileManager() {
     setBulkEditOpen(false);
   }
 
-  // Delete selected files
   function deleteSelected() {
     if (selectedFiles.size === 0) return;
+    
+    selectedFiles.forEach(fileId => {
+      logFileAccess(fileId, 'delete');
+    });
+    
     const filesToDelete = files.filter((f) => selectedFiles.has(f.id));
     setUndoStack((stack) => [...stack, { type: "delete", files: filesToDelete }]);
     setFiles((old) => old.filter((f) => !selectedFiles.has(f.id)));
     setSelectedFiles(new Set());
   }
 
-  // Undo last action
   function undo() {
     if (undoStack.length === 0) return;
     const lastAction = undoStack[undoStack.length - 1];
@@ -550,7 +1012,7 @@ export function useFileManager() {
         setFiles((old) => [...old, ...lastAction.files]);
         break;
       case "move":
-        if (lastAction.previousFolder !== undefined) {
+        if (lastAction.previousFolder) {
           setFiles(prev => 
             prev.map(f => 
               lastAction.files.some(af => af.id === f.id) 
@@ -565,7 +1027,6 @@ export function useFileManager() {
     setUndoStack(newStack);
   }
 
-  // File selection
   function toggleSelect(id: string) {
     const newSet = new Set(selectedFiles);
     if (newSet.has(id)) newSet.delete(id);
@@ -589,22 +1050,12 @@ export function useFileManager() {
     }
   }
 
-  // Download selected files
   function downloadSelected() {
     selectedFiles.forEach((id) => {
-      const file = files.find((f) => f.id === id);
-      if (!file || !file.fileObject) return;
-      
-      const url = URL.createObjectURL(file.fileObject);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.name;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadSingleFile(id);
     });
   }
 
-  // Drag and drop
   function onDragEnter(e: React.DragEvent) {
     e.preventDefault();
     dragCounter.current++;
@@ -627,7 +1078,6 @@ export function useFileManager() {
     }
   }
 
-  // File input change
   function onFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files) {
       addFiles(e.target.files);
@@ -637,7 +1087,6 @@ export function useFileManager() {
     }
   }
 
-  // Context menu
   function handleMenuOpen(event: React.MouseEvent<HTMLElement>, fileId: string) {
     setAnchorEl(event.currentTarget);
     setMenuFileId(fileId);
@@ -649,7 +1098,6 @@ export function useFileManager() {
   }
 
   return {
-    // State
     files,
     folders,
     currentFolderId,
@@ -680,8 +1128,8 @@ export function useFileManager() {
     loading,
     anchorEl,
     menuFileId,
-    
-    // Dialog states
+    setMenuFileId,
+
     createFolderOpen,
     setCreateFolderOpen,
     moveFilesOpen,
@@ -698,14 +1146,23 @@ export function useFileManager() {
     setEditDialogOpen,
     previewDialogOpen,
     setPreviewDialogOpen,
+    ocrDialogOpen,
+    setOcrDialogOpen,
+    fileProcessingOpen,
+    setFileProcessingOpen,
+    mobileIntegrationsOpen,
+    setMobileIntegrationsOpen,
+    securityDashboardOpen,
+    setSecurityDashboardOpen,
+    advancedSearchOpen,
+    setAdvancedSearchOpen,
     
-    // Working state - FIXED NAMING
     editingFile,
     setEditingFile,
     editFormData,
     setEditFormData,
-    currentPreviewFile,        // CHANGED FROM previewFile (this is the state variable)
-    setCurrentPreviewFile,     // CHANGED FROM setPreviewFile
+    currentPreviewFile,
+    setCurrentPreviewFile,
     selectedFileForHistory,
     setSelectedFileForHistory,
     shareUsers,
@@ -713,7 +1170,16 @@ export function useFileManager() {
     shareNote,
     setShareNote,
     
-    // Form state
+    searchFilters,
+    setSearchFilters,
+    searchHistory,
+    ocrProgress,
+    processingQueue,
+    selectedFilesForProcessing,
+    setSelectedFilesForProcessing,
+    cameraStream,
+    isRecording,
+    
     newFolderName,
     setNewFolderName,
     selectedPatientForUpload,
@@ -727,11 +1193,11 @@ export function useFileManager() {
     isConfidential,
     setIsConfidential,
     
-    // Refs
     fileInputRef,
     dragging,
+    videoRef,
+    canvasRef,
     
-    // Computed values
     currentFolder,
     breadcrumbs,
     filteredFiles,
@@ -741,10 +1207,8 @@ export function useFileManager() {
     currentFolders,
     patients,
     
-    // Constants
     FILE_CATEGORIES,
     
-    // Functions
     getFileIcon,
     formatFileSize,
     getCategoryInfo,
@@ -752,7 +1216,7 @@ export function useFileManager() {
     openEditDialog,
     saveFileEdit,
     duplicateFile,
-    previewFile,               // This is the FUNCTION (fileId: string) => void
+    previewFile,
     viewVersionHistory,
     uploadNewVersion,
     openShareDialog,
@@ -773,6 +1237,19 @@ export function useFileManager() {
     onDrop,
     onFileInputChange,
     handleMenuOpen,
-    handleMenuClose
+    handleMenuClose,
+    
+    processFileWithOCR,
+    extractMedicalDataFromText,
+    mergePDFs,
+    convertImageToPDF,
+    performAdvancedSearch,
+    clearSearch,
+    logFileAccess,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+    startVoiceRecording,
+    stopVoiceRecording
   };
 }

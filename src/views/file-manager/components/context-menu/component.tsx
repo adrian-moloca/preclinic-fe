@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, MenuItem as MuiMenuItem, Divider } from "@mui/material";
+import { Menu, MenuItem as MuiMenuItem, Divider, ListItemIcon, ListItemText } from "@mui/material";
 import { 
   Visibility, 
   Edit, 
@@ -9,7 +9,11 @@ import {
   FileCopy, 
   Share, 
   Public, 
-  Delete 
+  Delete,
+  TextFields,
+  Security,
+  BugReport,
+  GetApp
 } from "@mui/icons-material";
 import { FileItem } from "../types";
 
@@ -29,6 +33,9 @@ interface FileContextMenuProps {
   selectedFiles: Set<string>;
   setSelectedFiles: (files: Set<string>) => void;
   deleteSelected: () => void;
+  processFileWithOCR: (fileId: string) => void;
+  setOcrDialogOpen: (open: boolean) => void;
+  setMenuFileId: ((id: string) => void) | null;
 }
 
 export function FileContextMenu({
@@ -46,10 +53,28 @@ export function FileContextMenu({
   stopSharing,
   selectedFiles,
   setSelectedFiles,
-  deleteSelected
+  deleteSelected,
+  processFileWithOCR,
+  setOcrDialogOpen,
+  setMenuFileId
 }: FileContextMenuProps) {
   
   const currentFile = files.find(f => f.id === menuFileId);
+
+  const handleOCRProcessing = () => {
+    if (currentFile && (currentFile.type.startsWith('image/') || currentFile.type === 'application/pdf')) {
+      processFileWithOCR(menuFileId);
+    }
+    handleMenuClose();
+  };
+
+  const handleAdvancedOCR = () => {
+    if (setMenuFileId) {
+      setMenuFileId(menuFileId);
+    }
+    setOcrDialogOpen(true);
+    handleMenuClose();
+  };
 
   return (
     <Menu
@@ -58,29 +83,38 @@ export function FileContextMenu({
       onClose={handleMenuClose}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      PaperProps={{
+        sx: { minWidth: 200 }
+      }}
     >
       <MuiMenuItem onClick={() => {
         previewFile(menuFileId);
         handleMenuClose();
       }}>
-        <Visibility fontSize="small" sx={{ mr: 1 }} />
-        Preview
+        <ListItemIcon>
+          <Visibility fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Preview" />
       </MuiMenuItem>
       
       <MuiMenuItem onClick={() => {
         openEditDialog(menuFileId);
         handleMenuClose();
       }}>
-        <Edit fontSize="small" sx={{ mr: 1 }} />
-        Edit Details
+        <ListItemIcon>
+          <Edit fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Edit Details" />
       </MuiMenuItem>
       
       <MuiMenuItem onClick={() => {
         downloadSingleFile(menuFileId);
         handleMenuClose();
       }}>
-        <Download fontSize="small" sx={{ mr: 1 }} />
-        Download
+        <ListItemIcon>
+          <Download fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Download" />
       </MuiMenuItem>
       
       <Divider />
@@ -89,43 +123,112 @@ export function FileContextMenu({
         viewVersionHistory(menuFileId);
         handleMenuClose();
       }}>
-        <History fontSize="small" sx={{ mr: 1 }} />
-        Version History
+        <ListItemIcon>
+          <History fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Version History" />
       </MuiMenuItem>
       
       <MuiMenuItem onClick={() => {
         uploadNewVersion(menuFileId);
         handleMenuClose();
       }}>
-        <CloudUpload fontSize="small" sx={{ mr: 1 }} />
-        Upload New Version
+        <ListItemIcon>
+          <CloudUpload fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Upload New Version" />
       </MuiMenuItem>
       
       <MuiMenuItem onClick={() => {
         duplicateFile(menuFileId);
         handleMenuClose();
       }}>
-        <FileCopy fontSize="small" sx={{ mr: 1 }} />
-        Duplicate
+        <ListItemIcon>
+          <FileCopy fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Duplicate" />
       </MuiMenuItem>
       
       <Divider />
+      
+      {currentFile && (currentFile.type.startsWith('image/') || currentFile.type === 'application/pdf') && (
+        <>
+          <MuiMenuItem onClick={handleOCRProcessing}>
+            <ListItemIcon>
+              <TextFields fontSize="small" />
+            </ListItemIcon>
+            <ListItemText 
+              primary={currentFile.isOcrProcessed ? "Re-process OCR" : "Process OCR"} 
+              secondary={currentFile.isOcrProcessed ? "Text already extracted" : "Extract text from document"}
+            />
+          </MuiMenuItem>
+          
+          <MuiMenuItem onClick={handleAdvancedOCR}>
+            <ListItemIcon>
+              <BugReport fontSize="small" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Advanced OCR" 
+              secondary="Configure language & settings"
+            />
+          </MuiMenuItem>
+          
+          <Divider />
+        </>
+      )}
       
       <MuiMenuItem onClick={() => {
         openShareDialog(menuFileId);
         handleMenuClose();
       }}>
-        <Share fontSize="small" sx={{ mr: 1 }} />
-        Share File
+        <ListItemIcon>
+          <Share fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary="Share File" />
       </MuiMenuItem>
       
-      {(currentFile?.sharedWith && currentFile.sharedWith.length > 0) && (
+      {currentFile?.sharedWith && currentFile.sharedWith.length > 0 && (
         <MuiMenuItem onClick={() => {
           stopSharing(menuFileId);
           handleMenuClose();
         }}>
-          <Public fontSize="small" sx={{ mr: 1 }} />
-          Stop Sharing
+          <ListItemIcon>
+            <Public fontSize="small" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Stop Sharing" 
+            secondary={`Shared with ${currentFile.sharedWith?.length ?? 0} people`}
+          />
+        </MuiMenuItem>
+      )}
+      
+      <Divider />
+      
+      {currentFile?.accessLog && currentFile.accessLog.length > 0 && (
+        <MuiMenuItem onClick={() => {
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Security fontSize="small" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Access History" 
+            secondary={`${currentFile.accessCount || 0} total accesses`}
+          />
+        </MuiMenuItem>
+      )}
+      
+      {currentFile?.isOcrProcessed && (
+        <MuiMenuItem onClick={() => {
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <GetApp fontSize="small" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="View OCR Data" 
+            secondary="Show extracted text & medical data"
+          />
         </MuiMenuItem>
       )}
       
@@ -139,8 +242,10 @@ export function FileContextMenu({
         }}
         sx={{ color: 'error.main' }}
       >
-        <Delete fontSize="small" sx={{ mr: 1 }} />
-        Delete
+        <ListItemIcon>
+          <Delete fontSize="small" sx={{ color: 'error.main' }} />
+        </ListItemIcon>
+        <ListItemText primary="Delete" />
       </MuiMenuItem>
     </Menu>
   );

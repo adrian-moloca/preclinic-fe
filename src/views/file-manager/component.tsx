@@ -1,15 +1,14 @@
 import React from "react";
 import { Container, Box, Typography } from "@mui/material";
+import { CloudUpload } from "@mui/icons-material";
 import { FileManagerHeader } from "./components/header/component";
 import { NavigationBreadcrumbs } from "./components/navigation/component";
 import { FileManagerControls } from "./components/controls/component";
-import { CloudUpload } from "@mui/icons-material";
+import { FoldersDisplay } from "./components/folders/component";
+import { FilesTable } from "./components/files-table/component";
+import { FilesGrid } from "./components/files-grid/component";
+import { FileContextMenu } from "./components/context-menu/component";
 import { useFileManager } from "../../hooks/file-manager";
-import FileStatistics from "./components/statistics";
-import FoldersDisplay from "./components/folders";
-import FilesTable from "./components/files-table";
-import FilesGrid from "./components/files-grid";
-import FileContextMenu from "./components/context-menu";
 import EditFileDialog from "./components/edit-dialogs";
 import PreviewDialog from "./components/preview-dialogs";
 import VersionHistoryDialog from "./components/history-dialog";
@@ -17,6 +16,11 @@ import CreateFolderDialog from "./components/create-folder";
 import MoveFilesDialog from "./components/move-files";
 import BulkEditDialog from "./components/bulk-edit";
 import ShareDialog from "./components/share-dialog";
+import OCRDialog from "./components/ocr-dialog";
+import FileProcessingDialog from "./components/file-processing";
+import MobileIntegrationsDialog from "./components/mobile-integration";
+import SecurityDashboardDialog from "./components/security-dashboard";
+import AdvancedSearchDialog from "./components/advanced-search";
 
 export default function EnhancedFileManager() {
   const fileManager = useFileManager();
@@ -72,11 +76,6 @@ export default function EnhancedFileManager() {
 
       <FileManagerControls 
         fileManager={fileManager}
-      />
-
-      <FileStatistics 
-        sortedFiles={fileManager.sortedFiles}
-        currentFolders={fileManager.currentFolders}
       />
 
       <FoldersDisplay 
@@ -137,6 +136,9 @@ export default function EnhancedFileManager() {
         selectedFiles={fileManager.selectedFiles}
         setSelectedFiles={fileManager.setSelectedFiles}
         deleteSelected={fileManager.deleteSelected}
+        processFileWithOCR={fileManager.processFileWithOCR}
+        setOcrDialogOpen={fileManager.setOcrDialogOpen}
+        setMenuFileId={fileManager.setMenuFileId}
       />
 
       <EditFileDialog fileManager={fileManager} />
@@ -147,12 +149,30 @@ export default function EnhancedFileManager() {
       <BulkEditDialog fileManager={fileManager} />
       <ShareDialog fileManager={fileManager} />
 
+      <OCRDialog fileManager={fileManager} />
+      <FileProcessingDialog fileManager={fileManager} />
+      <MobileIntegrationsDialog fileManager={fileManager} />
+      <SecurityDashboardDialog fileManager={fileManager} />
+      <AdvancedSearchDialog fileManager={fileManager} />
+
       <input
         ref={fileManager.fileInputRef}
         type="file"
         multiple
         style={{ display: "none" }}
         onChange={fileManager.onFileInputChange}
+      />
+
+      <video
+        ref={fileManager.videoRef}
+        autoPlay
+        playsInline
+        style={{ display: 'none' }}
+      />
+      
+      <canvas
+        ref={fileManager.canvasRef}
+        style={{ display: 'none' }}
       />
     </Container>
   );

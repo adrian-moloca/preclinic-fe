@@ -11,18 +11,31 @@ import {
   TableRow, 
   TableCell, 
   TableBody, 
-  Chip 
+  Chip,
+  Box,
+  Typography,
+  IconButton,
+  Tooltip
 } from "@mui/material";
-import { CloudUpload } from "@mui/icons-material";
+import { CloudUpload, Download, Restore, Visibility } from "@mui/icons-material";
 
 interface VersionHistoryDialogProps {
-  fileManager: any; 
+  fileManager: any;
 }
 
 export function VersionHistoryDialog({ fileManager }: VersionHistoryDialogProps) {
   return (
     <Dialog open={fileManager.versionHistoryOpen} onClose={() => fileManager.setVersionHistoryOpen(false)} maxWidth="md" fullWidth>
-      <DialogTitle>Version History</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Version History
+          {fileManager.selectedFileForHistory && (
+            <Typography variant="body2" color="text.secondary">
+              {fileManager.selectedFileForHistory.name}
+            </Typography>
+          )}
+        </Box>
+      </DialogTitle>
       <DialogContent>
         {fileManager.selectedFileForHistory && (
           <TableContainer>
@@ -34,12 +47,14 @@ export function VersionHistoryDialog({ fileManager }: VersionHistoryDialogProps)
                   <TableCell>Uploaded By</TableCell>
                   <TableCell>Changes</TableCell>
                   <TableCell>Size</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {fileManager.selectedFileForHistory.versions.map((version: any) => (
-                  <TableRow key={version.id}>
+                  <TableRow key={version.id} sx={{ 
+                    bgcolor: version.version === fileManager.selectedFileForHistory.version ? 'action.selected' : 'inherit'
+                  }}>
                     <TableCell>
                       <Chip 
                         label={`v${version.version}`}
@@ -47,14 +62,45 @@ export function VersionHistoryDialog({ fileManager }: VersionHistoryDialogProps)
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>{new Date(version.date).toLocaleString()}</TableCell>
-                    <TableCell>{version.uploadedBy}</TableCell>
-                    <TableCell>{version.changes}</TableCell>
-                    <TableCell>{fileManager.formatFileSize(version.fileSize)}</TableCell>
                     <TableCell>
-                      {version.version === fileManager.selectedFileForHistory.version && (
-                        <Chip label="Current" color="success" size="small" />
-                      )}
+                      <Typography variant="body2">
+                        {new Date(version.date).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(version.date).toLocaleTimeString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{version.uploadedBy}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {version.changes}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{fileManager.formatFileSize(version.fileSize)}</TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                        {version.version === fileManager.selectedFileForHistory.version ? (
+                          <Chip label="Current" color="success" size="small" />
+                        ) : (
+                          <>
+                            <Tooltip title="Preview this version">
+                              <IconButton size="small">
+                                <Visibility fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Download this version">
+                              <IconButton size="small">
+                                <Download fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Restore this version">
+                              <IconButton size="small" color="warning">
+                                <Restore fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -64,7 +110,11 @@ export function VersionHistoryDialog({ fileManager }: VersionHistoryDialogProps)
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => fileManager.selectedFileForHistory && fileManager.uploadNewVersion(fileManager.selectedFileForHistory.id)} startIcon={<CloudUpload />}>
+        <Button 
+          onClick={() => fileManager.selectedFileForHistory && fileManager.uploadNewVersion(fileManager.selectedFileForHistory.id)} 
+          startIcon={<CloudUpload />}
+          variant="outlined"
+        >
           Upload New Version
         </Button>
         <Button onClick={() => fileManager.setVersionHistoryOpen(false)}>Close</Button>

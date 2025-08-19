@@ -15,7 +15,9 @@ import {
   FormControlLabel,
   Switch,
   IconButton,
-  LinearProgress
+  LinearProgress,
+  Chip,
+  Divider
 } from "@mui/material";
 import { 
   CloudUpload,
@@ -28,11 +30,17 @@ import {
   CreateNewFolder,
   NoteAdd,
   Search,
-  Sort
+  Sort,
+  CameraAlt,
+  TextFields,
+  PictureAsPdf,
+  Security,
+  SearchOff,
+  FilterList
 } from "@mui/icons-material";
 
 interface FileManagerControlsProps {
-  fileManager: any; 
+  fileManager: any;
 }
 
 export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
@@ -44,7 +52,7 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Quick Actions
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Button
                 variant="contained"
                 startIcon={<CloudUpload />}
@@ -76,52 +84,111 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
                 From Template
               </Button>
               
-              {fileManager.selectedFiles.size > 0 && (
-                <>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Delete />}
-                    onClick={fileManager.deleteSelected}
-                    color="error"
-                  >
-                    Delete ({fileManager.selectedFiles.size})
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<Download />}
-                    onClick={fileManager.downloadSelected}
-                    color="success"
-                  >
-                    Download ({fileManager.selectedFiles.size})
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<FolderOpen />}
-                    onClick={() => fileManager.setMoveFilesOpen(true)}
-                  >
-                    Move ({fileManager.selectedFiles.size})
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<Edit />}
-                    onClick={() => fileManager.setBulkEditOpen(true)}
-                  >
-                    Bulk Edit ({fileManager.selectedFiles.size})
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<Share />}
-                    onClick={() => fileManager.setShareDialogOpen(true)}
-                  >
-                    Share ({fileManager.selectedFiles.size})
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="outlined"
+                startIcon={<CameraAlt />}
+                onClick={() => fileManager.setMobileIntegrationsOpen(true)}
+                color="success"
+              >
+                Camera Capture
+              </Button>
               
+              <Button
+                variant="outlined"
+                startIcon={<TextFields />}
+                onClick={() => fileManager.setOcrDialogOpen(true)}
+                color="info"
+              >
+                OCR Processing
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<PictureAsPdf />}
+                onClick={() => fileManager.setFileProcessingOpen(true)}
+                color="warning"
+              >
+                File Tools
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<Security />}
+                onClick={() => fileManager.setSecurityDashboardOpen(true)}
+                color="error"
+              >
+                Security
+              </Button>
+            </Box>
+
+            {fileManager.selectedFiles.size > 0 && (
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2, bgcolor: 'action.selected', borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ alignSelf: 'center', mr: 2 }}>
+                  {fileManager.selectedFiles.size} files selected:
+                </Typography>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<Delete />}
+                  onClick={fileManager.deleteSelected}
+                  color="error"
+                  size="small"
+                >
+                  Delete
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<Download />}
+                  onClick={fileManager.downloadSelected}
+                  color="success"
+                  size="small"
+                >
+                  Download
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<FolderOpen />}
+                  onClick={() => fileManager.setMoveFilesOpen(true)}
+                  size="small"
+                >
+                  Move
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<Edit />}
+                  onClick={() => fileManager.setBulkEditOpen(true)}
+                  size="small"
+                >
+                  Bulk Edit
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<Share />}
+                  onClick={() => fileManager.setShareDialogOpen(true)}
+                  size="small"
+                >
+                  Share
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<TextFields />}
+                  onClick={() => {
+                    fileManager.setSelectedFilesForProcessing(Array.from(fileManager.selectedFiles));
+                    fileManager.setOcrDialogOpen(true);
+                  }}
+                  color="info"
+                  size="small"
+                >
+                  OCR Selected
+                </Button>
+              </Box>
+            )}
+
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <Button
                 variant="outlined"
                 startIcon={<Undo />}
@@ -130,8 +197,19 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
               >
                 Undo
               </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<SearchOff />}
+                onClick={fileManager.clearSearch}
+                disabled={!fileManager.searchTerm && Object.keys(fileManager.searchFilters).length === 0}
+              >
+                Clear Filters
+              </Button>
             </Box>
           </Box>
+
+          <Divider sx={{ my: 3 }} />
 
           <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
@@ -215,16 +293,29 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
             </Grid>
           </Box>
 
+          <Divider sx={{ my: 3 }} />
+
           <Box>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-              Advanced Filters
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Search & Filters
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<FilterList />}
+                onClick={() => fileManager.setAdvancedSearchOpen(true)}
+                size="small"
+              >
+                Advanced Search
+              </Button>
+            </Box>
+            
             <Grid container spacing={2} alignItems="center">
               <Grid>
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder="Search files, patients, descriptions..."
+                  placeholder="Search files, OCR text, patients..."
                   value={fileManager.searchTerm}
                   onChange={(e) => {
                     fileManager.setSearchTerm(e.target.value);
@@ -364,6 +455,45 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
                 </Box>
               </Grid>
             </Grid>
+
+            {(Object.keys(fileManager.searchFilters).length > 0 || fileManager.searchTerm || 
+              fileManager.categoryFilter !== 'all' || fileManager.patientFilter || fileManager.tagFilter) && (
+              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">Active filters:</Typography>
+                {fileManager.searchTerm && (
+                  <Chip label={`Search: "${fileManager.searchTerm}"`} size="small" onDelete={() => fileManager.setSearchTerm('')} />
+                )}
+                {fileManager.categoryFilter !== 'all' && (
+                  <Chip label={`Category: ${fileManager.getCategoryInfo(fileManager.categoryFilter).label}`} size="small" onDelete={() => fileManager.setCategoryFilter('all')} />
+                )}
+                {fileManager.patientFilter && (
+                  <Chip label={`Patient: ${fileManager.patients.find((p: any) => p.id === fileManager.patientFilter)?.firstName} ${fileManager.patients.find((p: any) => p.id === fileManager.patientFilter)?.lastName}`} size="small" onDelete={() => fileManager.setPatientFilter(null)} />
+                )}
+                {fileManager.tagFilter && (
+                  <Chip label={`Tag: ${fileManager.tagFilter}`} size="small" onDelete={() => fileManager.setTagFilter('')} />
+                )}
+              </Box>
+            )}
+
+            {fileManager.searchHistory.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  Recent searches:
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {fileManager.searchHistory.slice(0, 5).map((search: string, index: number) => (
+                    <Chip
+                      key={index}
+                      label={search}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => fileManager.setSearchTerm(search)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
           </Box>
         </CardContent>
       </Card>
@@ -371,7 +501,29 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
       {fileManager.loading && (
         <Box sx={{ mb: 2 }}>
           <LinearProgress />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+            Processing files...
+          </Typography>
         </Box>
+      )}
+
+      {Object.keys(fileManager.ocrProgress).length > 0 && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ mb: 2 }}>OCR Processing Progress:</Typography>
+            {Object.entries(fileManager.ocrProgress).map(([fileId, progress]) => {
+              const file = fileManager.files.find((f: any) => f.id === fileId);
+              return (
+                <Box key={fileId} sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {file?.name || 'Unknown file'}
+                  </Typography>
+                  <LinearProgress variant="determinate" value={(progress as number) * 100} sx={{ mt: 0.5 }} />
+                </Box>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
     </>
   );

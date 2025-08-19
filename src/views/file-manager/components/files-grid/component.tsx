@@ -7,9 +7,23 @@ import {
   Checkbox, 
   IconButton, 
   Chip,
-  Button
+  Button,
+  Badge,
+  Tooltip,
+  LinearProgress
 } from "@mui/material";
-import { MoreVert, Person, Lock, Share, InsertDriveFile } from "@mui/icons-material";
+import { 
+  MoreVert, 
+  Person, 
+  Lock, 
+  Share, 
+  InsertDriveFile, 
+  TextFields,
+  Visibility,
+  CloudDone,
+  Error,
+  Schedule
+} from "@mui/icons-material";
 import { FileCategory, FileItem } from "../types";
 
 interface FilesGridProps {
@@ -50,12 +64,31 @@ export function FilesGrid({
     const iconProps = { sx: { fontSize: 40, color: 'grey.600' } };
     
     switch (iconName) {
-      case 'Image': return <img {...iconProps} alt="" />;
-      case 'PictureAsPdf': return <InsertDriveFile {...iconProps} />;
-      case 'VideoFile': return <InsertDriveFile {...iconProps} />;
-      case 'AudioFile': return <InsertDriveFile {...iconProps} />;
+      case 'Image': return <InsertDriveFile {...iconProps} style={{ color: '#4CAF50' }} />;
+      case 'PictureAsPdf': return <InsertDriveFile {...iconProps} style={{ color: '#F44336' }} />;
+      case 'VideoFile': return <InsertDriveFile {...iconProps} style={{ color: '#2196F3' }} />;
+      case 'AudioFile': return <InsertDriveFile {...iconProps} style={{ color: '#FF9800' }} />;
       default: return <InsertDriveFile {...iconProps} />;
     }
+  }
+
+  function getProcessingStatusDisplay(file: FileItem) {
+    if (file.processingStatus === 'processing') {
+      return (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 8, 
+          right: 40, 
+          zIndex: 1,
+          bgcolor: 'warning.light',
+          borderRadius: 1,
+          p: 0.5
+        }}>
+          <Schedule sx={{ fontSize: 16, color: 'warning.main' }} />
+        </Box>
+      );
+    }
+    return null;
   }
 
   return (
@@ -102,19 +135,39 @@ export function FilesGrid({
                     </IconButton>
                   </Box>
 
+                  {getProcessingStatusDisplay(file)}
+
                   <Box sx={{ p: 2, pt: 5 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, position: 'relative' }}>
                       {file.type.startsWith("image/") && file.content ? (
-                        <img
-                          src={file.content}
-                          alt={file.name}
-                          style={{
-                            width: 80,
-                            height: 80,
-                            objectFit: 'cover',
-                            borderRadius: 8
-                          }}
-                        />
+                        <Box sx={{ position: 'relative' }}>
+                          <img
+                            src={file.content}
+                            alt={file.name}
+                            style={{
+                              width: 80,
+                              height: 80,
+                              objectFit: 'cover',
+                              borderRadius: 8
+                            }}
+                          />
+                          {file.processingStatus === 'processing' && (
+                            <Box sx={{ 
+                              position: 'absolute', 
+                              top: 0, 
+                              left: 0, 
+                              right: 0, 
+                              bottom: 0,
+                              bgcolor: 'rgba(255, 255, 255, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 2
+                            }}>
+                              <Schedule sx={{ color: 'warning.main' }} />
+                            </Box>
+                          )}
+                        </Box>
                       ) : (
                         <Box
                           sx={{
@@ -124,10 +177,27 @@ export function FilesGrid({
                             alignItems: 'center',
                             justifyContent: 'center',
                             bgcolor: 'grey.100',
-                            borderRadius: 2
+                            borderRadius: 2,
+                            position: 'relative'
                           }}
                         >
                           {renderIconFromString(getFileIcon(file.type))}
+                          {file.processingStatus === 'processing' && (
+                            <Box sx={{ 
+                              position: 'absolute', 
+                              top: 0, 
+                              left: 0, 
+                              right: 0, 
+                              bottom: 0,
+                              bgcolor: 'rgba(255, 255, 255, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 2
+                            }}>
+                              <Schedule sx={{ color: 'warning.main' }} />
+                            </Box>
+                          )}
                         </Box>
                       )}
                     </Box>
@@ -154,30 +224,101 @@ export function FilesGrid({
                       </Box>
                     )}
 
-                    <Chip
-                      label={categoryInfo.label}
-                      size="small"
-                      sx={{
-                        bgcolor: categoryInfo.color,
-                        color: 'white',
-                        fontWeight: 'medium',
-                        mb: 1
-                      }}
-                    />
+                    <Box sx={{ mb: 1 }}>
+                      <Chip
+                        label={categoryInfo.label}
+                        size="small"
+                        sx={{
+                          bgcolor: categoryInfo.color,
+                          color: 'white',
+                          fontWeight: 'medium'
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                      {file.isOcrProcessed && (
+                        <Tooltip title="OCR Processed">
+                          <Chip
+                            icon={<TextFields />}
+                            label="OCR"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 20 }}
+                          />
+                        </Tooltip>
+                      )}
+                      {file.isConfidential && (
+                        <Tooltip title="Confidential">
+                          <Chip
+                            icon={<Lock />}
+                            label="Private"
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 20 }}
+                          />
+                        </Tooltip>
+                      )}
+                      {file.processingStatus === 'completed' && (
+                        <Tooltip title="Processing Complete">
+                          <CloudDone sx={{ fontSize: 16, color: 'success.main' }} />
+                        </Tooltip>
+                      )}
+                      {file.processingStatus === 'failed' && (
+                        <Tooltip title="Processing Failed">
+                          <Error sx={{ fontSize: 16, color: 'error.main' }} />
+                        </Tooltip>
+                      )}
+                    </Box>
+
+                    {file.description && (
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary" 
+                        sx={{ 
+                          display: 'block',
+                          mb: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {file.description}
+                      </Typography>
+                    )}
 
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" color="text.secondary">
                         {formatFileSize(file.size)}
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {file.isConfidential && (
-                          <Lock sx={{ fontSize: 12, color: 'error.main' }} />
-                        )}
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                         {file.sharedWith.length > 0 && (
-                          <Share sx={{ fontSize: 12, color: 'primary.main' }} />
+                          <Tooltip title={`Shared with ${file.sharedWith.length} people`}>
+                            <Badge badgeContent={file.sharedWith.length} color="primary">
+                              <Share sx={{ fontSize: 12, color: 'primary.main' }} />
+                            </Badge>
+                          </Tooltip>
+                        )}
+                        {file.accessCount && file.accessCount > 0 && (
+                          <Tooltip title={`Accessed ${file.accessCount} times`}>
+                            <Badge badgeContent={file.accessCount} color="info">
+                              <Visibility sx={{ fontSize: 12, color: 'info.main' }} />
+                            </Badge>
+                          </Tooltip>
                         )}
                       </Box>
                     </Box>
+
+                    {file.processingStatus === 'processing' && (
+                      <Box sx={{ mt: 1 }}>
+                        <LinearProgress />
+                        <Typography variant="caption" color="text.secondary">
+                          Processing...
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 </Card>
               </Grid>
@@ -200,7 +341,6 @@ export function FilesGrid({
         )}
       </Box>
       
-      {/* Pagination */}
       {totalPages > 1 && (
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
           {Array.from({ length: totalPages }, (_, p) => (

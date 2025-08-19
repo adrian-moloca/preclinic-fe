@@ -22,18 +22,37 @@ export interface FileItem {
   description?: string;
   priority: 'low' | 'medium' | 'high';
   isConfidential: boolean;
+  
+  // NEW: OCR and Processing Features
+  ocrText?: string;
+  isOcrProcessed?: boolean;
+  ocrLanguage?: string;
+  extractedData?: ExtractedMedicalData;
+  processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  
+  // NEW: Access tracking
+  accessLog?: AccessLogEntry[];
+  lastAccessed?: string;
+  accessCount?: number;
+  
+  // NEW: Mobile features
+  capturedLocation?: GeolocationCoordinates;
+  voiceNotes?: VoiceNote[];
+  
+  // NEW: File processing
+  originalFileId?: string;
+  processedFrom?: string;
 }
 
 export interface FolderItem {
   id: string;
   name: string;
-  parentId: string;
+  parentId: string | null;
   color: string;
   icon: string;
   createdAt: string;
   fileCount: number;
   isPatientFolder: boolean;
-  patientId?: string;
 }
 
 export interface FileVersion {
@@ -43,6 +62,46 @@ export interface FileVersion {
   uploadedBy: string;
   changes: string;
   fileSize: number;
+}
+
+export interface ExtractedMedicalData {
+  patientName?: string;
+  dateOfBirth?: string;
+  medicalRecordNumber?: string;
+  doctorName?: string;
+  facilityName?: string;
+  medications?: string[];
+  testResults?: string[];
+  [key: string]: string | string[] | undefined;
+}
+
+export interface AccessLogEntry {
+  timestamp: string;
+  action: 'view' | 'download' | 'edit' | 'share' | 'delete';
+  userId?: string;
+  userAgent?: string;
+  location?: string;
+}
+
+export interface VoiceNote {
+  id: string;
+  timestamp: string;
+  duration: number;
+  transcription?: string;
+  audioBlob?: Blob;
+}
+
+export interface SearchFilters {
+  textSearch?: string;
+  categoryFilter?: FileCategory | 'all';
+  patientFilter?: string;
+  tagFilter?: string;
+  dateRange?: { start: Date; end: Date };
+  sizeRange?: { min: number; max: number };
+  hasOCR?: boolean;
+  isConfidential?: boolean;
+  isShared?: boolean;
+  accessedRecently?: boolean;
 }
 
 export type FileCategory = 
@@ -58,28 +117,9 @@ export type FileCategory =
   | 'templates'
   | 'other';
 
-export type TemplateType =
-  | 'prescription_form'
-  | 'lab_request'
+export type TemplateType = 
   | 'consent_form'
-  | 'medical_report'
-  | 'insurance_claim'
-  | 'patient_intake';
-
-export interface DocumentTemplate {
-  id: string;
-  name: string;
-  type: TemplateType;
-  category: FileCategory;
-  fields: TemplateField[];
-  content: string;
-}
-
-export interface TemplateField {
-  id: string;
-  name: string;
-  type: 'text' | 'date' | 'select' | 'checkbox' | 'signature';
-  required: boolean;
-  options?: string[];
-  placeholder?: string;
-}
+  | 'medical_form'
+  | 'prescription_template'
+  | 'report_template'
+  | 'insurance_form';

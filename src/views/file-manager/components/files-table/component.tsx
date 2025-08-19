@@ -15,7 +15,7 @@ import {
   Tooltip,
   Badge,
   Button,
-  Avatar
+  Avatar,
 } from "@mui/material";
 import { 
   Person, 
@@ -27,7 +27,12 @@ import {
   Image,
   PictureAsPdf,
   VideoFile,
-  AudioFile
+  AudioFile,
+  TextFields,
+  Visibility,
+  CloudDone,
+  Error,
+  Schedule
 } from "@mui/icons-material";
 import { FileCategory, FileItem } from "../types";
 
@@ -93,6 +98,19 @@ export function FilesTable({
         {getFileIcon(file.type)}
       </Avatar>
     );
+  }
+
+  function getProcessingStatusIcon(file: FileItem) {
+    switch (file.processingStatus) {
+      case 'processing':
+        return <Schedule sx={{ color: 'warning.main' }} />;
+      case 'completed':
+        return <CloudDone sx={{ color: 'success.main' }} />;
+      case 'failed':
+        return <Error sx={{ color: 'error.main' }} />;
+      default:
+        return null;
+    }
   }
 
   return (
@@ -180,7 +198,25 @@ export function FilesTable({
                     />
                   </TableCell>
                   <TableCell>
-                    {renderFilePreview(file)}
+                    <Box sx={{ position: 'relative' }}>
+                      {renderFilePreview(file)}
+                      {file.processingStatus === 'processing' && (
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          top: 0, 
+                          left: 0, 
+                          right: 0, 
+                          bottom: 0,
+                          bgcolor: 'rgba(255, 255, 255, 0.8)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 1
+                        }}>
+                          <Schedule sx={{ color: 'warning.main', fontSize: 16 }} />
+                        </Box>
+                      )}
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Box>
@@ -191,6 +227,18 @@ export function FilesTable({
                         <Typography variant="caption" color="text.secondary">
                           {file.description}
                         </Typography>
+                      )}
+                      {file.ocrText && (
+                        <Box sx={{ mt: 0.5 }}>
+                          <Chip
+                            icon={<TextFields />}
+                            label="OCR Processed"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', height: 20 }}
+                          />
+                        </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -221,7 +269,7 @@ export function FilesTable({
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {file.tags.slice(0, 2).map((tag, index) => (
+                      {file.tags.slice(0, 2).map((tag: string, index: number) => (
                         <Chip
                           key={index}
                           label={tag}
@@ -249,9 +297,14 @@ export function FilesTable({
                     <Typography variant="body2" color="text.secondary">
                       {new Date(file.date).toLocaleDateString()}
                     </Typography>
+                    {file.lastAccessed && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        Last: {new Date(file.lastAccessed).toLocaleDateString()}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       {file.isConfidential && (
                         <Tooltip title="Confidential">
                           <Lock sx={{ fontSize: 16, color: 'error.main' }} />
@@ -268,6 +321,19 @@ export function FilesTable({
                         <Tooltip title={`Version ${file.version}`}>
                           <Badge badgeContent={file.version} color="secondary">
                             <History sx={{ fontSize: 16, color: 'secondary.main' }} />
+                          </Badge>
+                        </Tooltip>
+                      )}
+                      {file.isOcrProcessed && (
+                        <Tooltip title="OCR Processed">
+                          <TextFields sx={{ fontSize: 16, color: 'success.main' }} />
+                        </Tooltip>
+                      )}
+                      {getProcessingStatusIcon(file)}
+                      {file.accessCount && file.accessCount > 0 && (
+                        <Tooltip title={`Accessed ${file.accessCount} times`}>
+                          <Badge badgeContent={file.accessCount} color="info">
+                            <Visibility sx={{ fontSize: 16, color: 'info.main' }} />
                           </Badge>
                         </Tooltip>
                       )}

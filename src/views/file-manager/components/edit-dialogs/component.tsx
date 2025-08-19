@@ -14,8 +14,12 @@ import {
   Box, 
   Autocomplete, 
   FormControlLabel, 
-  Switch 
+  Switch,
+  Chip,
+  Typography,
+  Divider
 } from "@mui/material";
+import { TextFields, Visibility } from "@mui/icons-material";
 import { FileCategory } from "../types";
 
 interface EditFileDialogProps {
@@ -25,7 +29,20 @@ interface EditFileDialogProps {
 export function EditFileDialog({ fileManager }: EditFileDialogProps) {
   return (
     <Dialog open={fileManager.editDialogOpen} onClose={() => fileManager.setEditDialogOpen(false)} maxWidth="md" fullWidth>
-      <DialogTitle>Edit File Details</DialogTitle>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          Edit File Details
+          {fileManager.editingFile?.isOcrProcessed && (
+            <Chip
+              icon={<TextFields />}
+              label="OCR Processed"
+              size="small"
+              color="success"
+              variant="outlined"
+            />
+          )}
+        </Box>
+      </DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid>
@@ -98,6 +115,7 @@ export function EditFileDialog({ fileManager }: EditFileDialogProps) {
                 tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) 
               }))}
               placeholder="tag1, tag2, tag3"
+              helperText="Separate tags with commas"
             />
           </Grid>
           
@@ -123,6 +141,86 @@ export function EditFileDialog({ fileManager }: EditFileDialogProps) {
               label="Mark as Confidential"
             />
           </Grid>
+
+          {fileManager.editingFile?.isOcrProcessed && (
+            <>
+              <Grid>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextFields />
+                  OCR Information
+                </Typography>
+              </Grid>
+              
+              <Grid>
+                <TextField
+                  fullWidth
+                  label="OCR Language"
+                  value={fileManager.editingFile.ocrLanguage || 'eng'}
+                  disabled
+                  size="small"
+                />
+              </Grid>
+              
+              <Grid>
+                <TextField
+                  fullWidth
+                  label="Processing Status"
+                  value={fileManager.editingFile.processingStatus || 'completed'}
+                  disabled
+                  size="small"
+                />
+              </Grid>
+              
+              {fileManager.editingFile.extractedData?.patientName && (
+                <Grid>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Extracted Medical Data:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {fileManager.editingFile.extractedData.patientName && (
+                      <Chip label={`Patient: ${fileManager.editingFile.extractedData.patientName}`} size="small" />
+                    )}
+                    {fileManager.editingFile.extractedData.doctorName && (
+                      <Chip label={`Doctor: ${fileManager.editingFile.extractedData.doctorName}`} size="small" />
+                    )}
+                    {fileManager.editingFile.extractedData.testResults && (
+                      <Chip label={`${fileManager.editingFile.extractedData.testResults.length} Test Results`} size="small" />
+                    )}
+                    {fileManager.editingFile.extractedData.medications && (
+                      <Chip label={`${fileManager.editingFile.extractedData.medications.length} Medications`} size="small" />
+                    )}
+                  </Box>
+                </Grid>
+              )}
+              
+              {fileManager.editingFile.ocrText && (
+                <Grid>
+                  <TextField
+                    fullWidth
+                    label="Extracted Text (Preview)"
+                    value={fileManager.editingFile.ocrText.substring(0, 200) + (fileManager.editingFile.ocrText.length > 200 ? '...' : '')}
+                    disabled
+                    multiline
+                    rows={3}
+                    size="small"
+                    InputProps={{
+                      endAdornment: (
+                        <Button
+                          size="small"
+                          startIcon={<Visibility />}
+                          onClick={() => {
+                          }}
+                        >
+                          View Full
+                        </Button>
+                      )
+                    }}
+                  />
+                </Grid>
+              )}
+            </>
+          )}
         </Grid>
       </DialogContent>
       <DialogActions>

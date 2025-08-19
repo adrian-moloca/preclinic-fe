@@ -8,7 +8,7 @@ export function FileManagerHeader() {
         Enhanced File Manager
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Advanced file organization with patient linking, smart categorization, and collaboration tools
+        Advanced file organization with OCR processing, smart categorization, mobile integration, and collaboration tools
       </Typography>
     </Box>
   );
