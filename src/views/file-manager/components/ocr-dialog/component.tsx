@@ -1,15 +1,15 @@
 import React from "react";
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  Button, 
-  Box, 
-  Typography, 
-  FormControl, 
-  InputLabel, 
-  Select, 
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
   MenuItem,
   List,
   ListItem,
@@ -22,12 +22,12 @@ import {
   Alert,
   Divider
 } from "@mui/material";
-import { 
-  TextFields, 
-  Image, 
-  PictureAsPdf, 
-  CheckCircle, 
-  Error, 
+import {
+  TextFields,
+  Image,
+  PictureAsPdf,
+  CheckCircle,
+  Error,
   Schedule,
   Language
 } from "@mui/icons-material";
@@ -53,21 +53,21 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
     { code: 'ara', name: 'Arabic' }
   ];
 
-  const eligibleFiles = fileManager.files.filter((file: any) => 
+  const eligibleFiles = fileManager.files.filter((file: any) =>
     file.type.startsWith('image/') || file.type === 'application/pdf'
   );
 
-  const selectedEligibleFiles = eligibleFiles.filter((file: any) => 
-    fileManager.selectedFilesForProcessing.includes(file.id) || 
+  const selectedEligibleFiles = eligibleFiles.filter((file: any) =>
+    fileManager.selectedFilesForProcessing.includes(file.id) ||
     file.id === fileManager.menuFileId
   );
 
   // FIXED: Use the hook's built-in OCR processing function
   const handleProcessFiles = async () => {
     const filesToProcess = selectedEligibleFiles.length > 0 ? selectedEligibleFiles : eligibleFiles.slice(0, 5);
-    
+
     setProcessingFiles(filesToProcess.map((f: any) => f.id));
-    
+
     // Use the hook's processFileWithOCR function for each file
     for (const file of filesToProcess) {
       try {
@@ -76,7 +76,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
         console.error(`Failed to process ${file.name}:`, error);
       }
     }
-    
+
     setProcessingFiles([]);
   };
 
@@ -107,7 +107,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                 <Language />
                 OCR Settings
               </Typography>
-              
+
               <FormControl fullWidth>
                 <InputLabel>Language</InputLabel>
                 <Select
@@ -122,7 +122,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                   ))}
                 </Select>
               </FormControl>
-              
+
               <Alert severity="info" sx={{ mt: 2 }}>
                 OCR will extract text from images and PDF documents, then attempt to identify medical information like patient names, medications, and test results.
               </Alert>
@@ -133,13 +133,13 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
             <Typography variant="h6" sx={{ mb: 2 }}>
               Files Ready for OCR Processing ({selectedEligibleFiles.length || eligibleFiles.length})
             </Typography>
-            
+
             <Box sx={{ maxHeight: 400, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
               <List dense>
                 {(selectedEligibleFiles.length > 0 ? selectedEligibleFiles : eligibleFiles).map((file: any) => {
                   const status = getFileStatus(file);
                   const progress = fileManager.ocrProgress[file.id];
-                  
+
                   return (
                     <ListItem key={file.id}>
                       <ListItemIcon>
@@ -149,9 +149,9 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2">{file.name}</Typography>
-                            <Chip 
-                              label={status.text} 
-                              size="small" 
+                            <Chip
+                              label={status.text}
+                              size="small"
                               color={status.color as any}
                               icon={status.icon}
                             />
@@ -194,10 +194,10 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                     </ListItem>
                   );
                 })}
-                
+
                 {eligibleFiles.length === 0 && (
                   <ListItem>
-                    <ListItemText 
+                    <ListItemText
                       primary="No files available for OCR processing"
                       secondary="OCR can process images (JPG, PNG) and PDF documents"
                     />
@@ -231,7 +231,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
       </DialogContent>
       <DialogActions>
         <Button onClick={() => fileManager.setOcrDialogOpen(false)}>Close</Button>
-        <Button 
+        <Button
           onClick={handleProcessFiles}
           variant="contained"
           disabled={eligibleFiles.length === 0 || processingFiles.length > 0}
