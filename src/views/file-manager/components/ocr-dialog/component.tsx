@@ -62,11 +62,13 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
     file.id === fileManager.menuFileId
   );
 
+  // FIXED: Use the hook's built-in OCR processing function
   const handleProcessFiles = async () => {
     const filesToProcess = selectedEligibleFiles.length > 0 ? selectedEligibleFiles : eligibleFiles.slice(0, 5);
     
     setProcessingFiles(filesToProcess.map((f: any) => f.id));
     
+    // Use the hook's processFileWithOCR function for each file
     for (const file of filesToProcess) {
       try {
         await fileManager.processFileWithOCR(file.id, selectedLanguage);
@@ -88,7 +90,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
     if (file.isOcrProcessed) {
       return { icon: <CheckCircle color="success" />, text: 'Completed', color: 'success' };
     }
-    return { icon: null, text: 'Ready', color: 'default' };
+    return { icon: undefined, text: 'Ready', color: 'default' };
   };
 
   return (
@@ -151,7 +153,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                               label={status.text} 
                               size="small" 
                               color={status.color as any}
-                              icon={status.icon ?? undefined}
+                              icon={status.icon}
                             />
                           </Box>
                         }
@@ -162,7 +164,7 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                             </Typography>
                             {progress !== undefined && (
                               <Box sx={{ mt: 1 }}>
-                                <LinearProgress variant="determinate" value={(progress as number) * 100} />
+                                <LinearProgress variant="determinate" value={progress * 100} />
                                 <Typography variant="caption" color="text.secondary">
                                   {Math.round(progress * 100)}% complete
                                 </Typography>
@@ -180,6 +182,11 @@ export function OCRDialog({ fileManager }: OCRDialogProps) {
                                   <Chip label={`${file.extractedData.testResults.length} Results`} size="small" />
                                 )}
                               </Box>
+                            )}
+                            {file.processingStatus === 'failed' && (
+                              <Alert severity="error" sx={{ mt: 1 }}>
+                                OCR processing failed. Please try again or check if the image is clear and readable.
+                              </Alert>
                             )}
                           </Box>
                         }

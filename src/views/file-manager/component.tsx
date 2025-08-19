@@ -21,6 +21,7 @@ import FileProcessingDialog from "./components/file-processing";
 import MobileIntegrationsDialog from "./components/mobile-integration";
 import SecurityDashboardDialog from "./components/security-dashboard";
 import AdvancedSearchDialog from "./components/advanced-search";
+import OCRDataViewerDialog from "./components/ocr-data-viewer";
 
 export default function EnhancedFileManager() {
   const fileManager = useFileManager();
@@ -139,6 +140,7 @@ export default function EnhancedFileManager() {
         processFileWithOCR={fileManager.processFileWithOCR}
         setOcrDialogOpen={fileManager.setOcrDialogOpen}
         setMenuFileId={fileManager.setMenuFileId}
+        viewOCRData={fileManager.viewOCRData}
       />
 
       <EditFileDialog fileManager={fileManager} />
@@ -154,6 +156,7 @@ export default function EnhancedFileManager() {
       <MobileIntegrationsDialog fileManager={fileManager} />
       <SecurityDashboardDialog fileManager={fileManager} />
       <AdvancedSearchDialog fileManager={fileManager} />
+      <OCRDataViewerDialog fileManager={fileManager} />
 
       <input
         ref={fileManager.fileInputRef}

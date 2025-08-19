@@ -33,9 +33,10 @@ interface FileContextMenuProps {
   selectedFiles: Set<string>;
   setSelectedFiles: (files: Set<string>) => void;
   deleteSelected: () => void;
-  processFileWithOCR: (fileId: string) => void;
+  processFileWithOCR: (fileId: string, language?: string) => void;
   setOcrDialogOpen: (open: boolean) => void;
-  setMenuFileId: ((id: string) => void) | null;
+  setMenuFileId: (id: string) => void;
+  viewOCRData: (fileId: string) => void;
 }
 
 export function FileContextMenu({
@@ -56,7 +57,8 @@ export function FileContextMenu({
   deleteSelected,
   processFileWithOCR,
   setOcrDialogOpen,
-  setMenuFileId
+  setMenuFileId,
+  viewOCRData
 }: FileContextMenuProps) {
   
   const currentFile = files.find(f => f.id === menuFileId);
@@ -69,9 +71,7 @@ export function FileContextMenu({
   };
 
   const handleAdvancedOCR = () => {
-    if (setMenuFileId) {
-      setMenuFileId(menuFileId);
-    }
+    setMenuFileId(menuFileId);
     setOcrDialogOpen(true);
     handleMenuClose();
   };
@@ -119,6 +119,7 @@ export function FileContextMenu({
       
       <Divider />
       
+      {/* Version Control */}
       <MuiMenuItem onClick={() => {
         viewVersionHistory(menuFileId);
         handleMenuClose();
@@ -197,7 +198,7 @@ export function FileContextMenu({
           </ListItemIcon>
           <ListItemText 
             primary="Stop Sharing" 
-            secondary={`Shared with ${currentFile.sharedWith?.length ?? 0} people`}
+            secondary={`Shared with ${currentFile.sharedWith.length} people`}
           />
         </MuiMenuItem>
       )}
@@ -220,6 +221,7 @@ export function FileContextMenu({
       
       {currentFile?.isOcrProcessed && (
         <MuiMenuItem onClick={() => {
+          viewOCRData(menuFileId);
           handleMenuClose();
         }}>
           <ListItemIcon>
