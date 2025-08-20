@@ -1,9 +1,7 @@
-import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
-import { AppointmentsEntry } from './types';
+import React, { FC, ReactNode, useState } from 'react';
 import { AppointmentsContext } from './context';
+import { AppointmentsEntry } from './types';
 import { IDepartments } from '../departments';
-
-const LOCAL_STORAGE_KEY = 'appointments';
 
 export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
   {
@@ -16,7 +14,9 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     time: '09:00',
     reason: 'Routine checkup',
     status: 'scheduled',
-    department: { id: 'd1', name: 'Cardiology' } as IDepartments, 
+    department: { id: 'd1', name: 'Cardiology' } as IDepartments,
+    doctorId: 'd1', // Make sure this matches doctor IDs
+    duration: 30,
   },
   {
     id: 'a2',
@@ -29,6 +29,8 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     reason: 'Asthma follow-up',
     status: 'confirmed',
     department: { id: 'd2', name: 'Pediatrics' } as IDepartments,
+    doctorId: 'd2', // Make sure this matches doctor IDs
+    duration: 20,
   },
   {
     id: 'a3',
@@ -41,68 +43,71 @@ export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
     reason: 'Medication review',
     status: 'completed',
     department: { id: 'd3', name: 'Dermatology' } as IDepartments,
+    doctorId: 'd3', // Make sure this matches doctor IDs
+    duration: 45,
+  },
+  // Add more appointments with different doctors
+  {
+    id: 'a4',
+    patients: ['1'],
+    patientId: '1',
+    appointmentType: 'In-person',
+    type: 'emergency',
+    date: '2025-08-20',
+    time: '10:00',
+    reason: 'Chest pain evaluation',
+    status: 'scheduled',
+    department: { id: 'd1', name: 'Cardiology' } as IDepartments,
+    doctorId: 'd1',
+    duration: 60,
+  },
+  {
+    id: 'a5',
+    patients: ['2'],
+    patientId: '2',
+    appointmentType: 'Online',
+    type: 'follow-up',
+    date: '2025-08-21',
+    time: '15:00',
+    reason: 'Blood test results',
+    status: 'scheduled',
+    department: { id: 'd2', name: 'Pediatrics' } as IDepartments,
+    doctorId: 'd2', // Same doctor as first appointment - should have same color
+    duration: 15,
   }
 ];
 
 export const AppointmentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [appointments, setAppointments] = useState<AppointmentsEntry[]>(MOCK_APPOINTMENTS);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Always include mock appointments
-        const merged = [
-          ...MOCK_APPOINTMENTS,
-          ...parsed.filter((a: AppointmentsEntry) => !MOCK_APPOINTMENTS.some(ma => ma.id === a.id))
-        ];
-        setAppointments(merged);
-      } catch {
-        console.warn('Failed to parse appointments from localStorage');
-      }
-    }
-  }, []);
+  const addAppointment = (appointment: AppointmentsEntry) => {
+    setAppointments(prev => [...prev, appointment]);
+  };
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appointments));
-  }, [appointments]);
-
-  const addAppointment = useCallback((entry: AppointmentsEntry) => {
-    setAppointments(prev => [...prev, entry]);
-  }, []);
-
-  const updateAppointment = useCallback((updatedEntry: AppointmentsEntry) => {
-    setAppointments(prev =>
-      prev.map(entry => (entry.id === updatedEntry.id ? updatedEntry : entry))
+  const updateAppointment = (updatedAppointment: AppointmentsEntry) => {
+    setAppointments(prev => 
+      prev.map(appointment => 
+        appointment.id === updatedAppointment.id ? updatedAppointment : appointment
+      )
     );
-  }, []);
+  };
 
-  const deleteAppointment = useCallback((id: string) => {
-    // Prevent deleting mock appointments
-    if (MOCK_APPOINTMENTS.some(ma => ma.id === id)) {
-      console.warn("❌ Cannot delete mock appointment:", id);
-      return;
-    }
-    setAppointments(prev => prev.filter(entry => entry.id !== id));
-  }, []);
+  const deleteAppointment = (id: string) => {
+    setAppointments(prev => prev.filter(appointment => appointment.id !== id));
+  };
 
-  const resetAppointments = useCallback(() => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setAppointments(MOCK_APPOINTMENTS);
-  }, []);
+  const getAppointmentById = (id: string): AppointmentsEntry | undefined => {
+    return appointments.find(appointment => appointment.id === id);
+  };
 
   return (
-    <AppointmentsContext.Provider
-      value={{
-        appointments,
-        setAppointments,
-        addAppointment,
-        updateAppointment,
-        deleteAppointment,
-        resetAppointments,
-      }}
-    >
+    <AppointmentsContext.Provider value={{
+      appointments,
+      addAppointment,
+      updateAppointment,
+      deleteAppointment,
+      getAppointmentById,
+    }}>
       {children}
     </AppointmentsContext.Provider>
   );

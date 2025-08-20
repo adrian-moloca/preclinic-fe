@@ -27,6 +27,7 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteModal from '../../../components/delete-modal';
+import { IDoctor } from '../../../providers/doctor/types';
 
 export const DoctorDetails: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export const DoctorDetails: FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
-  const doctor = doctors.find(doc => doc.id === id);
+  const doctor = doctors.find((doc: IDoctor) => doc.id === id);
 
   const handleDeleteClick = () => {
     if (doctor) {

@@ -14,6 +14,7 @@ import { usePatientsContext } from "../../providers/patients";
 import { IDepartments, useDepartmentsContext } from "../../providers/departments";
 import { useNavigate } from "react-router-dom";
 import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
+import { AppointmentsEntry } from "../../providers/appointments/types";
 
 interface Patient {
     id: string;
@@ -136,14 +137,23 @@ export const CreateAppointmentForm: FC = () => {
             return;
         }
 
-        if (appointment.department) {
-            addAppointment({
-                ...appointment,
-                patients: [appointment.patientId],
-                status: appointment.status || "scheduled",
-                department: appointment.department,
-            });
-        }
+    if (appointment.department) {
+    const newAppointment: AppointmentsEntry = {
+        id: `apt-${Date.now()}`,
+        patients: [appointment.patientId],
+        patientId: appointment.patientId,
+        appointmentType: appointment.appointmentType,
+        type: appointment.type,
+        date: appointment.date,
+        time: appointment.time,
+        reason: appointment.reason,
+        status: appointment.status || "scheduled",
+        department: appointment.department,
+        duration: 30,
+    };
+    
+    addAppointment(newAppointment);
+}
 
         setAppointment({
             id: generateId(),

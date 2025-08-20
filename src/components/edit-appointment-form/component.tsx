@@ -44,43 +44,32 @@ export const EditAppointmentForm: FC = () => {
         }
     }, [id, appointments]);
 
-    const handleChange = (field: keyof AppointmentsEntry, value: string) => {
+    const handleChange = (field: keyof AppointmentsEntry, value: any) => {
         if (!appointment) return;
 
-        setAppointment((prev) => ({
-            ...prev!,
-            [field]: value,
-        }));
+        setAppointment((prev) => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                [field]: value,
+            };
+        });
 
         setErrors((prev) => ({
             ...prev,
-            [field]: false,
+            [field]: "",
         }));
     };
 
     const handleSubmit = () => {
         if (!appointment) return;
 
-        const newErrors = {
-            patientId: appointment.patientId === "",
-            appointmentType: appointment.appointmentType === "",
-            date: appointment.date === "",
-            time: appointment.time === "",
-            reason: appointment.reason === "",
-        };
-
-        const hasErrors = Object.values(newErrors).some(Boolean);
-
-        if (hasErrors) {
-            setErrors(newErrors);
-            return;
-        }
-
-        updateAppointment({
+        const updatedAppointment: AppointmentsEntry = {
             ...appointment,
             patients: [appointment.patientId],
-        });
+        };
 
+        updateAppointment(updatedAppointment);
         navigate("/appointments/all");
     };
 

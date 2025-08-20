@@ -1,13 +1,14 @@
 import { createContext, useContext } from 'react';
-import { IAppointmentsContext } from './types';
+import { AppointmentsEntry, IAppointmentsContext } from './types';
 
 export const AppointmentsContext = createContext<IAppointmentsContext>({
   appointments: [],
-  setAppointments: () => {},
-  addAppointment: () => {},
-  updateAppointment: () => {},
-  deleteAppointment: () => {},
-  resetAppointments: () => {},
+  addAppointment: () => { },
+  updateAppointment: () => { },
+  deleteAppointment: () => { },
+  getAppointmentById: function (id: string): AppointmentsEntry | undefined {
+    throw new Error('Function not implemented.');
+  }
 });
 
 export const useAppointmentsContext = () => useContext(AppointmentsContext);

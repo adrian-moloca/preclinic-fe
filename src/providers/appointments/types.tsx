@@ -1,6 +1,6 @@
 import { IDepartments } from "../departments";
 
-export type AppointmentsEntry = {
+export interface AppointmentsEntry {
   id: string;
   patients: string[];
   patientId: string; 
@@ -11,13 +11,14 @@ export type AppointmentsEntry = {
   type: string;
   status: string;
   department: IDepartments;
-};
+  doctorId?: string;
+  duration?: number;
+}
 
 export interface IAppointmentsContext {
   appointments: AppointmentsEntry[];
-  setAppointments: React.Dispatch<React.SetStateAction<AppointmentsEntry[]>>;
-  addAppointment: (entry: AppointmentsEntry) => void;
-  updateAppointment: (entry: AppointmentsEntry) => void;
+  addAppointment: (appointment: AppointmentsEntry) => void;
+  updateAppointment: (appointment: AppointmentsEntry) => void;
   deleteAppointment: (id: string) => void;
-  resetAppointments: () => void;
+  getAppointmentById: (id: string) => AppointmentsEntry | undefined;
 }
