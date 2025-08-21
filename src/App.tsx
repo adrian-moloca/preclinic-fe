@@ -18,43 +18,46 @@ import { DepartmentsProvider } from './providers/departments';
 import { PayrollProvider } from './providers/payroll';
 import { InvoicesProvider } from './providers/invoices';
 import { CasesProvider } from './providers/cases';
+import { ThemeProvider } from './providers/theme';
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ScheduleProvider>
-          <PatientsProvider>
-            <AppointmentsProvider>
-              <ProfileProvider>
-                <PrescriptionProvider>
-                  <LeavesProvider>
-                    <ProductsProvider>
-                      <UsersProvider>
-                        <DoctorsProvider>
-                          <AssistentsProvider>
-                            <ServicesProvider>
-                              <DepartmentsProvider>
-                                <PayrollProvider>
-                                  <InvoicesProvider>
-                                    <CasesProvider>
-                                      <Routing />
-                                    </CasesProvider>
-                                  </InvoicesProvider>
-                                </PayrollProvider>
-                              </DepartmentsProvider>
-                            </ServicesProvider>
-                          </AssistentsProvider>
-                        </DoctorsProvider>
-                      </UsersProvider>
-                    </ProductsProvider>
-                  </LeavesProvider>
-                </PrescriptionProvider>
-              </ProfileProvider>
-            </AppointmentsProvider>
-          </PatientsProvider>
-        </ScheduleProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ScheduleProvider>
+            <PatientsProvider>
+              <AppointmentsProvider>
+                <ProfileProvider>
+                  <PrescriptionProvider>
+                    <LeavesProvider>
+                      <ProductsProvider>
+                        <UsersProvider>
+                          <DoctorsProvider>
+                            <AssistentsProvider>
+                              <ServicesProvider>
+                                <DepartmentsProvider>
+                                  <PayrollProvider>
+                                    <InvoicesProvider>
+                                      <CasesProvider>
+                                        <Routing />
+                                      </CasesProvider>
+                                    </InvoicesProvider>
+                                  </PayrollProvider>
+                                </DepartmentsProvider>
+                              </ServicesProvider>
+                            </AssistentsProvider>
+                          </DoctorsProvider>
+                        </UsersProvider>
+                      </ProductsProvider>
+                    </LeavesProvider>
+                  </PrescriptionProvider>
+                </ProfileProvider>
+              </AppointmentsProvider>
+            </PatientsProvider>
+          </ScheduleProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

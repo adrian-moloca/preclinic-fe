@@ -10,6 +10,7 @@ import {
   AppBar,
   Toolbar,
   Divider,
+  useTheme,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { format } from 'date-fns';
@@ -22,6 +23,7 @@ type Message = {
 };
 
 export const Chat: React.FC = () => {
+  const theme = useTheme(); 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,6 +72,8 @@ export const Chat: React.FC = () => {
         flexDirection: 'column',
         borderRadius: 3,
         overflow: 'hidden',
+        backgroundColor: theme.palette.background.paper, 
+        color: theme.palette.text.primary, 
       }}
     >
       <AppBar position="static" color="primary" elevation={1}>
@@ -84,7 +88,9 @@ export const Chat: React.FC = () => {
           flex: 1,
           overflowY: 'auto',
           p: 2,
-          backgroundColor: '#f1f5f9',
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? '#2a2a2a' 
+            : '#f1f5f9',
         }}
       >
         {messages.map((msg) => (
@@ -98,8 +104,8 @@ export const Chat: React.FC = () => {
               {msg.sender === 'bot' && <Avatar sx={{ bgcolor: 'secondary.main' }}>B</Avatar>}
               <Box
                 sx={{
-                  bgcolor: msg.sender === 'me' ? 'primary.main' : 'grey.300',
-                  color: msg.sender === 'me' ? 'white' : 'black',
+                  bgcolor: msg.sender === 'me' ? 'primary.main' : theme.palette.action.selected, 
+                  color: msg.sender === 'me' ? 'white' : theme.palette.text.primary, 
                   px: 2,
                   py: 1,
                   borderRadius: 3,
@@ -125,13 +131,12 @@ export const Chat: React.FC = () => {
 
       <Divider />
 
-      {/* Input */}
       <Box
         sx={{
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          bgcolor: 'white',
+          backgroundColor: theme.palette.background.paper, 
         }}
       >
         <TextField

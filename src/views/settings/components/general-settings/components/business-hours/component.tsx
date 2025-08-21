@@ -6,6 +6,7 @@ import {
   Card,
   Switch,
   FormControlLabel,
+  useTheme,
 } from "@mui/material";
 import { Schedule as ScheduleIcon } from "@mui/icons-material";
 import { FC, useState } from "react";
@@ -34,17 +35,18 @@ interface BusinessHoursProps {
 }
 
 export const BusinessHours: FC<BusinessHoursProps> = ({ settings, onChange }) => {
+  const theme = useTheme(); 
   const [closedDays, setClosedDays] = useState<Record<string, boolean>>({
     sunday: !settings.sundayOpen,
   });
 
   const daysOfWeek = [
-    { key: 'monday', label: 'Monday', color: '#1976d2' },
-    { key: 'tuesday', label: 'Tuesday', color: '#1976d2' },
-    { key: 'wednesday', label: 'Wednesday', color: '#1976d2' },
-    { key: 'thursday', label: 'Thursday', color: '#1976d2' },
-    { key: 'friday', label: 'Friday', color: '#1976d2' },
-    { key: 'saturday', label: 'Saturday', color: '#1976d2' },
+    { key: 'monday', label: 'Monday', color: theme.palette.primary.main }, 
+    { key: 'tuesday', label: 'Tuesday', color: theme.palette.primary.main }, 
+    { key: 'wednesday', label: 'Wednesday', color: theme.palette.primary.main }, 
+    { key: 'thursday', label: 'Thursday', color: theme.palette.primary.main }, 
+    { key: 'friday', label: 'Friday', color: theme.palette.primary.main }, 
+    { key: 'saturday', label: 'Saturday', color: theme.palette.primary.main }, 
   ];
 
   const handleDayToggle = (day: string, isClosed: boolean) => {
@@ -62,8 +64,8 @@ export const BusinessHours: FC<BusinessHoursProps> = ({ settings, onChange }) =>
           sx={{
             p: 1.5,
             borderRadius: 2,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
+            backgroundColor: theme.palette.primary.main, 
+            color: theme.palette.primary.contrastText, 
           }}
         >
           <ScheduleIcon />
@@ -87,12 +89,12 @@ export const BusinessHours: FC<BusinessHoursProps> = ({ settings, onChange }) =>
                 p: 3,
                 borderRadius: 3,
                 border: '2px solid',
-                borderColor: closedDays[day.key] ? 'grey.300' : day.color,
-                background: closedDays[day.key]
-                  ? 'linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 100%)'
-                  : 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+                borderColor: closedDays[day.key] ? theme.palette.divider : day.color, 
+                backgroundColor: closedDays[day.key]
+                  ? theme.palette.action.disabledBackground 
+                  : theme.palette.background.paper, 
                 transition: 'all 0.3s ease',
-                height: "100px", 
+                height: "150px", 
                 width: "300px"
               }}
             >
@@ -117,52 +119,27 @@ export const BusinessHours: FC<BusinessHoursProps> = ({ settings, onChange }) =>
               </Box>
               
               {!closedDays[day.key] ? (
-                <Grid container spacing={2} sx={{ display: "flex", justifyContent: "center" }}>
-                  <Grid>
-                    <TextField
-                      fullWidth
-                      label="Open"
-                      type="time"
-                      size="small"
-                      value={settings[`${day.key}Open` as keyof BusinessHoursSettings]}
-                      onChange={(e) => onChange(`${day.key}Open` as keyof BusinessHoursSettings, e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
-                      }}
-                    />
-                  </Grid>
-                  <Grid>
-                    <TextField
-                      fullWidth
-                      label="Close"
-                      type="time"
-                      size="small"
-                      value={settings[`${day.key}Close` as keyof BusinessHoursSettings]}
-                      onChange={(e) => onChange(`${day.key}Close` as keyof BusinessHoursSettings, e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                        },
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              ) : (
-                <Box
-                  sx={{
-                    textAlign: 'center',
-                    py: 2,
-                    color: 'text.secondary',
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={500}>
-                    Closed
-                  </Typography>
+                <Box display="flex" gap={1} alignItems="center">
+                  <TextField
+                    type="time"
+                    size="small"
+                    value={settings[`${day.key}Open` as keyof BusinessHoursSettings]}
+                    onChange={(e) => onChange(`${day.key}Open` as keyof BusinessHoursSettings, e.target.value)}
+                    sx={{ width: 120 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">to</Typography>
+                  <TextField
+                    type="time"
+                    size="small"
+                    value={settings[`${day.key}Close` as keyof BusinessHoursSettings]}
+                    onChange={(e) => onChange(`${day.key}Close` as keyof BusinessHoursSettings, e.target.value)}
+                    sx={{ width: 120 }}
+                  />
                 </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Closed
+                </Typography>
               )}
             </Card>
           </Grid>

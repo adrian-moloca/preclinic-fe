@@ -1,9 +1,9 @@
 // src/components/add-invoice-form/patient-information/component.tsx
 import React, { FC } from "react";
 import { Card, CardContent, Typography, Grid, TextField, MenuItem, Avatar, Box } from "@mui/material";
-import { IInvoice } from "../../../providers/invoices/types";
-import { PatientsEntry } from "../../../providers/patients/types";
-import { AppointmentsEntry } from "../../../providers/appointments/types";
+import { IInvoice } from "../../../../providers/invoices/types";
+import { PatientsEntry } from "../../../../providers/patients/types";
+import { AppointmentsEntry } from "../../../../providers/appointments/types";
 
 interface PatientInformationProps {
     formData: Partial<IInvoice>;

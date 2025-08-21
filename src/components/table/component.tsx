@@ -10,15 +10,12 @@ import {
   TablePagination,
   TableSortLabel,
   Typography,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
   Checkbox,
   Toolbar,
   alpha,
   IconButton,
   Tooltip,
+  useTheme,
 } from "@mui/material";
 import { FC, useState, useMemo } from "react";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -68,6 +65,7 @@ export const ReusableTable: FC<ReusableTableProps> = ({
   enableSorting = true,
   stickyHeader = true,
 }) => {
+  const theme = useTheme();
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<string>('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -102,20 +100,30 @@ export const ReusableTable: FC<ReusableTableProps> = ({
     });
   }, [data, order, orderBy, enableSorting]);
 
+  const filteredData = useMemo(() => {
+    if (!searchQuery) return sortedData;
+
+    return sortedData.filter((row) =>
+      Object.values(row).some((value) =>
+        String(value).toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [sortedData, searchQuery]);
+
   const paginatedData = useMemo(() => {
-    if (!enablePagination) return sortedData;
+    if (!enablePagination) return filteredData;
     
     const startIndex = page * rowsPerPage;
-    return sortedData.slice(startIndex, startIndex + rowsPerPage);
-  }, [sortedData, page, rowsPerPage, enablePagination]);
+    return filteredData.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredData, page, rowsPerPage, enablePagination]);
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = data.map((row) => row.id);
+      const newSelected = data.map((n) => n.id);
       setSelected(newSelected);
-    } else {
-      setSelected([]);
+      return;
     }
+    setSelected([]);
   };
 
   const handleClick = (id: string) => {
@@ -131,36 +139,44 @@ export const ReusableTable: FC<ReusableTableProps> = ({
     } else if (selectedIndex > 0) {
       newSelected = newSelected.concat(
         selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
+        selected.slice(selectedIndex + 1)
       );
     }
+
     setSelected(newSelected);
   };
-
-  const isSelected = (id: string) => selected.indexOf(id) !== -1;
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: any) => {
-    const value = event.target.value;
-    setRowsPerPage(Number(value));
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
   const handleDeleteSelected = () => {
-    if (onDeleteSelected && selected.length > 0) {
+    if (onDeleteSelected) {
       onDeleteSelected(selected);
       setSelected([]);
     }
   };
 
-  if (data.length === 0) {
+  const isSelected = (id: string) => selected.indexOf(id) !== -1;
+
+  if (filteredData.length === 0) {
     return (
-      <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: 'grey.50' }}>
-        <Typography variant="h6" color="text.secondary">
-          {emptyMessage}
+      <Paper 
+        sx={{ 
+          p: 4, 
+          textAlign: 'center', 
+          borderRadius: 3,
+          backgroundColor: theme.palette.background.paper, 
+          color: theme.palette.text.primary,
+        }}
+      >
+        <Typography variant="h6" gutterBottom color="text.secondary">
+          {searchQuery ? 'No Search Results' : emptyMessage}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           {searchQuery ? 'No items match your search criteria.' : emptyDescription}
@@ -199,12 +215,25 @@ export const ReusableTable: FC<ReusableTableProps> = ({
         </Toolbar>
       )}
 
-      <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          borderRadius: 3,
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+        }}
+      >
         <Table stickyHeader={stickyHeader}>
           <TableHead>
             <TableRow>
               {enableSelection && (
-                <TableCell padding="checkbox">
+                <TableCell 
+                  padding="checkbox"
+                  sx={{
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                  }}
+                >
                   <Checkbox
                     color="primary"
                     indeterminate={selected.length > 0 && selected.length < data.length}
@@ -219,6 +248,10 @@ export const ReusableTable: FC<ReusableTableProps> = ({
                   align={column.align}
                   style={{ minWidth: column.minWidth }}
                   sortDirection={orderBy === column.id ? order : false}
+                  sx={{
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                  }}
                 >
                   {enableSorting && column.sortable !== false ? (
                     <TableSortLabel
@@ -262,8 +295,13 @@ export const ReusableTable: FC<ReusableTableProps> = ({
                   selected={isItemSelected}
                   sx={{
                     cursor: onRowClick || enableSelection ? 'pointer' : 'default',
-                    backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa",
-                    '&:hover': { backgroundColor: "#f9f9f9" },
+                    backgroundColor: index % 2 === 0 
+                      ? theme.palette.background.paper 
+                      : theme.palette.action.hover,
+                    '&:hover': { 
+                      backgroundColor: theme.palette.action.selected,
+                    },
+                    color: theme.palette.text.primary,
                   }}
                 >
                   {enableSelection && (
@@ -293,40 +331,19 @@ export const ReusableTable: FC<ReusableTableProps> = ({
       </TableContainer>
 
       {enablePagination && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Rows per page</InputLabel>
-              <Select
-                value={rowsPerPage}
-                label="Rows per page"
-                onChange={handleChangeRowsPerPage}
-              >
-                {rowsPerPageOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Typography variant="body2" color="text.secondary">
-              Showing {Math.min(page * rowsPerPage + 1, data.length)}-{Math.min((page + 1) * rowsPerPage, data.length)} of {data.length} items
-            </Typography>
-          </Box>
-          
-          <TablePagination
-            component="div"
-            count={data.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[]}
-            labelRowsPerPage=""
-            showFirstButton
-            showLastButton
-          />
-        </Box>
+        <TablePagination
+          rowsPerPageOptions={rowsPerPageOptions}
+          component="div"
+          count={filteredData.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          }}
+        />
       )}
     </Box>
   );

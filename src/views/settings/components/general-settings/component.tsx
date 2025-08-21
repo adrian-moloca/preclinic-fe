@@ -5,6 +5,7 @@ import {
   Button,
   Alert,
   Fade,
+  useTheme,
 } from "@mui/material";
 import { Save as SaveIcon } from "@mui/icons-material";
 import { FC, useState } from "react";
@@ -12,9 +13,9 @@ import { ClinicInformation } from "./components/clinic-information/component";
 import { BusinessHours } from "./components/business-hours/component";
 import { Preferences } from "./components/preferences/component";
 import NotificationGeneralSettings from "./components/notifications-settings";
+import ThemeSettings from "./components/theme-settings";
 
 interface ClinicSettings {
-  // Clinic Information
   clinicName: string;
   clinicDescription: string;
   clinicLogo: string;
@@ -25,8 +26,6 @@ interface ClinicSettings {
   phone: string;
   email: string;
   website: string;
-  
-  // Business Hours
   mondayOpen: string;
   mondayClose: string;
   tuesdayOpen: string;
@@ -41,16 +40,12 @@ interface ClinicSettings {
   saturdayClose: string;
   sundayOpen: string;
   sundayClose: string;
-  
-  // Preferences
   timeZone: string;
   dateFormat: string;
   timeFormat: string;
   currency: string;
   language: string;
   theme: string;
-  
-  // Notifications
   emailNotifications: boolean;
   smsNotifications: boolean;
   appointmentReminders: boolean;
@@ -59,6 +54,7 @@ interface ClinicSettings {
 }
 
 export const GeneralSettings: FC = () => {
+  const theme = useTheme();
   const [settings, setSettings] = useState<ClinicSettings>({
     clinicName: "Downtown Medical Clinic",
     clinicDescription: "Providing quality healthcare services to our community",
@@ -70,7 +66,6 @@ export const GeneralSettings: FC = () => {
     phone: "+1 (555) 123-4567",
     email: "info@downtownmedical.com",
     website: "www.downtownmedical.com",
-    
     mondayOpen: "09:00",
     mondayClose: "17:00",
     tuesdayOpen: "09:00",
@@ -85,14 +80,12 @@ export const GeneralSettings: FC = () => {
     saturdayClose: "14:00",
     sundayOpen: "",
     sundayClose: "",
-    
     timeZone: "America/New_York",
     dateFormat: "MM/DD/YYYY",
     timeFormat: "12-hour",
     currency: "USD",
     language: "en",
     theme: "light",
-    
     emailNotifications: true,
     smsNotifications: true,
     appointmentReminders: true,
@@ -101,35 +94,54 @@ export const GeneralSettings: FC = () => {
   });
 
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const handleInputChange = (field: keyof ClinicSettings, value: string | number | boolean) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleThemeChange = () => {
+    setHasChanges(true);
   };
 
   const handleSave = () => {
     setAlert({ type: 'success', message: 'Settings saved successfully! 🎉' });
+    setHasChanges(false);
     setTimeout(() => setAlert(null), 5000);
   };
 
   return (
     <Box
       sx={{
-        p: 4,
+        p: { xs: 2, md: 4 },
         minHeight: '100vh',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        bgcolor: theme.palette.background.default,
+        transition: "background-color 0.3s",
       }}
     >
-      {/* Header */}
       <Box
         display="flex"
+        flexDirection={{ xs: "column", md: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        mb={4}
+        alignItems={{ xs: "flex-start", md: "center" }}
+        width={{ xs: "100%", md: "1170px" }}
+        mb={2}
         sx={{
-          background: 'rgba(255, 255, 255, 0.9)',
+          background: theme.palette.mode === "dark"
+            ? "rgba(30, 32, 36, 0.98)"
+            : "rgba(255, 255, 255, 0.9)",
           backdropFilter: 'blur(10px)',
-          p: 3,
+          p: { xs: 2, md: 3 },
           borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          boxShadow: theme.palette.mode === "dark"
+            ? "0 8px 32px rgba(0,0,0,0.5)"
+            : "0 8px 32px rgba(0,0,0,0.1)",
+          color: theme.palette.text.primary,
+          transition: "background 0.3s, box-shadow 0.3s",
         }}
       >
         <Box>
@@ -137,7 +149,7 @@ export const GeneralSettings: FC = () => {
             variant="h4"
             fontWeight={800}
             sx={{
-              background: '#000',
+              background: theme.palette.mode === "dark" ? "#fff" : "#000",
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -160,23 +172,27 @@ export const GeneralSettings: FC = () => {
             fontWeight: 700,
             px: 4,
             py: 1.5,
-            background: 'primary',
-            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+            background: theme.palette.primary.main,
+            boxShadow: theme.palette.mode === "dark"
+              ? "0 8px 25px rgba(102, 126, 234, 0.5)"
+              : "0 8px 25px rgba(102, 126, 234, 0.3)",
             '&:hover': {
-              background: 'linear-gradient(135deg, #5a6fd8 0%)',
+              background: theme.palette.primary.dark,
               transform: 'translateY(-2px)',
-              boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+              boxShadow: theme.palette.mode === "dark"
+                ? "0 12px 35px rgba(102, 126, 234, 0.7)"
+                : "0 12px 35px rgba(102, 126, 234, 0.4)",
             },
             transition: 'all 0.3s ease',
           }}
+          disabled={!hasChanges}
         >
           Save Changes
         </Button>
       </Box>
 
-      {/* Alert */}
       <Fade in={!!alert} timeout={500}>
-        <Box mb={3}>
+        <Box mb={3} width={{ xs: "100%", md: "1170px" }}>
           {alert && (
             <Alert
               severity={alert.type}
@@ -194,8 +210,15 @@ export const GeneralSettings: FC = () => {
         </Box>
       </Fade>
 
-      {/* Content */}
-      <Grid container spacing={4}>
+      <Grid
+        container
+        spacing={4}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          width: { xs: "100%", md: "1170px" },
+        }}
+      >
         <Grid>
           <ClinicInformation
             settings={settings}
@@ -222,6 +245,9 @@ export const GeneralSettings: FC = () => {
             settings={settings}
             onChange={handleInputChange}
           />
+        </Grid>
+        <Grid>
+          <ThemeSettings onChange={handleThemeChange} />
         </Grid>
       </Grid>
     </Box>

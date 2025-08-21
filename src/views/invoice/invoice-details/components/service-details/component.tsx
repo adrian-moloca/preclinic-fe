@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Card, CardContent, Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useTheme } from '@mui/material';
 import { LocalShipping, Business } from '@mui/icons-material';
 import { IInvoice } from '../../../../../providers/invoices';
 
@@ -14,8 +14,14 @@ export const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({
     formatCurrency,
     subtotal
 }) => {
+    const theme = useTheme(); 
+
     return (
-        <Card sx={{ boxShadow: 2 }}>
+        <Card sx={{ 
+          boxShadow: 2,
+          backgroundColor: theme.palette.background.paper, 
+          color: theme.palette.text.primary, 
+        }}>
             <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <LocalShipping color="primary" />
@@ -24,10 +30,18 @@ export const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({
                     </Typography>
                 </Box>
 
-                <TableContainer component={Paper} sx={{ boxShadow: 1 }}>
+                <TableContainer 
+                  component={Paper} 
+                  sx={{ 
+                    boxShadow: 1,
+                    backgroundColor: theme.palette.background.paper, 
+                  }}
+                >
                     <Table>
                         <TableHead>
-                            <TableRow sx={{ bgcolor: 'primary.main' }}>
+                            <TableRow sx={{ 
+                              bgcolor: theme.palette.primary.main, 
+                            }}>
                                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Department</TableCell>
                                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Service/Product</TableCell>
                                 <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Quantity</TableCell>
@@ -35,7 +49,12 @@ export const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            <TableRow sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.50' } }}>
+                            <TableRow sx={{ 
+                              '&:nth-of-type(odd)': { 
+                                bgcolor: theme.palette.action.hover, 
+                              },
+                              backgroundColor: theme.palette.background.paper, 
+                            }}>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Business sx={{ color: 'grey.500', fontSize: 20 }} />

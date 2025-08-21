@@ -1,5 +1,5 @@
 import React, { FC, useState, useEffect, useMemo } from "react";
-import { Box, Paper, Divider, Button, Typography } from "@mui/material";
+import { Box, Paper, Divider, Button, Typography, useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { usePatientsContext } from "../../providers/patients";
@@ -7,6 +7,7 @@ import { useAppointmentsContext } from "../../providers/appointments";
 import { useProductsContext } from "../../providers/products";
 import { useInvoicesContext } from "../../providers/invoices";
 import { useDepartmentsContext } from "../../providers/departments";
+import { useServicesContext } from "../../providers/services";
 import { IInvoice } from "../../providers/invoices/types";
 import { PatientsEntry } from "../../providers/patients/types";
 import { AppointmentsEntry } from "../../providers/appointments/types";
@@ -14,10 +15,10 @@ import { MedicalProduct } from "../../providers/products/types";
 import { Service } from "../../providers/cases/types";
 import ProductsSection from "./components/products-section";
 import DepartmentPaymentInfo from "./components/department-payment";
-import PatientInformation from "./patient-information";
+import PatientInformation from "./components/patient-information";
 import InvoiceBasicInfo from "./components/basic-info";
 import InvoiceHeader from "./components/invoice-header";
-import ServicesSection from "../edit-case-form/components/service-table";
+import ServicesSection from "./components/service-section";
 
 export interface InvoiceProduct {
     productId: string;
@@ -65,27 +66,26 @@ interface AddInvoiceFormProps {
     onInvoiceCreated?: (invoice: IInvoice) => void;
 }
 
-export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({ 
-    initialData, 
-    onInvoiceCreated 
+export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
+    initialData,
+    onInvoiceCreated
 }) => {
+    const theme = useTheme();
     const navigate = useNavigate();
     const { patients } = usePatientsContext();
     const { appointments } = useAppointmentsContext();
     const { products } = useProductsContext();
     const { departments } = useDepartmentsContext();
+    const { services } = useServicesContext(); 
     const { addInvoice } = useInvoicesContext();
 
-    console.log("AddInvoiceForm received initialData:", initialData);
-
-    // Helper functions for price calculation
     const calculateServicesTotal = (services: Service[]): number => {
         return services.reduce((total, service) => total + (service.price || 0), 0);
     };
 
     const generateServiceDescription = (services: Service[]): string => {
         if (!services || services.length === 0) return "";
-        return services.map(service => 
+        return services.map(service =>
             `${service.name}${service.description ? ` - ${service.description}` : ''}`
         ).join(", ");
     };
@@ -94,14 +94,12 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         if (initialData?.appointment?.department) {
             return initialData.appointment.department;
         }
-        
         if (initialData?.services && initialData.services.length > 0) {
             const firstServiceWithDept = initialData.services.find(s => s.category);
             if (firstServiceWithDept) {
                 return firstServiceWithDept.category || '';
             }
         }
-        
         return '';
     };
 
@@ -133,6 +131,13 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         return Object.values(departments).flat() as DepartmentEntry[];
     }, [departments]);
 
+    const servicesArray = useMemo(() => {
+        if (Array.isArray(services)) {
+            return services;
+        }
+        return Object.values(services).flat();
+    }, [services]);
+
     const [formData, setFormData] = useState<Partial<IInvoice>>(() => {
         const baseFormData = {
             id: uuidv4(),
@@ -160,15 +165,6 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
             const servicesTotal = calculateServicesTotal(initialData.services || []);
             const serviceDescription = generateServiceDescription(initialData.services || []);
             const departmentName = getDepartmentFromData();
-            
-            console.log("Pre-filling form with:", {
-                patientName: initialData.patientName,
-                email: initialData.email,
-                department: departmentName,
-                servicesTotal,
-                serviceDescription
-            });
-
             return {
                 ...baseFormData,
                 patientId: initialData.patientId || baseFormData.patientId,
@@ -182,14 +178,12 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                 amount: servicesTotal.toString(),
             };
         }
-
         return baseFormData;
     });
 
     const [selectedPatient, setSelectedPatient] = useState<PatientsEntry | null>(() => {
         if (initialData?.patientId) {
             const patient = patientsArray.find(p => p.id === initialData.patientId);
-            console.log("Found patient for pre-selection:", patient);
             return patient || null;
         }
         return null;
@@ -209,7 +203,6 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                 amount: service.price || 0,
                 department: service.category || getDepartmentFromData() || 'General'
             }));
-            console.log("Pre-filled services:", services);
             return services;
         }
         return [];
@@ -221,7 +214,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
 
     const filteredAppointments = useMemo(() => {
         if (!appointmentFilter.trim()) return patientAppointments;
-        return patientAppointments.filter(app => 
+        return patientAppointments.filter(app =>
             app.id.toLowerCase().includes(appointmentFilter.toLowerCase()) ||
             app.reason?.toLowerCase().includes(appointmentFilter.toLowerCase())
         );
@@ -296,11 +289,11 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         if (!selectedProductData) return;
 
         const existingProductIndex = selectedProducts.findIndex(p => p.productId === currentProduct.productId);
-        
+
         if (existingProductIndex !== -1) {
             const updatedProducts = [...selectedProducts];
             updatedProducts[existingProductIndex].quantity += currentProduct.quantity;
-            updatedProducts[existingProductIndex].amount = 
+            updatedProducts[existingProductIndex].amount =
                 updatedProducts[existingProductIndex].quantity * updatedProducts[existingProductIndex].unitCost;
             setSelectedProducts(updatedProducts);
         } else {
@@ -326,6 +319,11 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         setSelectedServices(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleAddService = (service: InvoiceService) => {
+        console.log("Adding service to invoice:", service);
+        setSelectedServices(prev => [...prev, service]);
+    };
+
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
 
@@ -346,11 +344,11 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
     const handleSubmit = () => {
         if (!validateForm()) return;
 
-        const servicesDescription = selectedServices.map(s => 
+        const servicesDescription = selectedServices.map(s =>
             `${s.serviceName} (Medical Service)`
         ).join(", ");
-        
-        const productsDescription = selectedProducts.map(p => 
+
+        const productsDescription = selectedProducts.map(p =>
             `${p.productName} (Qty: ${p.quantity})`
         ).join(", ");
 
@@ -358,8 +356,8 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
             .filter(Boolean)
             .join(", ");
 
-        const mainItemName = selectedServices[0] ? 
-            selectedServices[0].serviceName : 
+        const mainItemName = selectedServices[0] ?
+            selectedServices[0].serviceName :
             selectedProducts[0]?.productName || "Medical Services";
 
         const invoice: IInvoice = {
@@ -371,9 +369,8 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
             amount: totalAmount.toString()
         } as IInvoice;
 
-        console.log("Creating invoice:", invoice);
         addInvoice(invoice);
-        
+
         if (onInvoiceCreated) {
             onInvoiceCreated(invoice);
         } else {
@@ -382,28 +379,36 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
     };
 
     return (
-        <Box 
-            display="flex" 
-            justifyContent="center" 
-            p={3}
+        <Box
+            display="flex"
+            justifyContent="center"
+            p={{ xs: 1, md: 3 }}
             sx={{
                 minHeight: onInvoiceCreated ? "auto" : "100vh",
-                backgroundColor: "#fafafa"
+                backgroundColor: theme.palette.background.default,
+                transition: "background-color 0.3s",
             }}
         >
-            <Paper 
-                elevation={2} 
-                sx={{ 
-                    maxWidth: 1400, 
-                    width: "100%", 
-                    p: 4,
+            <Paper
+                elevation={2}
+                sx={{
+                    maxWidth: 1400,
+                    width: "100%",
+                    p: { xs: 2, md: 4 },
                     borderRadius: 3,
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+                    boxShadow: theme.palette.mode === "dark"
+                        ? "0 4px 20px rgba(0,0,0,0.3)"
+                        : "0 4px 20px rgba(0,0,0,0.08)",
+                    backgroundColor: theme.palette.mode === "dark"
+                        ? theme.palette.background.paper
+                        : "#fff",
+                    color: theme.palette.text.primary,
+                    transition: "background 0.3s, color 0.3s",
                 }}
             >
                 <InvoiceHeader title={onInvoiceCreated ? "Generate Invoice" : "Create Invoice"} />
 
-                <Divider sx={{ mb: 4, borderColor: "#e0e0e0" }} />
+                <Divider sx={{ mb: 4, borderColor: theme.palette.divider }} />
 
                 <InvoiceBasicInfo
                     formData={formData}
@@ -431,15 +436,11 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                 />
 
                 <ServicesSection
-                    services={selectedServices}
-                    servicesList={[]} 
-                    openServiceDialog={false} 
-                    setOpenServiceDialog={() => {}} 
-                    selectedService={null} 
-                    setSelectedService={() => {}}
-                    handleAddService={() => {}} 
-                    handleRemoveService={(id: string) => removeService(selectedServices.findIndex(s => s.serviceId === id))}
-                    calculateTotal={() => servicesTotal}
+                    selectedServices={selectedServices}
+                    availableServices={servicesArray}
+                    onAddService={handleAddService} 
+                    onRemoveService={removeService} 
+                    isReadOnly={false} 
                 />
 
                 <ProductsSection
@@ -460,15 +461,17 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                     </Box>
                 )}
 
-                <Box sx={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "flex-end", 
+                <Box sx={{
+                    display: "flex",
+                    flexDirection: { xs: "column", md: "row" },
+                    justifyContent: "space-between",
+                    alignItems: { xs: "stretch", md: "flex-end" },
                     mt: 4,
-                    p: 3,
-                    bgcolor: '#f8f9fa',
+                    p: { xs: 2, md: 3 },
+                    bgcolor: theme.palette.mode === "dark" ? "rgba(102,126,234,0.08)" : '#f8f9fa',
                     borderRadius: 2,
-                    border: '1px solid #e9ecef'
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: "background 0.3s, border 0.3s",
                 }}>
                     <Box>
                         {servicesTotal > 0 && (
@@ -482,13 +485,13 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                             </Typography>
                         )}
                     </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                    <Box sx={{ textAlign: { xs: "left", md: "right" } }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                             Grand Total: ${totalAmount.toFixed(2)}
                         </Typography>
-                        <Button 
-                            variant="contained" 
-                            size="large" 
+                        <Button
+                            variant="contained"
+                            size="large"
                             onClick={handleSubmit}
                             sx={{ px: 4, mt: 2 }}
                         >

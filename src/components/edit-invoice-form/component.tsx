@@ -12,7 +12,7 @@ import { AppointmentsEntry } from "../../providers/appointments/types";
 import { MedicalProduct } from "../../providers/products/types";
 import InvoiceHeader from "../add-invoice-form/components/invoice-header";
 import InvoiceBasicInfo from "../add-invoice-form/components/basic-info";
-import PatientInformation from "../add-invoice-form/patient-information";
+import PatientInformation from "../add-invoice-form/components/patient-information";
 import DepartmentPaymentInfo from "../add-invoice-form/components/department-payment";
 import ProductsSection from "../add-invoice-form/components/products-section";
 

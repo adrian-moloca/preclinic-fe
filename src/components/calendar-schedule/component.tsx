@@ -32,6 +32,7 @@ export const ScheduleCalendar: React.FC = () => {
   const [showMiniCalendar, setShowMiniCalendar] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -67,88 +68,102 @@ export const ScheduleCalendar: React.FC = () => {
     return [];
   }, [doctors]);
 
-  const uniqueDepartments = useMemo(() => {
-    if (!appointments) return [];
+  const orderedDoctorIds = useMemo(() => {
+    if (!appointments || !Array.isArray(appointments)) return [];
     
-    const departments: string[] = [];
+    const uniqueIds = Array.from(new Set(
+      appointments
+        .map(apt => apt.doctorId)
+        .filter(id => id && id.trim() !== '')
+    ));
     
-    appointments.forEach(apt => {
-      let departmentName: string | null = null;
-      
-      if (apt.department) {
-        if (typeof apt.department === 'string') {
-          departmentName = apt.department;
-        } else if (apt.department && typeof apt.department === 'object' && apt.department.name) {
-          departmentName = apt.department.name;
-        }
-      }
-      
-      if (departmentName && typeof departmentName === 'string' && departmentName.trim() !== '') {
-        departments.push(departmentName.toLowerCase());
-      }
-    });
-    
-    return Array.from(new Set(departments));
+    return uniqueIds.sort();
   }, [appointments]);
 
-  const uniqueAppointmentTypes = useMemo(() => {
-    if (!appointments) return [];
+  const orderedDepartments = useMemo(() => {
+    if (!appointments || !Array.isArray(appointments)) return [];
     
-    const types: string[] = [];
+    const uniqueDepts = new Set<string>();
     
     appointments.forEach(apt => {
-      if (apt.type && typeof apt.type === 'string' && apt.type.trim() !== '') {
-        types.push(apt.type);
+      let departmentName = '';
+      if (typeof apt.department === 'string') {
+        departmentName = (apt.department as string).toLowerCase();
+      } else if (
+        apt.department &&
+        typeof apt.department === 'object' &&
+        typeof apt.department.name === 'string'
+      ) {
+        departmentName = apt.department.name.toLowerCase();
+      }
+      
+      if (departmentName && departmentName.trim() !== '') {
+        uniqueDepts.add(departmentName);
       }
     });
     
-    return Array.from(new Set(types));
+    return Array.from(uniqueDepts).sort();
+  }, [appointments]);
+
+  const orderedTypes = useMemo(() => {
+    if (!appointments || !Array.isArray(appointments)) return [];
+    
+    const uniqueTypes = Array.from(new Set(
+      appointments
+        .map(apt => apt.type)
+        .filter(type => type && typeof type === 'string' && type.trim() !== '')
+    ));
+    
+    return uniqueTypes.sort();
   }, [appointments]);
 
   const getAppointmentColor = useCallback((appointment: any): string => {
-    switch (colorBy) {
-      case 'doctor':
-        if (appointment.doctorId && normalizeDoctorsData.length > 0) {
-          const doctorIndex = normalizeDoctorsData.findIndex(
-            (doctor: any) => doctor.id === appointment.doctorId
-          );
-          
-          if (doctorIndex !== -1) {
-            const color = DOCTOR_COLORS[doctorIndex % DOCTOR_COLORS.length];
-            return color;
-          }
-        }
-        return '#9E9E9E';
+    if (colorBy === 'doctor') {
+      if (!appointment.doctorId) return '#9E9E9E';
       
-      case 'department':
-        let departmentName = '';
-        if (typeof appointment.department === 'string') {
-          departmentName = appointment.department.toLowerCase();
-        } else if (appointment.department && appointment.department.name) {
-          departmentName = appointment.department.name.toLowerCase();
-        }
-        
-        if (departmentName && DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS]) {
-          const color = DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS];
-          return color;
-        }
-        
-        return '#607D8B';
+      const index = orderedDoctorIds.indexOf(appointment.doctorId);
+      if (index === -1) return '#9E9E9E';
       
-      case 'type':
-        const appointmentType = appointment.type;
-        
-        if (appointmentType && APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS]) {
-          const color = APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS];
-          return color;
-        }
-        
-        return '#2196F3';
-      
-      default:
-        return '#2196F3';
+      const color = DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+      return color;
     }
-  }, [colorBy, normalizeDoctorsData]);
+    
+    if (colorBy === 'department') {
+      let departmentName = '';
+      if (typeof appointment.department === 'string') {
+        departmentName = appointment.department.toLowerCase();
+      } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
+        departmentName = appointment.department.name.toLowerCase();
+      }
+      
+      if (!departmentName) return '#607D8B';
+      
+      if (DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS]) {
+        return DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS];
+      }
+      
+      const index = orderedDepartments.indexOf(departmentName);
+      if (index === -1) return '#607D8B';
+      
+      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+    }
+    
+    if (colorBy === 'type') {
+      const appointmentType = appointment.type;
+      if (!appointmentType) return '#2196F3';
+      
+      if (APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS]) {
+        return APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS];
+      }
+      
+      const index = orderedTypes.indexOf(appointmentType);
+      if (index === -1) return '#2196F3';
+      
+      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+    }
+    
+    return '#2196F3';
+  }, [colorBy, orderedDoctorIds, orderedDepartments, orderedTypes]);
 
   const appointmentEvents = useMemo((): CalendarEvent[] => {
     if (!appointments || !Array.isArray(appointments)) return [];
@@ -176,7 +191,7 @@ export const ScheduleCalendar: React.FC = () => {
 
       const eventColor = getAppointmentColor(appointment);
 
-      let departmentName: string = '';
+      let departmentName = '';
       if (typeof appointment.department === 'string') {
         departmentName = appointment.department;
       } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
@@ -184,7 +199,7 @@ export const ScheduleCalendar: React.FC = () => {
       }
 
       return {
-        id: `appointment-${appointment.id}`,
+        id: `appointment-${appointment.id}-${refreshKey}`,
         title: patientName,
         start: `${appointment.date}T${appointment.time}`,
         end: endDateTime.toISOString(),
@@ -202,33 +217,21 @@ export const ScheduleCalendar: React.FC = () => {
           consultationType: appointment.type,
           type: 'appointment' as const,
           reason: appointment.reason,
+          expectedColor: eventColor,
+          colorMode: colorBy,
         }
       };
     });
-  }, [appointments, patients, getAppointmentColor]);
+  }, [appointments, patients, getAppointmentColor, refreshKey, colorBy]); 
 
   useEffect(() => {
     setEvents([...appointmentEvents, ...customEvents]);
   }, [appointmentEvents, customEvents]);
 
-  const resources = useMemo(() => {
-    const defaultResource = { id: 'unassigned', title: 'Unassigned' };
-    
-    if (!normalizeDoctorsData || normalizeDoctorsData.length === 0) {
-      return [defaultResource];
-    }
-
-    const doctorResources = normalizeDoctorsData.map((doctor: any) => ({
-      id: doctor.id,
-      title: `Dr. ${doctor.firstName || ''} ${doctor.lastName || ''}`.trim(),
-      department: doctor.department,
-    }));
-
-    return [defaultResource, ...doctorResources];
-  }, [normalizeDoctorsData]);
-
   const handleColorByChange = (newColorBy: 'type' | 'doctor' | 'department') => {
+    console.log(`🔄 Changing color mode from ${colorBy} to ${newColorBy}`);
     setColorBy(newColorBy);
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleDateClick = (info: DateClickArg) => {
@@ -370,6 +373,28 @@ export const ScheduleCalendar: React.FC = () => {
     );
   };
 
+  const getLegendColor = (item: string, index: number, mode: 'doctor' | 'department' | 'type'): string => {
+    if (mode === 'doctor') {
+      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+    }
+    
+    if (mode === 'department') {
+      if (DEPARTMENT_COLORS[item as keyof typeof DEPARTMENT_COLORS]) {
+        return DEPARTMENT_COLORS[item as keyof typeof DEPARTMENT_COLORS];
+      }
+      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+    }
+    
+    if (mode === 'type') {
+      if (APPOINTMENT_TYPE_COLORS[item as keyof typeof APPOINTMENT_TYPE_COLORS]) {
+        return APPOINTMENT_TYPE_COLORS[item as keyof typeof APPOINTMENT_TYPE_COLORS];
+      }
+      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+    }
+    
+    return '#2196F3';
+  };
+
   return (
     <Box sx={{ maxWidth: 1400, margin: "auto", p: 2 }}>
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -425,15 +450,20 @@ export const ScheduleCalendar: React.FC = () => {
 
         <Box mt={2} display="flex" flexWrap="wrap" gap={1} alignItems="center">
           <Typography variant="subtitle2" sx={{ mr: 2, fontWeight: 600 }}>
-            Color Legend:
+            Color Legend ({colorBy}):
           </Typography>
           
-          {colorBy === 'doctor' && resources.filter(r => r.id !== 'unassigned').map((doctor, index) => {
-            const color = DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+          {colorBy === 'doctor' && orderedDoctorIds.map((doctorId, index) => {
+            const doctor = normalizeDoctorsData.find((d: any) => d && d.id === doctorId);
+            const color = getLegendColor(doctorId ?? '', index, 'doctor');
+            const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
+              ? `Dr. ${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
+              : `Doctor ${doctorId}`;
+            
             return (
               <Chip
-                key={doctor.id}
-                label={doctor.title}
+                key={doctorId}
+                label={doctorName}
                 size="small"
                 sx={{ 
                   bgcolor: color, 
@@ -445,8 +475,9 @@ export const ScheduleCalendar: React.FC = () => {
             );
           })}
           
-          {colorBy === 'department' && uniqueDepartments.map((dept) => {
-            const color = DEPARTMENT_COLORS[dept as keyof typeof DEPARTMENT_COLORS] || '#607D8B';
+          {colorBy === 'department' && orderedDepartments.map((dept, index) => {
+            const color = getLegendColor(dept, index, 'department');
+            
             return (
               <Chip
                 key={dept}
@@ -462,8 +493,9 @@ export const ScheduleCalendar: React.FC = () => {
             );
           })}
           
-          {colorBy === 'type' && uniqueAppointmentTypes.map((type) => {
-            const color = APPOINTMENT_TYPE_COLORS[type as keyof typeof APPOINTMENT_TYPE_COLORS] || '#2196F3';
+          {colorBy === 'type' && orderedTypes.map((type, index) => {
+            const color = getLegendColor(type, index, 'type');
+            
             return (
               <Chip
                 key={type}
@@ -506,7 +538,7 @@ export const ScheduleCalendar: React.FC = () => {
         <Box sx={{ flex: 1 }}>
           <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
             <FullCalendar
-              key={`calendar-${colorBy}`} 
+              key={`calendar-${colorBy}-${refreshKey}`} 
               ref={setCalendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
               initialView="dayGridMonth"
@@ -539,7 +571,7 @@ export const ScheduleCalendar: React.FC = () => {
                 if (props.type === 'appointment') {
                   const doctor = normalizeDoctorsData.find((d: any) => d.id === props.doctorId);
                   const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
-                    ? `Dr. ${(doctor as any).firstName ?? ''} ${(doctor as any).lastName ?? ''}`.trim()
+                    ? `Dr. ${(doctor as any).firstName} ${(doctor as any).lastName}`
                     : 'Unassigned';
                   
                   const tooltip = `
@@ -551,6 +583,11 @@ ${props.reason ? `Reason: ${props.reason}` : ''}
 Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   `.trim();
                   info.el.title = tooltip;
+                  
+                  const expectedColor = props.expectedColor;
+                  const actualColor = info.event.backgroundColor;
+                  
+                  console.log(`🎨 EventDidMount: ${info.event.id} | Expected: ${expectedColor} | Actual: ${actualColor} | Mode: ${props.colorMode}`);
                   
                   if (info.event.backgroundColor) {
                     info.el.style.backgroundColor = info.event.backgroundColor;

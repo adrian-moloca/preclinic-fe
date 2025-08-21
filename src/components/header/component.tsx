@@ -9,9 +9,9 @@ import {
     HeaderWrapper,
     SecondSectionWrapper,
 } from "./style";
-import { IconButton, Box } from "@mui/material";
+import { IconButton } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import GlobalSearch from "../global-serch";
+import SimpleThemeToggle from "../theme/simple-toggle";
 
 export const Header: FC = () => {
     const navigate = useNavigate();
@@ -26,10 +26,6 @@ export const Header: FC = () => {
                 <img src={Logo} alt="Preclinic Logo" />
             </FirstSectionWrapper> 
 
-            <Box display="flex" alignItems="center" flex={2} justifyContent="center">
-                <GlobalSearch width={500} />
-            </Box>
-
             <SecondSectionWrapper>
                 <AiButton variant="contained" color="primary" onClick={handleAiClick}>
                     AI Assistance
@@ -39,6 +35,8 @@ export const Header: FC = () => {
                     <IconButton onClick={() => navigate("/appointments/create")}>
                         <EventIcon />
                     </IconButton>
+                    
+                    <SimpleThemeToggle />
                 </HeaderButtonsWrapper>
 
                 <AvatarMenu />

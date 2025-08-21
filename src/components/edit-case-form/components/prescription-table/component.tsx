@@ -1,6 +1,6 @@
 import { FC } from "react";
 import {
-  Accordion, AccordionSummary, AccordionDetails, Box, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Stack, TextField
+  Accordion, AccordionSummary, AccordionDetails, Box, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Typography, IconButton, useTheme
 } from "@mui/material";
 import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -22,144 +22,80 @@ export const PrescriptionsSection: FC<{
   setNewPrescription,
   handleAddPrescription,
   handleRemovePrescription,
-}) => (
-  <Accordion defaultExpanded>
-    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-      <Typography variant="h6">Prescriptions</Typography>
-    </AccordionSummary>
-    <AccordionDetails>
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="outlined"
-          startIcon={<LocalPharmacyIcon />}
-          onClick={() => setOpenPrescriptionDialog(true)}
-        >
-          Add Prescription
-        </Button>
-      </Box>
-      {prescriptions.length > 0 && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Medication</TableCell>
-                <TableCell>Dosage</TableCell>
-                <TableCell>Frequency</TableCell>
-                <TableCell>Duration</TableCell>
-                <TableCell>Instructions</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {prescriptions.map((prescription) => (
-                <TableRow key={prescription.id}>
-                  <TableCell>{prescription.medication}</TableCell>
-                  <TableCell>{prescription.dosage}</TableCell>
-                  <TableCell>{prescription.frequency}</TableCell>
-                  <TableCell>{prescription.duration}</TableCell>
-                  <TableCell>{prescription.instructions}</TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleRemovePrescription(prescription.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-      <Dialog
-        open={openPrescriptionDialog}
-        onClose={() => setOpenPrescriptionDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add Prescription</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Medication Name"
-              value={newPrescription.medication}
-              onChange={(e) =>
-                setNewPrescription((prev: any) => ({
-                  ...prev,
-                  medication: e.target.value,
-                }))
-              }
-              fullWidth
-              required
-            />
-            <TextField
-              label="Dosage"
-              value={newPrescription.dosage}
-              onChange={(e) =>
-                setNewPrescription((prev: any) => ({
-                  ...prev,
-                  dosage: e.target.value,
-                }))
-              }
-              fullWidth
-              placeholder="e.g., 500mg"
-              required
-            />
-            <TextField
-              label="Frequency"
-              value={newPrescription.frequency}
-              onChange={(e) =>
-                setNewPrescription((prev: any) => ({
-                  ...prev,
-                  frequency: e.target.value,
-                }))
-              }
-              fullWidth
-              placeholder="e.g., Twice daily"
-            />
-            <TextField
-              label="Duration"
-              value={newPrescription.duration}
-              onChange={(e) =>
-                setNewPrescription((prev: any) => ({
-                  ...prev,
-                  duration: e.target.value,
-                }))
-              }
-              fullWidth
-              placeholder="e.g., 7 days"
-            />
-            <TextField
-              label="Special Instructions"
-              value={newPrescription.instructions}
-              onChange={(e) =>
-                setNewPrescription((prev: any) => ({
-                  ...prev,
-                  instructions: e.target.value,
-                }))
-              }
-              fullWidth
-              multiline
-              rows={2}
-              placeholder="e.g., Take with food"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenPrescriptionDialog(false)}>
-            Cancel
-          </Button>
+}) => {
+  const theme = useTheme();
+
+  return (
+    <Accordion defaultExpanded>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Typography variant="h6">Prescriptions</Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Box sx={{ mb: 2 }}>
           <Button
-            onClick={handleAddPrescription}
-            variant="contained"
-            disabled={!newPrescription.medication || !newPrescription.dosage}
+            variant="outlined"
+            startIcon={<LocalPharmacyIcon />}
+            onClick={() => setOpenPrescriptionDialog(true)}
           >
             Add Prescription
           </Button>
-        </DialogActions>
-      </Dialog>
-    </AccordionDetails>
-  </Accordion>
-);
+        </Box>
+        {prescriptions.length > 0 && (
+          <TableContainer 
+            component={Paper} 
+            variant="outlined"
+            sx={{
+              backgroundColor: theme.palette.background.paper, 
+              color: theme.palette.text.primary, 
+            }}
+          >
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{
+                  backgroundColor: theme.palette.background.paper, 
+                }}>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>Medication</TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>Dosage</TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>Frequency</TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>Duration</TableCell>
+                  <TableCell sx={{ color: theme.palette.text.primary }}>Instructions</TableCell>
+                  <TableCell align="center" sx={{ color: theme.palette.text.primary }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {prescriptions.map((prescription, index) => (
+                  <TableRow 
+                    key={prescription.id}
+                    sx={{
+                      backgroundColor: index % 2 === 0 
+                        ? theme.palette.background.paper 
+                        : theme.palette.action.hover, 
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.selected, 
+                      }
+                    }}
+                  >
+                    <TableCell>{prescription.medication}</TableCell>
+                    <TableCell>{prescription.dosage}</TableCell>
+                    <TableCell>{prescription.frequency}</TableCell>
+                    <TableCell>{prescription.duration}</TableCell>
+                    <TableCell>{prescription.instructions}</TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        onClick={() => handleRemovePrescription(prescription.id)}
+                        color="error"
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </AccordionDetails>
+    </Accordion>
+  );
+};

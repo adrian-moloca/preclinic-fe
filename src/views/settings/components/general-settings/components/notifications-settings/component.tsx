@@ -5,6 +5,7 @@ import {
   FormControlLabel,
   Card,
   Grid,
+  useTheme,
 } from "@mui/material";
 import { Notifications as NotificationsIcon } from "@mui/icons-material";
 import { FC } from "react";
@@ -27,36 +28,38 @@ export const NotificationGeneralSettings: FC<NotificationSettingsProps> = ({
   settings,
   onChange,
 }) => {
+  const theme = useTheme(); 
+
   const notificationItems = [
     {
       key: 'emailNotifications' as keyof NotificationSettings,
       label: 'Email Notifications',
       description: 'Receive notifications via email',
-      color: '#1976d2',
+      color: theme.palette.primary.main, 
     },
     {
       key: 'smsNotifications' as keyof NotificationSettings,
       label: 'SMS Notifications',
       description: 'Receive notifications via SMS',
-      color: '#1976d2',
+      color: theme.palette.primary.main, 
     },
     {
       key: 'appointmentReminders' as keyof NotificationSettings,
       label: 'Appointment Reminders',
       description: 'Automatic reminders for appointments',
-      color: '#1976d2',
+      color: theme.palette.primary.main, 
     },
     {
       key: 'marketingEmails' as keyof NotificationSettings,
       label: 'Marketing Emails',
       description: 'Promotional and marketing content',
-      color: '#1976d2',
+      color: theme.palette.primary.main, 
     },
     {
       key: 'systemAlerts' as keyof NotificationSettings,
       label: 'System Alerts',
       description: 'Important system notifications',
-      color: '#1976d2',
+      color: theme.palette.primary.main, 
     },
   ];
 
@@ -67,8 +70,8 @@ export const NotificationGeneralSettings: FC<NotificationSettingsProps> = ({
           sx={{
             p: 1.5,
             borderRadius: 2,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
+            backgroundColor: theme.palette.primary.main, 
+            color: theme.palette.primary.contrastText, 
           }}
         >
           <NotificationsIcon />
@@ -92,15 +95,17 @@ export const NotificationGeneralSettings: FC<NotificationSettingsProps> = ({
                 p: 3,
                 borderRadius: 3,
                 width: 300,
-                height: 100,
+                height: 120,
                 border: '2px solid',
-                borderColor: settings[item.key] ? item.color : 'divider',
-                background: settings[item.key]
-                  ? `linear-gradient(145deg, ${item.color}10 0%, ${item.color}05 100%)`
-                  : 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+                borderColor: settings[item.key] ? item.color : theme.palette.divider, 
+                backgroundColor: settings[item.key]
+                  ? `${item.color}10` 
+                  : theme.palette.background.paper,
                 transition: 'all 0.3s ease',
                 '&:hover': {
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? '0 4px 15px rgba(255,255,255,0.1)' 
+                    : '0 4px 15px rgba(0,0,0,0.1)',
                   transform: 'translateY(-1px)',
                 },
               }}

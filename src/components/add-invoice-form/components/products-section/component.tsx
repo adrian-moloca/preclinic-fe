@@ -13,7 +13,8 @@ import {
     TableRow,
     TableCell,
     TableBody,
-    IconButton
+    IconButton,
+    useTheme
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -39,10 +40,20 @@ export const ProductsSection: FC<ProductsSectionProps> = ({
     onAddProduct,
     onRemoveProduct
 }) => {
+    const theme = useTheme();
+
+    // Colors for dark mode
+    const cardBg = theme.palette.mode === "dark" ? theme.palette.background.paper : "#fff";
+    const sectionBg = theme.palette.mode === "dark" ? "rgba(102,126,234,0.08)" : "#f8f9fa";
+    const borderColor = theme.palette.mode === "dark" ? theme.palette.divider : "#e9ecef";
+    const tableHeadBg = theme.palette.mode === "dark" ? "rgba(102,126,234,0.10)" : "#f8f9fa";
+    const tableRowOddBg = theme.palette.mode === "dark" ? "rgba(102,126,234,0.04)" : "#fafafa";
+    const textColor = theme.palette.text.primary;
+
     return (
-        <Card variant="outlined" sx={{ mb: 4, border: "1px solid #e8e8e8" }}>
+        <Card variant="outlined" sx={{ mb: 4, border: `1px solid ${borderColor}`, bgcolor: cardBg, color: textColor, transition: "background 0.3s, color 0.3s" }}>
             <CardContent>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: "#424242" }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: textColor }}>
                     Products & Services
                 </Typography>
 
@@ -52,8 +63,8 @@ export const ProductsSection: FC<ProductsSectionProps> = ({
                     </Typography>
                 )}
 
-                <Box sx={{ mb: 3, p: 3, bgcolor: "#f8f9fa", borderRadius: 2, border: "1px solid #e9ecef" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 2, color: "#495057", fontWeight: 600 }}>
+                <Box sx={{ mb: 3, p: 3, bgcolor: sectionBg, borderRadius: 2, border: `1px solid ${borderColor}` }}>
+                    <Typography variant="subtitle2" sx={{ mb: 2, color: textColor, fontWeight: 600 }}>
                         Add New Product
                     </Typography>
                     <Grid container spacing={2} alignItems="end" sx={{ display: "flex", justifyContent: "center" }}>
@@ -125,20 +136,20 @@ export const ProductsSection: FC<ProductsSectionProps> = ({
 
                 {/* Products Table */}
                 {selectedProducts.length > 0 && (
-                    <Box sx={{ border: "1px solid #e9ecef", borderRadius: 2, overflow: "hidden" }}>
+                    <Box sx={{ border: `1px solid ${borderColor}`, borderRadius: 2, overflow: "hidden" }}>
                         <Table>
-                            <TableHead sx={{ bgcolor: "#f8f9fa" }}>
+                            <TableHead sx={{ bgcolor: tableHeadBg }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: "#495057" }}>Product Name</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, color: "#495057" }}>Unit Price</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, color: "#495057" }}>Quantity</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 600, color: "#495057" }}>Amount</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 600, color: "#495057" }}>Actions</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: textColor }}>Product Name</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600, color: textColor }}>Unit Price</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600, color: textColor }}>Quantity</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 600, color: textColor }}>Amount</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 600, color: textColor }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {selectedProducts.map((product, index) => (
-                                    <TableRow key={index} sx={{ "&:nth-of-type(odd)": { bgcolor: "#fafafa" } }}>
+                                    <TableRow key={index} sx={{ "&:nth-of-type(odd)": { bgcolor: tableRowOddBg } }}>
                                         <TableCell sx={{ fontWeight: 500 }}>{product.productName}</TableCell>
                                         <TableCell align="right">${product.unitCost.toFixed(2)}</TableCell>
                                         <TableCell align="right">{product.quantity}</TableCell>

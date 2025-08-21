@@ -6,7 +6,8 @@ export const HeaderWrapper = styled(Box)<BoxProps>(({ theme }) => ({
     alignItems: "center",
     width: "100%",
     padding: "12px 24px",
-    backgroundColor: "#fff",
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
     boxShadow: theme.shadows[1],
     position: "sticky",
     top: 0,
@@ -16,21 +17,23 @@ export const HeaderWrapper = styled(Box)<BoxProps>(({ theme }) => ({
     maxWidth: "100vw",
 }));
 
-export const FirstSectionWrapper = styled(Box)({
+export const FirstSectionWrapper = styled(Box)(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     flex: 1,
     minWidth: 240,
-});
+    color: theme.palette.text.primary,
+}));
 
-export const SecondSectionWrapper = styled(Box)({
+export const SecondSectionWrapper = styled(Box)(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 16,
     flex: 2,
     flexWrap: "wrap",
-});
+    color: theme.palette.text.primary,
+}));
 
 export const AiButton = styled(Button)<ButtonProps>(({ theme }) => ({
     height: 40,
@@ -54,9 +57,10 @@ export const IconButtons = styled(Button)<ButtonProps>(({ theme }) => ({
     height: 36,
     borderRadius: "50%",
     padding: 0,
-    borderColor: theme.palette.grey[300],
-    backgroundColor: "#f9f9f9",
+    borderColor: theme.palette.divider,
+    backgroundColor: theme.palette.action.hover,
+    color: theme.palette.text.primary,
     "&:hover": {
-        backgroundColor: theme.palette.grey[200],
+        backgroundColor: theme.palette.action.selected,
     },
 }));

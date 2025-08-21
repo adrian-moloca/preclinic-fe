@@ -1,23 +1,25 @@
 import { Box, BoxProps, Paper, PaperProps, styled } from "@mui/material";
 
-export const CustomPaper = styled(Paper)<PaperProps>({
+export const CustomPaper = styled(Paper)<PaperProps>(({ theme }) => ({
     padding: "24px",
     border: "1px solid",
-    borderColor: "divider",
+    borderColor: theme.palette.divider,
     borderRadius: 12,
-    background: "linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)",
-});
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary, 
+}));
 
-export const TitleWrapper = styled(Box)<BoxProps>({
+export const TitleWrapper = styled(Box)<BoxProps>(({ theme }) => ({
     display: "flex",
     alignItems: "center",
     gap: "16px",
     marginBottom: "24px",
-});
+    color: theme.palette.text.primary, 
+}));
 
-export const IconWrapper = styled(Box)<BoxProps>({
+export const IconWrapper = styled(Box)<BoxProps>(({ theme }) => ({
     padding: "8px",
     borderRadius: "8px",
-    background: "linear-gradient(145deg, #667eea 0%, #f5f5f5 100%)",
-    color: "#ffffff"
-});
+    backgroundColor: theme.palette.primary.main, 
+    color: theme.palette.primary.contrastText, 
+}));

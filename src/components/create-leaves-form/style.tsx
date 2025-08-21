@@ -13,7 +13,7 @@ export const DividerFormWrapper = styled(Divider)<DividerProps>({
     width: "100%",
 });
 
-export const PaperFormWrapper = styled(Paper)<PaperProps>({
+export const PaperFormWrapper = styled(Paper)<PaperProps>(({ theme }) => ({
     padding: "16px",
     marginTop: "32px",
     width: "100%",
@@ -22,11 +22,16 @@ export const PaperFormWrapper = styled(Paper)<PaperProps>({
     flexDirection: "column",
     alignItems: "center",
     flexWrap: "wrap",
-    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+    backgroundColor: theme.palette.background.paper, 
+    color: theme.palette.text.primary, 
+    boxShadow: theme.palette.mode === 'dark' 
+        ? "0px 4px 12px rgba(0, 0, 0, 0.5)" 
+        : "0px 4px 12px rgba(0, 0, 0, 0.1)", 
     elevation: 3
-});
+}));
 
-export const LeaveFormWrapper = styled(Box)<BoxProps>({
+export const LeaveFormWrapper = styled(Box)<BoxProps>(({ theme }) => ({
     display: "flex",
-    justifyContent: "center"
-});
+    justifyContent: "center",
+    color: theme.palette.text.primary, 
+}));

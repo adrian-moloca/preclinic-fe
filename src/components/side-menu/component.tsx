@@ -5,6 +5,7 @@ import {
   List,
   Typography,
   Fade,
+  useTheme,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -39,6 +40,7 @@ const drawerWidthClosed = 70;
 export const SideDrawer: FC = () => {
   const [open, setOpen] = useState(true);
   const { user } = useAuthContext();
+  const theme = useTheme(); 
 
   const toggleDrawer = () => setOpen(!open);
 
@@ -67,32 +69,13 @@ export const SideDrawer: FC = () => {
         { label: "Add Patient", icon: <PersonAddIcon />, route: "/patients/create", permission: "manage_patients" },
       ]
     },
-   {
-    label: "Doctors",
-    icon: <PersonIcon />,
-    resource: "doctors",
-    subItems: [
-      { label: "All Doctors", icon: <PersonIcon />, route: "/doctors/all", permission: "view_doctors" },
-      { label: "Add Doctor", icon: <PersonAddIcon />, route: "/doctors/create", permission: "manage_doctors" }, 
-    ]
-  },
-  {
-    label: "Assistents",
-    icon: <PersonIcon />,
-    resource: "assistents",
-    subItems: [
-      { label: "All Assistents", icon: <PersonIcon />, route: "/assistents/all", permission: "view_assistents" },
-      { label: "Add Assistent", icon: <PersonAddIcon />, route: "/assistents/create", permission: "manage_assistents" },
-    ]
-  },
     {
       label: "Appointments",
       icon: <CalendarMonthIcon />,
       resource: "appointments",
       subItems: [
         { label: "All Appointments", icon: <CalendarMonthIcon />, route: "/appointments/all", permission: "view_appointments" },
-        { label: "Add Appointment", icon: <PersonAddIcon />, route: "/appointments/create", permission: "manage_appointments" },
-        { label: "Online Appointments", icon: <VideoCallIcon />, route: "/appointments/online-appointments", permission: "view_appointments" },
+        { label: "Online Appointments", icon: <VideoCallIcon />, route: "/appointments/online", permission: "view_appointments" },
       ]
     },
     {
@@ -110,7 +93,7 @@ export const SideDrawer: FC = () => {
       resource: "products",
       subItems: [
         { label: "All Products", icon: <InventoryIcon />, route: "/products/all", permission: "view_products" },
-        { label: "Add Product", icon: <PersonAddIcon />, route: "/products/create", permission: "manage_products" }
+        { label: "Add Product", icon: <PersonAddIcon />, route: "/products/create", permission: "manage_products" },
       ]
     },
     {
@@ -118,13 +101,28 @@ export const SideDrawer: FC = () => {
       icon: <ReviewsIcon />,
       resource: "reviews",
       subItems: [
-        { label: "All Reviews", icon: <ReviewsIcon />, route: "/reviews/all", permission: "view_reviews" }
+        { label: "All Reviews", icon: <ReviewsIcon />, route: "/reviews/all", permission: "view_reviews" },
+      ]
+    },
+    {
+      label: "Doctors",
+      icon: <MedicalServicesIcon />,
+      subItems: [
+        { label: "All Doctors", icon: <MedicalServicesIcon />, route: "/doctors/all", permission: "view_doctors" },
+        { label: "Add Doctor", icon: <PersonAddIcon />, route: "/doctors/create", permission: "manage_doctors" },
+      ]
+    },
+    {
+      label: "Assistants",
+      icon: <PersonIcon />,
+      subItems: [
+        { label: "All Assistants", icon: <PersonIcon />, route: "/assistents/all", permission: "view_assistents" },
+        { label: "Add Assistant", icon: <PersonAddIcon />, route: "/assistents/create", permission: "manage_assistents" },
       ]
     },
     {
       label: "Services",
       icon: <MedicalServicesIcon />,
-      resource: "services",
       subItems: [
         { label: "All Services", icon: <MedicalServicesIcon />, route: "/services/all", permission: "view_services" },
         { label: "Add Service", icon: <PersonAddIcon />, route: "/services/create", permission: "manage_services" },
@@ -133,7 +131,6 @@ export const SideDrawer: FC = () => {
     {
       label: "Departments",
       icon: <BusinessIcon />,
-      resource: "departments",
       subItems: [
         { label: "All Departments", icon: <BusinessIcon />, route: "/departments/all", permission: "view_departments" },
         { label: "Add Department", icon: <PersonAddIcon />, route: "/departments/create", permission: "manage_departments" },
@@ -143,8 +140,8 @@ export const SideDrawer: FC = () => {
       label: "Chat",
       icon: <ChatIcon />,
       route: "/chat",
-      permission: "view_chat"
-    }
+      resource: "chat"
+    },
   ];
 
   const staffManagementItems = [
@@ -162,7 +159,7 @@ export const SideDrawer: FC = () => {
       icon: <PaymentsIcon />,
       subItems: [
         { label: "Add Payroll", icon: <PaymentsIcon />, route: "/payroll/add", permission: "manage_payroll" },
-        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all-payrolls", permission: "view_payrolls" },
+        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all", permission: "view_payrolls" },
       ]
     },
     {
@@ -202,7 +199,7 @@ export const SideDrawer: FC = () => {
       icon: <GavelIcon />,
       route: "/terms-and-conditions",
     }
-  ]
+  ];
 
   return (
     <Drawer
@@ -219,8 +216,12 @@ export const SideDrawer: FC = () => {
           overflowX: "hidden",
           overflowY: "hidden", 
           borderRight: "none",
-          background: "linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)",
-          boxShadow: "4px 0 20px rgba(0,0,0,0.08)",
+          background: theme.palette.mode === 'dark' 
+            ? "linear-gradient(180deg, #1e1e1e 0%, #2a2a2a 100%)" 
+            : "linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)",
+          boxShadow: theme.palette.mode === 'dark' 
+            ? "4px 0 20px rgba(0,0,0,0.5)" 
+            : "4px 0 20px rgba(0,0,0,0.08)",
           position: "fixed",
           height: "100vh", 
           top: 0,
@@ -233,7 +234,9 @@ export const SideDrawer: FC = () => {
             right: 0,
             width: "1px",
             height: "100%",
-            background: "linear-gradient(180deg, transparent 0%, #e0e0e0 50%, transparent 100%)",
+            background: theme.palette.mode === 'dark' 
+              ? "linear-gradient(180deg, transparent 0%, #555 50%, transparent 100%)" 
+              : "linear-gradient(180deg, transparent 0%, #e0e0e0 50%, transparent 100%)",
           },
         },
       }}
@@ -244,8 +247,9 @@ export const SideDrawer: FC = () => {
         alignItems="center"
         p={2}
         sx={{
-          borderBottom: "1px solid #e0e0e0",
-          background: "#ffffff",
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
           position: "sticky", 
           top: 0,
           zIndex: 10,
@@ -258,7 +262,9 @@ export const SideDrawer: FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+            background: theme.palette.mode === 'dark' 
+              ? "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.05) 0%, transparent 50%)" 
+              : "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%)",
           },
         }}
       >
@@ -266,9 +272,9 @@ export const SideDrawer: FC = () => {
           <IconButton
             onClick={toggleDrawer}
             sx={{
-              color: "#000",
+              color: theme.palette.text.primary,
               "&:hover": {
-                backgroundColor: "rgba(255,255,255,0.1)",
+                backgroundColor: theme.palette.action.hover,
                 transform: "scale(1.1)",
               },
               transition: "all 0.2s ease",
@@ -301,14 +307,16 @@ export const SideDrawer: FC = () => {
           background: 'transparent',
         },
         '&::-webkit-scrollbar-thumb': {
-          background: 'rgba(0,0,0,0.2)',
+          background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
           borderRadius: '3px',
           '&:hover': {
-            background: 'rgba(0,0,0,0.3)',
+            background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
           },
         },
         scrollbarWidth: 'thin',
-        scrollbarColor: 'rgba(0,0,0,0.2) transparent',
+        scrollbarColor: theme.palette.mode === 'dark' 
+          ? 'rgba(255,255,255,0.2) transparent' 
+          : 'rgba(0,0,0,0.2) transparent',
       }}>
         <List sx={{ px: 1 }}>
           <MenuSection
@@ -347,8 +355,10 @@ export const SideDrawer: FC = () => {
 
       <Box
         sx={{
-          borderTop: "1px solid #e0e0e0",
-          background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
+          borderTop: `1px solid ${theme.palette.divider}`,
+          background: theme.palette.mode === 'dark' 
+            ? "linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%)" 
+            : "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
           p: 2,
           position: "sticky",
           bottom: 0,
@@ -363,7 +373,7 @@ export const SideDrawer: FC = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: "#666",
+                    color: theme.palette.text.secondary, 
                     display: 'block',
                     fontWeight: 600,
                     mb: 0.5,
@@ -374,7 +384,7 @@ export const SideDrawer: FC = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: "#999",
+                    color: theme.palette.text.disabled, 
                     display: 'block',
                     fontSize: '0.7rem',
                   }}

@@ -1,3 +1,3 @@
-import LocalFileManager from "./component";
+import { LocalFileManager } from "./component";
 
 export default LocalFileManager;

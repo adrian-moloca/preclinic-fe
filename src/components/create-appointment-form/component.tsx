@@ -6,15 +6,14 @@ import {
     Avatar,
     Typography,
 } from "@mui/material";
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { FormFieldWrapper } from "../create-patient-form/style";
 import { useAppointmentsContext } from "../../providers/appointments";
 import { usePatientsContext } from "../../providers/patients";
 import { IDepartments, useDepartmentsContext } from "../../providers/departments";
 import { useNavigate } from "react-router-dom";
-import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
-import { AppointmentsEntry } from "../../providers/appointments/types";
+import { PaperFormWrapper } from "../create-leaves-form/style";
 
 interface Patient {
     id: string;
@@ -58,10 +57,25 @@ const appointmentStatuses = [
     "no_show"
 ];
 
-export const CreateAppointmentForm: FC = () => {
+// NEW: Props interface for calendar integration
+interface CreateAppointmentFormProps {
+    defaultDate?: string;
+    defaultTime?: string;
+    onSave?: () => void;
+    onCancel?: () => void;
+    embedded?: boolean;
+}
+
+export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
+    defaultDate,
+    defaultTime,
+    onSave,
+    onCancel,
+    embedded = false
+}) => {
     const { addAppointment } = useAppointmentsContext();
     const { patients } = usePatientsContext();
-    const { departments } = useDepartmentsContext(); // <-- get departments
+    const { departments } = useDepartmentsContext();
     const navigate = useNavigate();
 
     const patientsArray: Patient[] = Array.isArray(patients)
@@ -83,12 +97,22 @@ export const CreateAppointmentForm: FC = () => {
         patientId: "",
         appointmentType: "",
         type: "",
-        date: "",
-        time: "",
+        date: defaultDate || "", // NEW: Use default date from calendar
+        time: defaultTime || "", // NEW: Use default time from calendar
         reason: "",
         status: "scheduled",
         department: undefined,
     });
+
+    // NEW: Update appointment when default values change
+    useEffect(() => {
+        if (defaultDate) {
+            setAppointment(prev => ({ ...prev, date: defaultDate }));
+        }
+        if (defaultTime) {
+            setAppointment(prev => ({ ...prev, time: defaultTime }));
+        }
+    }, [defaultDate, defaultTime]);
 
     const [errors, setErrors] = useState({
         patientId: false,
@@ -137,37 +161,41 @@ export const CreateAppointmentForm: FC = () => {
             return;
         }
 
-    if (appointment.department) {
-    const newAppointment: AppointmentsEntry = {
-        id: `apt-${Date.now()}`,
-        patients: [appointment.patientId],
-        patientId: appointment.patientId,
-        appointmentType: appointment.appointmentType,
-        type: appointment.type,
-        date: appointment.date,
-        time: appointment.time,
-        reason: appointment.reason,
-        status: appointment.status || "scheduled",
-        department: appointment.department,
-        duration: 30,
+        if (appointment.department) {
+            addAppointment({
+                ...appointment,
+                patients: [appointment.patientId],
+                status: appointment.status || "scheduled",
+                department: appointment.department,
+            });
+        }
+
+        // NEW: Handle calendar integration
+        if (embedded && onSave) {
+            onSave();
+        } else {
+            setAppointment({
+                id: generateId(),
+                patientId: "",
+                appointmentType: "",
+                type: "",
+                date: defaultDate || "",
+                time: defaultTime || "",
+                reason: "",
+                status: "scheduled",
+                department: undefined,
+            });
+            navigate("/appointments/all");
+        }
     };
-    
-    addAppointment(newAppointment);
-}
 
-        setAppointment({
-            id: generateId(),
-            patientId: "",
-            appointmentType: "",
-            type: "",
-            date: "",
-            time: "",
-            reason: "",
-            status: "scheduled",
-            department: undefined,
-        });
-
-        navigate("/appointments/all");
+    // NEW: Handle cancel for calendar integration
+    const handleCancel = () => {
+        if (embedded && onCancel) {
+            onCancel();
+        } else {
+            navigate("/appointments/all");
+        }
     };
 
     const isFormValid =
@@ -178,81 +206,49 @@ export const CreateAppointmentForm: FC = () => {
         appointment.time !== "" &&
         appointment.reason !== "" &&
         appointment.status !== "" &&
-        !!appointment.department;
+        appointment.department;
 
-    const menuProps = {
-        PaperProps: {
-            style: {
-                maxHeight: 224,
-                width: 250,
-            },
-        },
-    };
-
-    const capitalizeFirstLetter = (str: string) => {
-        return str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ');
-    };
+    // NEW: Wrapper component for embedded mode
+    const FormWrapper = embedded ? Box : PaperFormWrapper;
+    const wrapperProps = embedded ? {} : { elevation: 3 };
 
     return (
-        <Box display={"flex"} justifyContent={"center"}>
-            <PaperFormWrapper>
-                <Typography variant="h4" gutterBottom>
-                    Create Appointment
-                </Typography>
+        <Box>
+            <FormWrapper {...wrapperProps}>
+                {!embedded && (
+                    <Typography variant="h4" textAlign="center" mb={3}>
+                        Create Appointment
+                    </Typography>
+                )}
 
-                <DividerFormWrapper />
-
-                <Box display="flex" flexDirection="column" alignItems="center">
+                <Box>
                     <FormFieldWrapper>
                         <TextField
-                            label="Appointment ID"
-                            value={appointment.id}
-                            fullWidth
-                            disabled
-                            sx={{ width: 500, marginY: 1 }}
-                        />
-
-                        <TextField
                             select
-                            label="Select Patient"
+                            label="Patient"
                             value={appointment.patientId}
                             onChange={(e) => handleChange("patientId", e.target.value)}
                             error={errors.patientId}
-                            helperText={errors.patientId && "Please select a patient"}
+                            helperText={errors.patientId && "Patient is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             required
-                            SelectProps={{
-                                MenuProps: menuProps,
-                                renderValue: (selected) => {
-                                    if (!selected) return <em>Select a patient</em>;
-                                    const patient = patientsArray.find(
-                                        (p: Patient) => p.id === selected
-                                    );
-                                    return patient
-                                        ? `${patient.firstName} ${patient.lastName}`
-                                        : "";
-                                },
-                            }}
                         >
-                            {patientsArray.length > 0 ? (
-                                patientsArray.map((patient: Patient) => (
-                                    <MenuItem
-                                        key={patient.id}
-                                        value={patient.id}
-                                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                                    >
+                            {patientsArray.map((patient) => (
+                                <MenuItem key={patient.id} value={patient.id}>
+                                    <Box display="flex" alignItems="center">
                                         <Avatar
-                                            alt={`${patient.firstName} ${patient.lastName}`}
-                                            src={patient.profileImg || ""}
-                                            sx={{ width: 30, height: 30 }}
-                                        />
-                                        {patient.firstName} {patient.lastName}
-                                    </MenuItem>
-                                ))
-                            ) : (
-                                <MenuItem disabled>No patients available</MenuItem>
-                            )}
+                                            src={patient.profileImg}
+                                            sx={{ width: 30, height: 30, mr: 2 }}
+                                        >
+                                            {patient.firstName?.[0]}{patient.lastName?.[0]}
+                                        </Avatar>
+                                        <Typography>
+                                            {patient.firstName} {patient.lastName}
+                                        </Typography>
+                                    </Box>
+                                </MenuItem>
+                            ))}
                         </TextField>
 
                         <TextField
@@ -261,23 +257,16 @@ export const CreateAppointmentForm: FC = () => {
                             value={appointment.department?.id || ""}
                             onChange={(e) => handleDepartmentChange(e.target.value)}
                             error={errors.department}
-                            helperText={errors.department && "Please select a department"}
+                            helperText={errors.department && "Department is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             required
-                            SelectProps={{
-                                MenuProps: menuProps,
-                            }}
                         >
-                            {departmentsArray.length > 0 ? (
-                                departmentsArray.map((dep: IDepartments) => (
-                                    <MenuItem key={dep.id} value={dep.id}>
-                                        {dep.name}
-                                    </MenuItem>
-                                ))
-                            ) : (
-                                <MenuItem disabled>No departments available</MenuItem>
-                            )}
+                            {departmentsArray.map((department) => (
+                                <MenuItem key={department.id} value={department.id}>
+                                    {department.name}
+                                </MenuItem>
+                            ))}
                         </TextField>
 
                         <TextField
@@ -286,15 +275,10 @@ export const CreateAppointmentForm: FC = () => {
                             value={appointment.appointmentType}
                             onChange={(e) => handleChange("appointmentType", e.target.value)}
                             error={errors.appointmentType}
-                            helperText={
-                                errors.appointmentType && "Please select an appointment type"
-                            }
+                            helperText={errors.appointmentType && "Appointment type is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             required
-                            SelectProps={{
-                                MenuProps: menuProps,
-                            }}
                         >
                             {appointmentTypes.map((type) => (
                                 <MenuItem key={type} value={type}>
@@ -305,23 +289,18 @@ export const CreateAppointmentForm: FC = () => {
 
                         <TextField
                             select
-                            label="Type"
+                            label="Consultation Type"
                             value={appointment.type}
                             onChange={(e) => handleChange("type", e.target.value)}
                             error={errors.type}
-                            helperText={
-                                errors.type && "Please select a type"
-                            }
+                            helperText={errors.type && "Consultation type is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             required
-                            SelectProps={{
-                                MenuProps: menuProps,
-                            }}
                         >
                             {consultationTypes.map((type) => (
                                 <MenuItem key={type} value={type}>
-                                    {capitalizeFirstLetter(type)}
+                                    {type.charAt(0).toUpperCase() + type.slice(1)}
                                 </MenuItem>
                             ))}
                         </TextField>
@@ -332,17 +311,14 @@ export const CreateAppointmentForm: FC = () => {
                             value={appointment.status}
                             onChange={(e) => handleChange("status", e.target.value)}
                             error={errors.status}
-                            helperText={errors.status && "Please select a status"}
+                            helperText={errors.status && "Status is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             required
-                            SelectProps={{
-                                MenuProps: menuProps,
-                            }}
                         >
                             {appointmentStatuses.map((status) => (
                                 <MenuItem key={status} value={status}>
-                                    {capitalizeFirstLetter(status)}
+                                    {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
                                 </MenuItem>
                             ))}
                         </TextField>
@@ -355,7 +331,7 @@ export const CreateAppointmentForm: FC = () => {
                             error={errors.date}
                             helperText={errors.date && "Date is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             InputLabelProps={{ shrink: true }}
                             required
                         />
@@ -368,7 +344,7 @@ export const CreateAppointmentForm: FC = () => {
                             error={errors.time}
                             helperText={errors.time && "Time is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
                             InputLabelProps={{ shrink: true }}
                             required
                         />
@@ -380,24 +356,35 @@ export const CreateAppointmentForm: FC = () => {
                             error={errors.reason}
                             helperText={errors.reason && "Reason is required"}
                             fullWidth
-                            sx={{ width: 500, marginY: 1 }}
+                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
+                            multiline
                             rows={3}
                             required
                         />
                     </FormFieldWrapper>
                 </Box>
 
-                <Box display="flex" justifyContent="center" mt={3}>
+                {/* NEW: Button layout for embedded vs standalone */}
+                <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                    {embedded && (
+                        <Button
+                            variant="outlined"
+                            onClick={handleCancel}
+                            sx={{ width: 150 }}
+                        >
+                            Cancel
+                        </Button>
+                    )}
                     <Button
                         variant="contained"
                         onClick={handleSubmit}
                         disabled={!isFormValid}
-                        sx={{ width: 300 }}
+                        sx={{ width: embedded ? 150 : 300 }}
                     >
                         Create Appointment
                     </Button>
                 </Box>
-            </PaperFormWrapper>
+            </FormWrapper>
         </Box>
     );
 };
