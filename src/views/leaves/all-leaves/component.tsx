@@ -6,18 +6,22 @@ import {
     MenuItem,
     Tooltip,
     Chip,
+    Avatar,
 } from "@mui/material";
 import { FC, useState, useMemo, useCallback } from "react";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import InfoIcon from '@mui/icons-material/Info';
+import EventBusyIcon from "@mui/icons-material/EventBusy";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import { useLeavesContext } from "../../../providers/leaves";
 import { Leaves } from "../../../providers/leaves/types";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllLeaves: FC = () => {
     const { leaves, deleteLeave } = useLeavesContext();
@@ -27,6 +31,8 @@ export const AllLeaves: FC = () => {
     const [selectedLeave, setSelectedLeave] = useState<Leaves | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+    const { addRecentItem } = useRecentItems();
 
     const handleDeleteClick = () => {
         if (selectedLeave) {
@@ -103,6 +109,21 @@ export const AllLeaves: FC = () => {
     }, [selectedLeave, navigate, handleMenuClose]);
 
     const handleRowClick = (leave: Leaves) => {
+        addRecentItem({
+            id: leave.id,
+            type: 'leave',
+            title: `Leave Request - ${leave.leaveType}`,
+            subtitle: `${leave.fromDate || ''} - ${leave.toDate || ''} (${leave.status || 'Pending'})`,
+            url: `/leaves/${leave.id}`,
+            metadata: {
+                leaveType: leave.leaveType,
+                status: leave.status,
+                fromDate: leave.fromDate,
+                toDate: leave.toDate,
+                days: leave.days,
+            },
+        });
+        
         navigate(`/leaves/${leave.id}`);
     };
 
@@ -123,26 +144,60 @@ export const AllLeaves: FC = () => {
         }
     };
 
+    const addToRecentAndNavigate = useCallback((leave: Leaves) => {
+        addRecentItem({
+            id: leave.id,
+            type: 'leave',
+            title: `Leave Request - ${leave.leaveType}`,
+            subtitle: `${leave.fromDate || ''} - ${leave.toDate || ''} (${leave.status || 'Pending'})`,
+            url: `/leaves/${leave.id}`,
+            metadata: {
+                leaveType: leave.leaveType,
+                status: leave.status,
+                fromDate: leave.fromDate,
+                toDate: leave.toDate,
+                days: leave.days,
+            },
+        });
+        navigate(`/leaves/${leave.id}`);
+    }, [addRecentItem, navigate]);
+
     const columns: Column[] = [
+        {
+            id: 'leaveInfo',
+            label: 'Leave Request',
+            minWidth: 200,
+            sortable: false,
+            render: (_, row: Leaves) => (
+                <Box display="flex" alignItems="center" gap={2}>
+                    <Avatar>
+                        <EventBusyIcon />
+                    </Avatar>
+                    <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {row.leaveType || 'Leave Request'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            ID: {row.id}
+                        </Typography>
+                    </Box>
+                </Box>
+            ),
+        },
         {
             id: 'leaveDate',
             label: 'Leave Date',
             minWidth: 200,
             sortable: false,
             render: (_, row: Leaves) => (
-                <Typography variant="body2">
-                    {`${row.fromDate || ''} - ${row.toDate || ''}`}
-                </Typography>
-            ),
-        },
-        {
-            id: 'leaveType',
-            label: 'Leave Type',
-            minWidth: 120,
-            render: (value: string) => (
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {value || 'N/A'}
-                </Typography>
+                <Box>
+                    <Typography variant="body2">
+                        {`${row.fromDate || ''} - ${row.toDate || ''}`}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {row.days || 0} days
+                    </Typography>
+                </Box>
             ),
         },
         {
@@ -159,17 +214,6 @@ export const AllLeaves: FC = () => {
             ),
         },
         {
-            id: 'days',
-            label: 'Days',
-            minWidth: 80,
-            align: 'center',
-            render: (value: number) => (
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {value || 0}
-                </Typography>
-            ),
-        },
-        {
             id: 'appliedOn',
             label: 'Applied On',
             minWidth: 120,
@@ -182,28 +226,47 @@ export const AllLeaves: FC = () => {
         {
             id: 'actions',
             label: 'Actions',
-            minWidth: 120,
+            minWidth: 140, 
             align: 'right',
             sortable: false,
-            render: (_, row: Leaves) => (
-                <Box>
-                    <Tooltip title="View Leave Details">
-                        <IconButton
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/leaves/${row.id}`);
-                            }}
-                            color="primary"
-                            size="small"
-                        >
-                            <InfoIcon />
+            render: (_, row: Leaves) => {
+                const favoriteItem = {
+                    id: row.id,
+                    type: 'leave' as const,
+                    title: `Leave Request - ${row.leaveType}`,
+                    subtitle: `${row.fromDate || ''} - ${row.toDate || ''} (${row.status || 'Pending'})`,
+                    url: `/leaves/${row.id}`,
+                    metadata: {
+                        leaveType: row.leaveType,
+                        status: row.status,
+                        fromDate: row.fromDate,
+                        toDate: row.toDate,
+                        days: row.days,
+                    },
+                };
+
+                return (
+                    <Box display="flex" alignItems="center">
+                        <FavoriteButton item={favoriteItem} size="small" />
+                        
+                        <Tooltip title="View Leave Details">
+                            <IconButton
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    addToRecentAndNavigate(row);
+                                }}
+                                color="primary"
+                                size="small"
+                            >
+                                <InfoIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+                            <MoreVertIcon />
                         </IconButton>
-                    </Tooltip>
-                    <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-                        <MoreVertIcon />
-                    </IconButton>
-                </Box>
-            ),
+                    </Box>
+                );
+            },
         },
     ];
 

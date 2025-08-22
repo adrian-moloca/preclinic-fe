@@ -4,27 +4,26 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Tooltip,
   Chip,
+  Avatar,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
 import { useDepartmentsContext } from "../../../providers/departments/context";
 import { IDepartments } from "../../../providers/departments/types";
-import { useDoctorsContext } from "../../../providers/doctor/context";
-import { useAssistentsContext } from "../../../providers/assistent/context";
 import InfoIcon from '@mui/icons-material/Info';
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import BusinessIcon from "@mui/icons-material/Business";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllDepartments: FC = () => {
   const { departments, deleteDepartment } = useDepartmentsContext();
-  const { doctors } = useDoctorsContext();
-  const { assistents } = useAssistentsContext();
   const [filteredDepartments, setFilteredDepartments] = useState<IDepartments[]>(departments);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -33,9 +32,64 @@ export const AllDepartments: FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const { addRecentItem } = useRecentItems();
+
   useEffect(() => {
     setFilteredDepartments(departments);
   }, [departments]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query) {
+      setFilteredDepartments(departments);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = departments.filter((department) =>
+      department.name?.toLowerCase().includes(lowerQuery) ||
+      department.description?.toLowerCase().includes(lowerQuery) ||
+      department.status?.toLowerCase().includes(lowerQuery)
+    );
+
+    setFilteredDepartments(filtered);
+  };
+
+  const handleRowClick = (department: IDepartments) => {
+    // NEW: Add to recent items
+    addRecentItem({
+      id: department.id,
+      type: 'department',
+      title: department.name,
+      subtitle: department.description || '',
+      url: `/departments/${department.id}`,
+      metadata: {
+        status: department.status,
+        doctorsCount: department.doctors?.length || 0,
+        assistantsCount: department.assistants?.length || 0,
+      },
+    });
+    
+    navigate(`/departments/${department.id}`);
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, department: IDepartments) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedDepartment(department);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedDepartment(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedDepartment) {
+      navigate(`/departments/edit/${selectedDepartment.id}`);
+      handleMenuClose();
+    }
+  };
 
   const handleDeleteClick = () => {
     if (selectedDepartment) {
@@ -52,7 +106,6 @@ export const AllDepartments: FC = () => {
       await deleteDepartment(selectedDepartment.id);
       setDeleteModalOpen(false);
       setSelectedDepartment(null);
-      setAnchorEl(null);
     } catch (error) {
       console.error('Error deleting department:', error);
     } finally {
@@ -66,188 +119,87 @@ export const AllDepartments: FC = () => {
     }
   };
 
-  const handleDeleteMultiple = async (selectedIds: string[]) => {
-    try {
-      await Promise.all(selectedIds.map(id => deleteDepartment(id)));
-    } catch (error) {
-      console.error('Error deleting departments:', error);
-    }
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, department: IDepartments) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setSelectedDepartment(department);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    if (!deleteModalOpen) {
-      setSelectedDepartment(null);
-    }
-  };
-
-  const handleEditDepartment = () => {
-    if (selectedDepartment) {
-      navigate(`/departments/edit/${selectedDepartment.id}`);
-      handleMenuClose();
-    }
-  };
-
-  const handleRowClick = (department: IDepartments) => {
-    navigate(`/departments/${department.id}`);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    
-    if (!query.trim()) {
-      setFilteredDepartments(departments);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = departments.filter((department) =>
-      department.name.toLowerCase().includes(lowerQuery) ||
-      department.description.toLowerCase().includes(lowerQuery) ||
-      department.status.toLowerCase().includes(lowerQuery)
-    );
-
-    setFilteredDepartments(filtered);
-  };
-
-  const getDoctorNames = (doctorIds: string[]) => {
-    if (!doctorIds || doctorIds.length === 0) return [];
-    return doctorIds
-      .map(id => doctors.find(doctor => doctor.id === id))
-      .filter(Boolean)
-      .map(doctor => `Dr. ${doctor!.firstName} ${doctor!.lastName}`);
-  };
-
-  const getAssistantNames = (assistantIds: string[]) => {
-    if (!assistantIds || assistantIds.length === 0) return [];
-    return assistantIds
-      .map(id => assistents.find(assistant => assistant.id === id))
-      .filter(Boolean)
-      .map(assistant => `${assistant!.firstName} ${assistant!.lastName}`);
-  };
-
-  const formatStaffDisplay = (doctorIds: string[], assistantIds: string[]) => {
-    const doctorCount = doctorIds?.length || 0;
-    const assistantCount = assistantIds?.length || 0;
-    const totalStaff = doctorCount + assistantCount;
-
-    if (totalStaff === 0) return "No staff assigned";
-    
-    return `${doctorCount} Doctor${doctorCount !== 1 ? 's' : ''} • ${assistantCount} Assistant${assistantCount !== 1 ? 's' : ''}`;
-  };
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active':
-        return 'success';
-      case 'inactive':
-        return 'error';
-      case 'maintenance':
-        return 'warning';
-      default:
-        return 'default';
+      case 'active': return 'success';
+      case 'inactive': return 'error';
+      case 'pending': return 'warning';
+      default: return 'default';
     }
+  };
+
+  const getTotalStaff = (department: IDepartments) => {
+    const doctorsCount = department.doctors?.length || 0;
+    const assistantsCount = department.assistants?.length || 0;
+    return doctorsCount + assistantsCount;
   };
 
   const columns: Column[] = [
     {
-      id: 'name',
+      id: 'department',
       label: 'Department',
       minWidth: 200,
-      sortable: true,
-      render: (_, row: IDepartments) => (
-        <Box>
-          <Typography variant="subtitle2" fontWeight={600}>
-            {row.name}
-          </Typography>
-          <Chip 
-            label={row.status} 
-            color={getStatusColor(row.status) as any}
-            size="small"
-            sx={{ mt: 0.5, textTransform: 'capitalize' }}
-          />
+      render: (value, row: IDepartments) => (
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar>
+            <BusinessIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              {row.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              ID: {row.id}
+            </Typography>
+          </Box>
         </Box>
       ),
     },
     {
-      id: 'staff',
-      label: 'Staff',
-      minWidth: 200,
-      sortable: false,
-      render: (_, row: IDepartments) => (
-        <Box>
-          <Typography variant="body2" fontWeight={500}>
-            {formatStaffDisplay(row.doctors, row.assistants)}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Total: {(row.doctors?.length || 0) + (row.assistants?.length || 0)} members
-          </Typography>
-        </Box>
+      id: 'description',
+      label: 'Description',
+      minWidth: 250,
+      render: (value: string) => (
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            maxWidth: 250, 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {value || 'No description provided'}
+        </Typography>
       ),
     },
     {
-      id: 'doctors',
-      label: 'Doctors',
-      minWidth: 150,
-      sortable: false,
-      render: (_, row: IDepartments) => {
-        const doctorNames = getDoctorNames(row.doctors);
-        if (doctorNames.length === 0) {
-          return <Typography variant="body2" color="text.secondary">None</Typography>;
-        }
-        if (doctorNames.length <= 2) {
-          return (
-            <Box>
-              {doctorNames.map((name, index) => (
-                <Typography key={index} variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  {name}
-                </Typography>
-              ))}
-            </Box>
-          );
-        }
-        return (
-          <Tooltip title={doctorNames.join(', ')}>
-            <Typography variant="body2">
-              {doctorNames.slice(0, 2).join(', ')} +{doctorNames.length - 2}
-            </Typography>
-          </Tooltip>
-        );
-      },
+      id: 'status',
+      label: 'Status',
+      minWidth: 120,
+      render: (value: string) => (
+        <Chip 
+          label={value?.toUpperCase()} 
+          size="small" 
+          color={getStatusColor(value) as any}
+        />
+      ),
     },
     {
-      id: 'assistants',
-      label: 'Assistants',
-      minWidth: 150,
-      sortable: false,
-      render: (_, row: IDepartments) => {
-        const assistantNames = getAssistantNames(row.assistants);
-        if (assistantNames.length === 0) {
-          return <Typography variant="body2" color="text.secondary">None</Typography>;
-        }
-        if (assistantNames.length <= 2) {
-          return (
-            <Box>
-              {assistantNames.map((name, index) => (
-                <Typography key={index} variant="body2" sx={{ fontSize: '0.8rem' }}>
-                  {name}
-                </Typography>
-              ))}
-            </Box>
-          );
-        }
+      id: 'totalStaff',
+      label: 'Total Staff',
+      minWidth: 120,
+      render: (value, row: IDepartments) => {
+        const total = getTotalStaff(row);
         return (
-          <Tooltip title={assistantNames.join(', ')}>
-            <Typography variant="body2">
-              {assistantNames.slice(0, 2).join(', ')} +{assistantNames.length - 2}
+          <Box>
+            <Typography variant="body2" fontWeight={500}>
+              {total} members
             </Typography>
-          </Tooltip>
+            <Typography variant="caption" color="text.secondary">
+              {row.doctors?.length || 0} doctors, {row.assistants?.length || 0} assistants
+            </Typography>
+          </Box>
         );
       },
     },
@@ -255,105 +207,96 @@ export const AllDepartments: FC = () => {
       id: 'createdAt',
       label: 'Created',
       minWidth: 120,
-      sortable: true,
-      render: (_, row: IDepartments) => (
-        <Typography variant="body2" color="text.secondary">
-          {new Date(row.createdAt).toLocaleDateString()}
+      render: (value: string) => (
+        <Typography variant="body2">
+          {new Date(value).toLocaleDateString()}
         </Typography>
       ),
     },
     {
       id: 'actions',
       label: 'Actions',
-      minWidth: 120,
+      minWidth: 140,
+      align: 'right',
       sortable: false,
-      align: 'center' as const,
-      render: (_, row: IDepartments) => (
-        <Box display="flex" gap={1}>
-          <Tooltip title="View Details">
+      render: (_: unknown, row: IDepartments) => {
+        const favoriteItem = {
+          id: row.id,
+          type: 'department' as const,
+          title: row.name,
+          subtitle: row.description || '',
+          url: `/departments/${row.id}`,
+          metadata: {
+            status: row.status,
+            doctorsCount: row.doctors?.length || 0,
+            assistantsCount: row.assistants?.length || 0,
+          },
+        };
+
+        return (
+          <Box display="flex" alignItems="center">
+            <FavoriteButton item={favoriteItem} size="small" />
             <IconButton
-              size="small"
               onClick={(e) => {
                 e.stopPropagation();
+                addRecentItem({
+                  id: row.id,
+                  type: 'department',
+                  title: row.name,
+                  subtitle: row.description || '',
+                  url: `/departments/${row.id}`,
+                  metadata: {
+                    status: row.status,
+                    doctorsCount: row.doctors?.length || 0,
+                    assistantsCount: row.assistants?.length || 0,
+                  },
+                });
                 navigate(`/departments/${row.id}`);
               }}
-            >
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="More Actions">
-            <IconButton
+              color="primary"
               size="small"
-              onClick={(e) => handleMenuOpen(e, row)}
             >
-              <MoreVertIcon fontSize="small" />
+              <InfoIcon />
             </IconButton>
-          </Tooltip>
-        </Box>
-      ),
+            <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+              <MoreVertIcon />
+            </IconButton>
+          </Box>
+        );
+      },
     },
   ];
 
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" fontWeight={600}>
-            All Departments ({filteredDepartments.length})
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {searchQuery && `Showing ${filteredDepartments.length} of ${departments.length} departments`}
-          </Typography>
-        </Box>
-      </Box>
-      
-      <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-start" }}>
+      <Typography variant="h4" mb={2}>
+        All Departments ({filteredDepartments.length})
+      </Typography>
+      <Box sx={{ mb: 2 }}>
         <SearchBar onSearch={handleSearch} placeholder="Search departments..." />
       </Box>
-      
+
       <ReusableTable
-        data={filteredDepartments} 
         columns={columns}
-        onRowClick={handleRowClick} 
-        onDeleteSelected={handleDeleteMultiple}
+        data={filteredDepartments}
+        onRowClick={handleRowClick}
         searchQuery={searchQuery}
-        emptyMessage={
-          searchQuery 
-            ? `No departments found matching "${searchQuery}"`
-            : "No departments found. Add your first department to get started."
-        }
-        emptyDescription={
-          searchQuery
-            ? "Try adjusting your search criteria or clear the search to see all departments."
-            : "There are currently no departments registered in the system."
-        }
-        enableSelection={true}
-        enablePagination={true}
-        enableSorting={true}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        defaultRowsPerPage={10}
+        emptyMessage="No Departments Found"
+        emptyDescription="There are currently no departments configured."
       />
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
       >
-        <MenuItem onClick={handleEditDepartment}>
+        <MenuItem onClick={handleEdit}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
+          Edit Department
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-          Delete
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Department
         </MenuItem>
       </Menu>
 
@@ -363,7 +306,6 @@ export const AllDepartments: FC = () => {
         onConfirm={handleDeleteConfirm}
         title="Delete Department"
         itemName={selectedDepartment ? selectedDepartment.name : undefined}
-        message={selectedDepartment ? `Are you sure you want to delete the "${selectedDepartment.name}" department? This action cannot be undone.` : undefined}
         isDeleting={isDeleting}
       />
     </Box>

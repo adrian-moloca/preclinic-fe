@@ -18,6 +18,8 @@ import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPatients: FC = () => {
   const { patients, deletePatient } = usePatientsContext();
@@ -29,6 +31,12 @@ export const AllPatients: FC = () => {
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { addRecentItem } = useRecentItems();
+
+  useEffect(() => {
+    setFilteredPatients(allPatients);
+  }, [allPatients]);
 
   const handleDeleteClick = () => {
     if (selectedPatient) {
@@ -88,12 +96,24 @@ export const AllPatients: FC = () => {
   };
 
   const handleRowClick = (patient: PatientsEntry) => {
+    addRecentItem({
+      id: patient.id,
+      type: 'patient',
+      title: `${patient.firstName} ${patient.lastName}`,
+      subtitle: patient.email || patient.phoneNumber || '',
+      url: `/patients/${patient.id}`,
+      metadata: {
+        gender: patient.gender,
+        email: patient.email,
+        phone: patient.phoneNumber,
+      },
+    });
+    
     navigate(`/patients/${patient.id}`);
   };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-
     if (!query) {
       setFilteredPatients(allPatients);
       return;
@@ -101,32 +121,24 @@ export const AllPatients: FC = () => {
 
     const lowerQuery = query.toLowerCase();
     const filtered = allPatients.filter((patient) =>
-      `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(lowerQuery) ||
-      patient.phoneNumber.toLowerCase().includes(lowerQuery) ||
-      patient.address.toLowerCase().includes(lowerQuery) ||
-      patient.birthDate.toLowerCase().includes(lowerQuery)
+      patient.firstName?.toLowerCase().includes(lowerQuery) ||
+      patient.lastName?.toLowerCase().includes(lowerQuery) ||
+      patient.email?.toLowerCase().includes(lowerQuery) ||
+      patient.phoneNumber?.toLowerCase().includes(lowerQuery) ||
+      patient.address?.toLowerCase().includes(lowerQuery)
     );
 
     setFilteredPatients(filtered);
   };
-
-  useEffect(() => {
-    setFilteredPatients(allPatients);
-  }, [patients, allPatients]);
 
   const columns: Column[] = [
     {
       id: 'patient',
       label: 'Patient',
       minWidth: 200,
-      sortable: false,
-      render: (_: unknown, row: PatientsEntry) => (
+      render: (value, row: PatientsEntry) => (
         <Box display="flex" alignItems="center" gap={2}>
-          <Avatar
-            src={row.profileImg}
-            alt={`${row.firstName} ${row.lastName}`}
-            sx={{ width: 40, height: 40 }}
-          >
+          <Avatar src={row.profileImg}>
             {row.firstName?.[0]}{row.lastName?.[0]}
           </Avatar>
           <Box>
@@ -163,28 +175,57 @@ export const AllPatients: FC = () => {
     {
       id: 'actions',
       label: 'Actions',
-      minWidth: 120,
+      minWidth: 140,
       align: 'right',
       sortable: false,
-      render: (_: unknown, row: PatientsEntry) => (
-        <Box>
-          <Tooltip title="View Patient Detail">
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/patients/${row.id}`);
-              }}
-              color="primary"
-              size="small"
-            >
-              <InfoIcon />
+      render: (_: unknown, row: PatientsEntry) => {
+        const favoriteItem = {
+          id: row.id,
+          type: 'patient' as const,
+          title: `${row.firstName} ${row.lastName}`,
+          subtitle: row.email || row.phoneNumber || '',
+          url: `/patients/${row.id}`,
+          metadata: {
+            gender: row.gender,
+            email: row.email,
+            phone: row.phoneNumber,
+          },
+        };
+
+        return (
+          <Box display="flex" alignItems="center">
+            <FavoriteButton item={favoriteItem} size="small" />
+            
+            <Tooltip title="View Patient Detail">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                   addRecentItem({
+                    id: row.id,
+                    type: 'patient',
+                    title: `${row.firstName} ${row.lastName}`,
+                    subtitle: row.email || row.phoneNumber || '',
+                    url: `/patients/${row.id}`,
+                    metadata: {
+                      gender: row.gender,
+                      email: row.email,
+                      phone: row.phoneNumber,
+                    },
+                  });
+                  navigate(`/patients/${row.id}`);
+                }}
+                color="primary"
+                size="small"
+              >
+                <InfoIcon />
+              </IconButton>
+            </Tooltip>
+            <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+              <MoreVertIcon />
             </IconButton>
-          </Tooltip>
-          <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-      ),
+          </Box>
+        );
+      },
     },
   ];
 
@@ -205,27 +246,22 @@ export const AllPatients: FC = () => {
         searchQuery={searchQuery}
         emptyMessage="No Patients Found"
         emptyDescription="There are currently no patients registered."
-        enableSelection={true}
-        enablePagination={true}
-        enableSorting={true}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        defaultRowsPerPage={10}
       />
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <MenuItem onClick={handleEditPatient}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
+          Edit Patient
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-          Delete
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Patient
         </MenuItem>
       </Menu>
 

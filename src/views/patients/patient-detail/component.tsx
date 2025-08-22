@@ -11,7 +11,7 @@ import {
   MenuItem,
   Tooltip
 } from "@mui/material";
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { usePatientsContext } from "../../../providers/patients";
 import { useNavigate, useParams } from "react-router-dom";
 import { PatientDetailsWrapper } from "./style";
@@ -22,6 +22,8 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteModal from "../../../components/delete-modal";
 import { useCasesContext } from "../../../providers/cases/context";
 import ReusableTable from "../../../components/table";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const PatientDetails: FC = () => {
   const { id } = useParams();
@@ -34,10 +36,29 @@ export const PatientDetails: FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
+  const { addRecentItem } = useRecentItems();
+
   const allPatients = Object.values(patients).flat();
   const patient = allPatients.find((p) => p.id === id);
 
   const patientCases = patient ? getCasesByPatientId(patient.id) : [];
+
+  useEffect(() => {
+    if (patient && id) {
+      addRecentItem({
+        id: patient.id,
+        type: 'patient',
+        title: `${patient.firstName} ${patient.lastName}`,
+        subtitle: patient.email || patient.phoneNumber || '',
+        url: `/patients/${patient.id}`,
+        metadata: {
+          gender: patient.gender,
+          email: patient.email,
+          phone: patient.phoneNumber,
+        },
+      });
+    }
+  }, [patient, id, addRecentItem]);
 
   const caseColumns = [
     { id: "id", label: "Case ID" },
@@ -113,7 +134,7 @@ export const PatientDetails: FC = () => {
     try {
       await deletePatient(patient.id);
       setDeleteModalOpen(false);
-      navigate('/patients/all');
+      navigate('/patients/all-patients');
     } catch (error) {
       console.error('Error deleting patient:', error);
     } finally {
@@ -141,6 +162,19 @@ export const PatientDetails: FC = () => {
     );
   }
 
+  const favoriteItem = {
+    id: patient.id,
+    type: 'patient' as const,
+    title: `${patient.firstName} ${patient.lastName}`,
+    subtitle: patient.email || patient.phoneNumber || '',
+    url: `/patients/${patient.id}`,
+    metadata: {
+      gender: patient.gender,
+      email: patient.email,
+      phone: patient.phoneNumber,
+    },
+  };
+
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
@@ -156,9 +190,12 @@ export const PatientDetails: FC = () => {
               sx={{ width: 100, height: 100 }}
             />
             <Box>
-              <Typography variant="h5">
-                {patient.firstName} {patient.lastName}
-              </Typography>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="h5">
+                  {patient.firstName} {patient.lastName}
+                </Typography>
+                <FavoriteButton item={favoriteItem} />
+              </Box>
               <Typography variant="body1" color="text.secondary">
                 {patient.email}
               </Typography>

@@ -5,7 +5,7 @@ import {
     IconButton,
     Menu,
     MenuItem,
-    Tooltip,
+    Chip,
 } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import { usePrescriptionContext } from "../../../providers/prescriptions";
@@ -19,6 +19,8 @@ import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPrescriptions: FC = () => {
     const { prescription, deletePrescription } = usePrescriptionContext();
@@ -31,8 +33,80 @@ export const AllPrescriptions: FC = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const { addRecentItem } = useRecentItems();
+
     const allPatients = Object.values(patients || {}).flat();
     const prescriptionList = Object.values(prescription);
+
+    useEffect(() => {
+        setFilteredPrescriptions(prescriptionList);
+    }, [prescriptionList]);
+
+    const getPatientName = (patientId: string) => {
+        const patient = allPatients.find(p => p.id === patientId);
+        return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
+    };
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        if (!query) {
+            setFilteredPrescriptions(prescriptionList);
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const filtered = prescriptionList.filter((prescription) => {
+            const patientName = getPatientName(prescription.patientId);
+            return (
+                patientName.toLowerCase().includes(lowerQuery) ||
+                prescription.diagnosis?.toLowerCase().includes(lowerQuery) ||
+                prescription.medications?.some(med => 
+                    med.name.toLowerCase().includes(lowerQuery)
+                ) ||
+                prescription.notes?.toLowerCase().includes(lowerQuery)
+            );
+        });
+
+        setFilteredPrescriptions(filtered);
+    };
+
+    const handleRowClick = (prescription: Prescription) => {
+        const patientName = getPatientName(prescription.patientId);
+        
+        // NEW: Add to recent items
+        addRecentItem({
+            id: prescription.id,
+            type: 'prescription',
+            title: `Prescription for ${patientName}`,
+            subtitle: prescription.diagnosis || 'Medical prescription',
+            url: `/prescriptions/${prescription.id}`,
+            metadata: {
+                patientId: prescription.patientId,
+                dateIssued: prescription.dateIssued,
+                diagnosis: prescription.diagnosis,
+            },
+        });
+        
+        navigate(`/prescriptions/${prescription.id}`);
+    };
+
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, prescription: Prescription) => {
+        event.stopPropagation();
+        setAnchorEl(event.currentTarget);
+        setSelectedPrescription(prescription);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setSelectedPrescription(null);
+    };
+
+    const handleEdit = () => {
+        if (selectedPrescription) {
+            navigate(`/prescriptions/edit/${selectedPrescription.id}`);
+            handleMenuClose();
+        }
+    };
 
     const handleDeleteClick = () => {
         if (selectedPrescription) {
@@ -49,7 +123,6 @@ export const AllPrescriptions: FC = () => {
             await deletePrescription(selectedPrescription.id);
             setDeleteModalOpen(false);
             setSelectedPrescription(null);
-            setAnchorEl(null);
         } catch (error) {
             console.error('Error deleting prescription:', error);
         } finally {
@@ -63,100 +136,27 @@ export const AllPrescriptions: FC = () => {
         }
     };
 
-    const handleDeleteMultiple = async (selectedIds: string[]) => {
-        try {
-            await Promise.all(selectedIds.map(id => deletePrescription(id)));
-        } catch (error) {
-            console.error('Error deleting prescriptions:', error);
-        }
-    };
-
-    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, presc: Prescription) => {
-        event.stopPropagation();
-        setAnchorEl(event.currentTarget);
-        setSelectedPrescription(presc);
-    };
-
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-        if (!deleteModalOpen) {
-            setSelectedPrescription(null);
-        }
-    };
-
-    const handleEditPrescription = () => {
-        if (selectedPrescription) {
-            navigate(`/prescriptions/edit/${selectedPrescription.id}`);
-            handleMenuClose();
-        }
-    };
-
-    const handleRowClick = (prescription: Prescription) => {
-        navigate(`/prescriptions/${prescription.id}`);
-    };
-
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-
-        if (!query) {
-            setFilteredPrescriptions(prescriptionList);
-            return;
-        }
-
-        const lowerQuery = query.toLowerCase();
-
-        const filtered = prescriptionList.filter((presc) => {
-            const patient = allPatients.find((p: any) => p.id === presc.patientId);
-            return (
-                (patient &&
-                    (`${patient.firstName} ${patient.lastName}`.toLowerCase().includes(lowerQuery) ||
-                        patient.phoneNumber?.toLowerCase().includes(lowerQuery) ||
-                        patient.address?.toLowerCase().includes(lowerQuery) ||
-                        patient.birthDate?.toLowerCase().includes(lowerQuery))) ||
-                presc.diagnosis.toLowerCase().includes(lowerQuery) ||
-                presc.medications.some((med) => med.name.toLowerCase().includes(lowerQuery))
-            );
-        });
-
-        setFilteredPrescriptions(filtered);
-    };
-
-    useEffect(() => {
-        setFilteredPrescriptions(prescriptionList);
-    }, [patients, prescription, prescriptionList]);
-
-    const getPatient = (patientId: string) => {
-        return allPatients.find((p: any) => p.id === patientId);
-    };
-
     const columns: Column[] = [
         {
             id: 'patient',
             label: 'Patient',
             minWidth: 200,
-            sortable: false,
-            render: (_, row: Prescription) => {
-                const patient = getPatient(row.patientId);
-                return patient ? (
+            render: (value, row: Prescription) => {
+                const patient = allPatients.find(p => p.id === row.patientId);
+                return (
                     <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar
-                            src={patient.profileImg}
-                            alt={`${patient.firstName} ${patient.lastName}`}
-                            sx={{ width: 40, height: 40 }}
-                        >
-                            {patient.firstName?.[0]}{patient.lastName?.[0]}
+                        <Avatar src={patient?.profileImg}>
+                            {patient?.firstName?.[0]}{patient?.lastName?.[0]}
                         </Avatar>
                         <Box>
                             <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {patient.firstName} {patient.lastName}
+                                {getPatientName(row.patientId)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                ID: {patient.id}
+                                Patient ID: {row.patientId}
                             </Typography>
                         </Box>
                     </Box>
-                ) : (
-                    <Typography color="text.secondary">Unknown Patient</Typography>
                 );
             },
         },
@@ -164,45 +164,31 @@ export const AllPrescriptions: FC = () => {
             id: 'dateIssued',
             label: 'Date Issued',
             minWidth: 120,
-            render: (value: string) => (
-                <Typography variant="body2">
-                    {value || 'N/A'}
-                </Typography>
-            ),
+            render: (value: string) => new Date(value).toLocaleDateString(),
         },
         {
             id: 'diagnosis',
             label: 'Diagnosis',
-            minWidth: 150,
-            render: (value: string) => (
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {value || 'N/A'}
-                </Typography>
-            ),
+            minWidth: 200,
         },
         {
             id: 'medications',
             label: 'Medications',
             minWidth: 200,
-            sortable: false,
-            render: (value: any[], row: Prescription) => (
+            render: (value: any[]) => (
                 <Box>
-                    {row.medications && row.medications.length > 0 ? (
-                        <>
-                            {row.medications.slice(0, 2).map((med, idx) => (
-                                <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>
-                                    {med.name}
-                                </Typography>
-                            ))}
-                            {row.medications.length > 2 && (
-                                <Typography variant="caption" color="primary.main">
-                                    +{row.medications.length - 2} more
-                                </Typography>
-                            )}
-                        </>
-                    ) : (
-                        <Typography variant="body2" color="text.secondary">
-                            No medications
+                    {value?.slice(0, 2).map((med, index) => (
+                        <Chip 
+                            key={index}
+                            label={med.name} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ mr: 0.5, mb: 0.5 }}
+                        />
+                    ))}
+                    {value?.length > 2 && (
+                        <Typography variant="caption" color="text.secondary">
+                            +{value.length - 2} more
                         </Typography>
                     )}
                 </Box>
@@ -211,15 +197,42 @@ export const AllPrescriptions: FC = () => {
         {
             id: 'actions',
             label: 'Actions',
-            minWidth: 120,
+            minWidth: 140,
             align: 'right',
             sortable: false,
-            render: (_, row: Prescription) => (
-                <Box>
-                    <Tooltip title="View Prescription Detail">
+            render: (_: unknown, row: Prescription) => {
+                const patientName = getPatientName(row.patientId);
+                const favoriteItem = {
+                    id: row.id,
+                    type: 'prescription' as const,
+                    title: `Prescription for ${patientName}`,
+                    subtitle: row.diagnosis || 'Medical prescription',
+                    url: `/prescriptions/${row.id}`,
+                    metadata: {
+                        patientId: row.patientId,
+                        dateIssued: row.dateIssued,
+                        diagnosis: row.diagnosis,
+                    },
+                };
+
+                return (
+                    <Box display="flex" alignItems="center">
+                        <FavoriteButton item={favoriteItem} size="small" />
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
+                                addRecentItem({
+                                    id: row.id,
+                                    type: 'prescription',
+                                    title: `Prescription for ${patientName}`,
+                                    subtitle: row.diagnosis || 'Medical prescription',
+                                    url: `/prescriptions/${row.id}`,
+                                    metadata: {
+                                        patientId: row.patientId,
+                                        dateIssued: row.dateIssued,
+                                        diagnosis: row.diagnosis,
+                                    },
+                                });
                                 navigate(`/prescriptions/${row.id}`);
                             }}
                             color="primary"
@@ -227,21 +240,21 @@ export const AllPrescriptions: FC = () => {
                         >
                             <InfoIcon />
                         </IconButton>
-                    </Tooltip>
-                    <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-                        <MoreVertIcon />
-                    </IconButton>
-                </Box>
-            ),
+                        <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+                            <MoreVertIcon />
+                        </IconButton>
+                    </Box>
+                );
+            },
         },
     ];
 
     return (
-        <Box p={3} sx={{ overflowX: "auto" }}>
+        <Box p={3}>
             <Typography variant="h4" mb={2}>
                 All Prescriptions ({filteredPrescriptions.length})
             </Typography>
-            <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-start" }}>
+            <Box sx={{ mb: 2 }}>
                 <SearchBar onSearch={handleSearch} />
             </Box>
 
@@ -249,31 +262,23 @@ export const AllPrescriptions: FC = () => {
                 columns={columns}
                 data={filteredPrescriptions}
                 onRowClick={handleRowClick}
-                onDeleteSelected={handleDeleteMultiple}
                 searchQuery={searchQuery}
                 emptyMessage="No Prescriptions Found"
-                emptyDescription="There are currently no prescriptions available."
-                enableSelection={true}
-                enablePagination={true}
-                enableSorting={true}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                defaultRowsPerPage={10}
+                emptyDescription="There are currently no prescriptions issued."
             />
 
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={handleEditPrescription}>
+                <MenuItem onClick={handleEdit}>
                     <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                    Edit
+                    Edit Prescription
                 </MenuItem>
                 <MenuItem onClick={handleDeleteClick}>
-                    <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-                    Delete
+                    <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+                    Delete Prescription
                 </MenuItem>
             </Menu>
 
@@ -282,8 +287,7 @@ export const AllPrescriptions: FC = () => {
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 title="Delete Prescription"
-                itemName={selectedPrescription ? `Prescription for ${getPatient(selectedPrescription.patientId)?.firstName} ${getPatient(selectedPrescription.patientId)?.lastName}` : undefined}
-                message={selectedPrescription ? `Are you sure you want to delete this prescription? This action cannot be undone.` : undefined}
+                itemName={selectedPrescription ? `Prescription for ${getPatientName(selectedPrescription.patientId)}` : undefined}
                 isDeleting={isDeleting}
             />
         </Box>

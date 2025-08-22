@@ -3,11 +3,9 @@ import {
     Typography, 
     Avatar, 
     IconButton, 
-    Tooltip, 
     Menu, 
     MenuItem, 
-    ListItemIcon, 
-    ListItemText 
+    Chip,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +18,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteModal from "../../../components/delete-modal";
 import SearchBar from "../../../components/search-bar";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllDoctors: FC = () => {
     const { doctors, deleteDoctor } = useDoctorsContext();
@@ -31,9 +31,45 @@ export const AllDoctors: FC = () => {
     const [filteredDoctors, setFilteredDoctors] = useState<IDoctor[]>(doctors);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const { addRecentItem } = useRecentItems();
+
     useEffect(() => {
         setFilteredDoctors(doctors);
     }, [doctors]);
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        if (!query) {
+            setFilteredDoctors(doctors);
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+        const filtered = doctors.filter((doctor) =>
+            doctor.firstName?.toLowerCase().includes(lowerQuery) ||
+            doctor.lastName?.toLowerCase().includes(lowerQuery) ||
+            doctor.email?.toLowerCase().includes(lowerQuery) ||
+            doctor.phoneNumber?.toLowerCase().includes(lowerQuery)
+        );
+
+        setFilteredDoctors(filtered);
+    };
+
+    const handleRowClick = (doctor: IDoctor) => {
+        addRecentItem({
+            id: doctor.id,
+            type: 'doctor',
+            title: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+            subtitle: doctor.email || '',
+            url: `/doctors/${doctor.id}`,
+            metadata: {
+                email: doctor.email,
+                phone: doctor.phoneNumber,
+            },
+        });
+        
+        navigate(`/doctors/${doctor.id}`);
+    };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, doctor: IDoctor) => {
         event.stopPropagation();
@@ -43,22 +79,24 @@ export const AllDoctors: FC = () => {
 
     const handleMenuClose = () => {
         setAnchorEl(null);
+        setSelectedDoctor(null);
     };
 
     const handleEditDoctor = () => {
         if (selectedDoctor) {
             navigate(`/doctors/edit/${selectedDoctor.id}`);
+            handleMenuClose();
         }
-        handleMenuClose();
-        setSelectedDoctor(null);
     };
 
-    const handleDeleteConfirm = () => {
-        setDeleteModalOpen(true); 
-        handleMenuClose(); 
+    const handleDeleteClick = () => {
+        if (selectedDoctor) {
+            setDeleteModalOpen(true);
+            setAnchorEl(null);
+        }
     };
 
-    const handleDeleteDoctor = async () => {
+    const handleDeleteConfirm = async () => {
         if (!selectedDoctor) return;
 
         setIsDeleting(true);
@@ -76,111 +114,84 @@ export const AllDoctors: FC = () => {
     const handleDeleteCancel = () => {
         if (!isDeleting) {
             setDeleteModalOpen(false);
-            setSelectedDoctor(null);
         }
-    };
-
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-
-        if (!query) {
-            setFilteredDoctors(doctors);
-            return;
-        }
-
-        const filtered = doctors.filter((doctor) => {
-            const searchTerm = query.toLowerCase();
-            return (
-                doctor.firstName.toLowerCase().includes(searchTerm) ||
-                doctor.lastName.toLowerCase().includes(searchTerm) ||
-                doctor.email.toLowerCase().includes(searchTerm) ||
-                doctor.department.toLowerCase().includes(searchTerm) ||
-                doctor.designation.toLowerCase().includes(searchTerm) ||
-                doctor.phoneNumber.includes(searchTerm)
-            );
-        });
-
-        setFilteredDoctors(filtered);
-    };
-
-    const handleRowClick = (doctor: IDoctor) => {
-        navigate(`/doctors/${doctor.id}`);
     };
 
     const columns = [
         {
-            id: 'photo',
-            label: 'Photo',
-            accessor: 'profileImg' as keyof IDoctor,
+            id: 'doctor',
+            label: 'Doctor',
+            minWidth: 200,
             render: (value: any, row: IDoctor) => (
-                <Avatar 
-                    src={row.profileImg} 
-                    alt={`${row.firstName} ${row.lastName}`}
-                    sx={{ width: 40, height: 40 }}
-                >
-                    {!row.profileImg && `${row.firstName.charAt(0)}${row.lastName.charAt(0)}`}
-                </Avatar>
-            )
-        },
-        {
-            id: 'name',
-            label: 'Name',
-            accessor: 'firstName' as keyof IDoctor,
-            render: (value: any, row: IDoctor) => (
-                <Box>
-                    <Typography variant="body2" fontWeight={600}>
-                        {`${row.firstName} ${row.lastName}`}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {row.email}
-                    </Typography>
+                <Box display="flex" alignItems="center" gap={2}>
+                    <Avatar src={row.profileImg}>
+                        {row.firstName?.[0]}{row.lastName?.[0]}
+                    </Avatar>
+                    <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            Dr. {row.firstName} {row.lastName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            ID: {row.id}
+                        </Typography>
+                    </Box>
                 </Box>
-            )
+            ),
         },
         {
-            id: 'department',
-            label: 'Department',
-            accessor: 'department' as keyof IDoctor,
+            id: 'specialization',
+            label: 'Specialization',
+            minWidth: 150,
+            render: (value: string) => (
+                <Chip label={value} size="small" color="primary" variant="outlined" />
+            ),
         },
         {
-            id: 'designation',
-            label: 'Designation',
-            accessor: 'designation' as keyof IDoctor,
+            id: 'email',
+            label: 'Email',
+            minWidth: 200,
         },
         {
-            id: 'experience',
-            label: 'Experience',
-            accessor: 'yearsOfExperience' as keyof IDoctor,
-            render: (value: any, row: IDoctor) => {
-                const experience = row.yearsOfExperience;
-                return experience !== undefined && experience !== null
-                    ? `${experience} years`
-                    : 'Not specified';
-            }
-        },
-        {
-            id: 'phone',
+            id: 'phoneNumber',
             label: 'Phone',
-            accessor: 'phoneNumber' as keyof IDoctor,
-            render: (value: any, row: IDoctor) => {
-                const phone = row.phoneNumber;
-                return phone && phone.trim() !== '' 
-                    ? phone 
-                    : 'Not provided';
-            }
+            minWidth: 130,
         },
         {
             id: 'actions',
             label: 'Actions',
-            minWidth: 120,
+            minWidth: 140,
             align: 'right' as const,
             sortable: false,
-            render: (_: unknown, row: IDoctor) => (
-                <Box>
-                    <Tooltip title="View Doctor Detail">
+            render: (_: unknown, row: IDoctor) => {
+                const favoriteItem = {
+                    id: row.id,
+                    type: 'doctor' as const,
+                    title: `Dr. ${row.firstName} ${row.lastName}`,
+                    subtitle: row.email || '',
+                    url: `/doctors/${row.id}`,
+                    metadata: {
+                        email: row.email,
+                        phone: row.phoneNumber,
+                    },
+                };
+
+                return (
+                    <Box display="flex" alignItems="center">
+                        <FavoriteButton item={favoriteItem} size="small" />
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
+                                addRecentItem({
+                                    id: row.id,
+                                    type: 'doctor',
+                                    title: `Dr. ${row.firstName} ${row.lastName}`,
+                                    subtitle: row.email || '',
+                                    url: `/doctors/${row.id}`,
+                                    metadata: {
+                                        email: row.email,
+                                        phone: row.phoneNumber,
+                                    },
+                                });
                                 navigate(`/doctors/${row.id}`);
                             }}
                             color="primary"
@@ -188,75 +199,54 @@ export const AllDoctors: FC = () => {
                         >
                             <InfoIcon />
                         </IconButton>
-                    </Tooltip>
-                    <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-                        <MoreVertIcon />
-                    </IconButton>
-                </Box>
-            ),
+                        <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+                            <MoreVertIcon />
+                        </IconButton>
+                    </Box>
+                );
+            },
         },
     ];
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Box mb={3}>
-                <Typography variant="h4" fontWeight={600}>
-                    All Doctors ({filteredDoctors.length})
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    {searchQuery && `Showing ${filteredDoctors.length} of ${doctors.length} doctors`}
-                </Typography>
-            </Box>
-            
-            <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-start" }}>
+        <Box p={3}>
+            <Typography variant="h4" mb={2}>
+                All Doctors ({filteredDoctors.length})
+            </Typography>
+            <Box sx={{ mb: 2 }}>
                 <SearchBar onSearch={handleSearch} />
             </Box>
-            
+
             <ReusableTable
-                data={filteredDoctors} 
                 columns={columns}
-                onRowClick={handleRowClick} 
-                emptyMessage={
-                    searchQuery 
-                        ? `No doctors found matching "${searchQuery}"`
-                        : "No doctors found. Add your first doctor to get started."
-                }
+                data={filteredDoctors}
+                onRowClick={handleRowClick}
+                searchQuery={searchQuery}
+                emptyMessage="No Doctors Found"
+                emptyDescription="There are currently no doctors registered."
             />
 
             <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                }}
             >
                 <MenuItem onClick={handleEditDoctor}>
-                    <ListItemIcon>
-                        <EditIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Edit</ListItemText>
+                    <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                    Edit Doctor
                 </MenuItem>
-                <MenuItem onClick={handleDeleteConfirm} sx={{ color: 'error.main' }}>
-                    <ListItemIcon>
-                        <DeleteIcon fontSize="small" color="error" />
-                    </ListItemIcon>
-                    <ListItemText>Delete</ListItemText>
+                <MenuItem onClick={handleDeleteClick}>
+                    <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+                    Delete Doctor
                 </MenuItem>
             </Menu>
 
             <DeleteModal
                 open={deleteModalOpen}
                 onClose={handleDeleteCancel}
-                onConfirm={handleDeleteDoctor}
+                onConfirm={handleDeleteConfirm}
                 title="Delete Doctor"
                 itemName={selectedDoctor ? `Dr. ${selectedDoctor.firstName} ${selectedDoctor.lastName}` : undefined}
-                message={selectedDoctor ? `Are you sure you want to delete Dr. ${selectedDoctor.firstName} ${selectedDoctor.lastName}? This action cannot be undone.` : undefined}
                 isDeleting={isDeleting}
             />
         </Box>

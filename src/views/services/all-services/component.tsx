@@ -1,50 +1,95 @@
 import {
   Box,
   Typography,
+  Avatar,
   IconButton,
   Menu,
   MenuItem,
   Chip,
-  Tooltip,
 } from "@mui/material";
-import { FC, useState, useMemo, useEffect, useCallback } from "react";
+import { FC, useState, useEffect } from "react";
+import { useServicesContext } from "../../../providers/services/context";
+import { IServices } from "../../../providers/services/types";
+import InfoIcon from '@mui/icons-material/Info';
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import InfoIcon from '@mui/icons-material/Info';
+import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
-import { useServicesContext } from "../../../providers/services/context";
-import { IServices } from "../../../providers/services/types";
-import { useDepartmentsContext } from "../../../providers/departments/context";
-import { useProductsContext } from "../../../providers/products/context";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
-
-const getStatusColor = (status: string) => {
-  const colors = {
-    active: 'success',
-    inactive: 'warning',
-    maintenance: 'error'
-  };
-  return colors[status as keyof typeof colors] || 'default';
-};
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllServices: FC = () => {
   const { services, deleteService } = useServicesContext();
-  const { departments } = useDepartmentsContext();
-  const { products } = useProductsContext();
+  const [filteredServices, setFilteredServices] = useState<IServices[]>(services);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedService, setSelectedService] = useState<IServices | null>(null);
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [filteredServices, setFilteredServices] = useState<IServices[]>(services);
+
+  const { addRecentItem } = useRecentItems();
 
   useEffect(() => {
     setFilteredServices(services);
   }, [services]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query) {
+      setFilteredServices(services);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = services.filter((service) =>
+      service.name?.toLowerCase().includes(lowerQuery) ||
+      service.description?.toLowerCase().includes(lowerQuery) ||
+      service.department?.toLowerCase().includes(lowerQuery)
+    );
+
+    setFilteredServices(filtered);
+  };
+
+  const handleRowClick = (service: IServices) => {
+    addRecentItem({
+      id: service.id,
+      type: 'service',
+      title: service.name,
+      subtitle: `${service.department} - $${service.price}`,
+      url: `/services/${service.id}`,
+      metadata: {
+        department: service.department,
+        price: service.price,
+        duration: service.duration,
+        status: service.status,
+      },
+    });
+    
+    navigate(`/services/${service.id}`);
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, service: IServices) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedService(service);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedService(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedService) {
+      navigate(`/services/edit/${selectedService.id}`);
+      handleMenuClose();
+    }
+  };
 
   const handleDeleteClick = () => {
     if (selectedService) {
@@ -58,7 +103,7 @@ export const AllServices: FC = () => {
 
     setIsDeleting(true);
     try {
-      deleteService(selectedService.id);
+      await deleteService(selectedService.id);
       setDeleteModalOpen(false);
       setSelectedService(null);
     } catch (error) {
@@ -74,99 +119,58 @@ export const AllServices: FC = () => {
     }
   };
 
-  const handleDeleteMultiple = async (selectedIds: string[]) => {
-    try {
-      selectedIds.forEach(id => deleteService(id));
-    } catch (error) {
-      console.error('Error deleting services:', error);
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'success';
+      case 'inactive': return 'error';
+      case 'pending': return 'warning';
+      default: return 'default';
     }
   };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, service: IServices) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setSelectedService(service);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    if (!deleteModalOpen) {
-      setSelectedService(null);
-    }
-  };
-
-  const handleEditService = () => {
-    if (selectedService) {
-      navigate(`/services/edit/${selectedService.id}`);
-      handleMenuClose();
-    }
-  };
-
-  const handleServiceDetails = (service: IServices) => {
-    navigate(`/services/${service.id}`);
-  };
-
-  const handleRowClick = (service: IServices) => {
-    navigate(`/services/${service.id}`);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    
-    if (!query.trim()) {
-      setFilteredServices(services);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = services.filter((service) =>
-      service.name.toLowerCase().includes(lowerQuery) ||
-      service.description.toLowerCase().includes(lowerQuery) ||
-      service.department.toLowerCase().includes(lowerQuery) ||
-      service.status.toLowerCase().includes(lowerQuery) ||
-      service.price.toString().includes(lowerQuery) ||
-      service.duration.toString().includes(lowerQuery)
-    );
-
-    setFilteredServices(filtered);
-  };
-
-  const getDepartmentName = (departmentName: string) => {
-    const department = departments.find(dept => dept.name === departmentName);
-    return department ? department.name : departmentName;
-  };
-
-  const calculateTotalCost = useCallback((service: IServices) => {
-    const productsCost = service.products
-      .map(id => products.find(product => product.id === id))
-      .filter(Boolean)
-      .reduce((total, product) => total + product!.unitPrice, 0);
-    
-    return service.price + productsCost;
-  }, [products]);
 
   const columns: Column[] = [
     {
       id: 'service',
       label: 'Service',
       minWidth: 200,
-      sortable: true,
-      render: (_, row: IServices) => (
-        <Box>
-          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-            {row.name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {getDepartmentName(row.department)}
-          </Typography>
+      render: (value, row: IServices) => (
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar>
+            <MedicalServicesIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              {row.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              ID: {row.id}
+            </Typography>
+          </Box>
         </Box>
+      ),
+    },
+    {
+      id: 'department',
+      label: 'Department',
+      minWidth: 150,
+      render: (value: string) => (
+        <Chip label={value} size="small" color="primary" variant="outlined" />
+      ),
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      minWidth: 100,
+      render: (value: number) => (
+        <Typography variant="body2" fontWeight={500}>
+          ${value?.toFixed(2)}
+        </Typography>
       ),
     },
     {
       id: 'duration',
       label: 'Duration',
       minWidth: 100,
-      sortable: true,
       render: (value: number) => (
         <Typography variant="body2">
           {value} min
@@ -174,103 +178,97 @@ export const AllServices: FC = () => {
       ),
     },
     {
-      id: 'price',
-      label: 'Base Price',
-      minWidth: 120,
-      sortable: true,
-      render: (value: number) => (
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          ${value.toFixed(2)}
-        </Typography>
-      ),
-    },
-    {
-      id: 'totalCost',
-      label: 'Total Cost',
-      minWidth: 120,
-      sortable: false,
-      render: (_, row: IServices) => {
-        const totalCost = calculateTotalCost(row);
-        return (
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              ${totalCost.toFixed(2)}
-            </Typography>
-            {row.products.length > 0 && (
-              <Typography variant="caption" color="text.secondary">
-                +{row.products.length} product{row.products.length !== 1 ? 's' : ''}
-              </Typography>
-            )}
-          </Box>
-        );
-      },
-    },
-    {
       id: 'status',
       label: 'Status',
       minWidth: 120,
-      sortable: true,
       render: (value: string) => (
-        <Chip
-          label={value.toUpperCase()}
-          size="small"
+        <Chip 
+          label={value} 
+          size="small" 
           color={getStatusColor(value) as any}
         />
       ),
     },
     {
+      id: 'description',
+      label: 'Description',
+      minWidth: 200,
+      render: (value: string) => (
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            maxWidth: 200, 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {value}
+        </Typography>
+      ),
+    },
+    {
       id: 'actions',
       label: 'Actions',
-      minWidth: 120,
+      minWidth: 140,
       align: 'right',
       sortable: false,
-      render: (_, row: IServices) => (
-        <Box>
-          <Tooltip title="View Service Details">
+      render: (_: unknown, row: IServices) => {
+        const favoriteItem = {
+          id: row.id,
+          type: 'service' as const,
+          title: row.name,
+          subtitle: `${row.department} - $${row.price}`,
+          url: `/services/${row.id}`,
+          metadata: {
+            department: row.department,
+            price: row.price,
+            duration: row.duration,
+            status: row.status,
+          },
+        };
+
+        return (
+          <Box display="flex" alignItems="center">
+            <FavoriteButton item={favoriteItem} size="small" />
             <IconButton
               onClick={(e) => {
                 e.stopPropagation();
-                handleServiceDetails(row);
+                addRecentItem({
+                  id: row.id,
+                  type: 'service',
+                  title: row.name,
+                  subtitle: `${row.department} - $${row.price}`,
+                  url: `/services/${row.id}`,
+                  metadata: {
+                    department: row.department,
+                    price: row.price,
+                    duration: row.duration,
+                    status: row.status,
+                  },
+                });
+                navigate(`/services/${row.id}`);
               }}
+              color="primary"
               size="small"
             >
               <InfoIcon />
             </IconButton>
-          </Tooltip>
-          <IconButton onClick={(e) => handleMenuOpen(e, row)}>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-      ),
+            <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+              <MoreVertIcon />
+            </IconButton>
+          </Box>
+        );
+      },
     },
   ];
 
-  const serviceStats = useMemo(() => {
-    const totalRevenue = filteredServices.reduce((total, service) => 
-      total + calculateTotalCost(service), 0
-    );
-    const activeServices = filteredServices.filter(service => service.status === 'active').length;
-    const averagePrice = filteredServices.length > 0 
-      ? totalRevenue / filteredServices.length 
-      : 0;
-
-    return { totalRevenue, activeServices, averagePrice };
-  }, [filteredServices, calculateTotalCost]);
-
   return (
-    <Box p={3} sx={{ overflowX: "auto" }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" fontWeight={600}>
-            All Services ({filteredServices.length})
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {searchQuery && `Showing ${filteredServices.length} of ${services.length} services`}
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-start" }}>
+    <Box p={3}>
+      <Typography variant="h4" mb={2}>
+        All Services ({filteredServices.length})
+      </Typography>
+      <Box sx={{ mb: 2 }}>
         <SearchBar onSearch={handleSearch} placeholder="Search services..." />
       </Box>
 
@@ -278,59 +276,32 @@ export const AllServices: FC = () => {
         columns={columns}
         data={filteredServices}
         onRowClick={handleRowClick}
-        onDeleteSelected={handleDeleteMultiple}
         searchQuery={searchQuery}
-        emptyMessage={
-          searchQuery 
-            ? `No services found matching "${searchQuery}"`
-            : "No services found. Add your first service to get started."
-        }
-        emptyDescription={
-          searchQuery
-            ? "Try adjusting your search criteria or clear the search to see all services."
-            : "There are currently no services registered in the system."
-        }
-        enableSelection={true}
-        enablePagination={true}
-        enableSorting={true}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        defaultRowsPerPage={10}
+        emptyMessage="No Services Found"
+        emptyDescription="There are currently no services configured."
       />
-
-      {filteredServices.length > 0 && (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Active Services: {serviceStats.activeServices} | 
-            Total Revenue Potential: ${serviceStats.totalRevenue.toFixed(2)} | 
-            Average Service Cost: ${serviceStats.averagePrice.toFixed(2)}
-          </Typography>
-        </Box>
-      )}
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem onClick={handleEditService}>
+        <MenuItem onClick={handleEdit}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
+          Edit Service
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-          Delete
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Service
         </MenuItem>
       </Menu>
-      
+
       <DeleteModal
         open={deleteModalOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         title="Delete Service"
-        itemName={selectedService?.name}
-        message={selectedService ? `Are you sure you want to delete "${selectedService.name}"? This action cannot be undone.` : undefined}
+        itemName={selectedService ? selectedService.name : undefined}
         isDeleting={isDeleting}
       />
     </Box>

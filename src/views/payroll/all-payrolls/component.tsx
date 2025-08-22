@@ -1,482 +1,344 @@
 import {
-    Box,
-    Typography,
-    IconButton,
-    Menu,
-    MenuItem,
-    Tooltip,
-    Chip,
+  Box,
+  Typography,
+  Avatar,
+  IconButton,
+  Menu,
+  MenuItem,
+  Chip,
 } from "@mui/material";
-import { FC, useState, useMemo, useEffect } from "react";
+import { FC, useState, useEffect } from "react";
 import { usePayrollsContext } from "../../../providers/payroll/context";
 import { IPayroll } from "../../../providers/payroll/types";
 import InfoIcon from '@mui/icons-material/Info';
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
+import { useRecentItems } from "../../../hooks/recent-items";
+import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPayrolls: FC = () => {
-    const { payrolls, deletePayroll } = usePayrollsContext();
-    const navigate = useNavigate();
+  const { payrolls, deletePayroll } = usePayrollsContext();
+  const [filteredPayrolls, setFilteredPayrolls] = useState<IPayroll[]>(payrolls);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedPayroll, setSelectedPayroll] = useState<IPayroll | null>(null);
+  const navigate = useNavigate();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    // Simplified payroll list since we know payrolls is always an array now
-    const payrollList = useMemo(() => {
-        if (!payrolls || !Array.isArray(payrolls)) {
-            console.log("No payrolls found or invalid format");
-            return [];
-        }
-        
-        return payrolls;
-    }, [payrolls]);
+  const { addRecentItem } = useRecentItems();
 
-    const [filteredPayrolls, setFilteredPayrolls] = useState<IPayroll[]>([]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [selectedPayroll, setSelectedPayroll] = useState<IPayroll | null>(null);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+  useEffect(() => {
+    setFilteredPayrolls(payrolls);
+  }, [payrolls]);
 
-    useEffect(() => {
-        setFilteredPayrolls(payrollList);
-    }, [payrollList]);
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query) {
+      setFilteredPayrolls(payrolls);
+      return;
+    }
 
-    useEffect(() => {
-        if (searchQuery.trim()) {
-            const filtered = payrollList.filter(payroll => {
-                if (!payroll) return false;
-                
-                const employeeName = payroll.employee?.toLowerCase() || '';
-                const payrollDate = payroll.date || '';
-                const netSalary = payroll.netSalary?.toString() || '';
-                const basicSalary = payroll.basicSalary?.toString() || '';
-                const payrollId = payroll.id?.toLowerCase() || '';
+    const lowerQuery = query.toLowerCase();
+    const filtered = payrolls.filter((payroll) => {
+      const employeeName = payroll.employee || '';
+      return employeeName.toLowerCase().includes(lowerQuery);
+    });
 
-                const query = searchQuery.toLowerCase();
+    setFilteredPayrolls(filtered);
+  };
 
-                return (
-                    employeeName.includes(query) ||
-                    payrollDate.includes(searchQuery) ||
-                    netSalary.includes(searchQuery) ||
-                    basicSalary.includes(searchQuery) ||
-                    payrollId.includes(query)
-                );
-            });
-            setFilteredPayrolls(filtered);
-        } else {
-            setFilteredPayrolls(payrollList);
-        }
-    }, [payrollList, searchQuery]);
+  const handleRowClick = (payroll: IPayroll) => {
+    const employeeName = payroll.employee || 'Unknown Employee';
+    const netSalary = calculateNetSalary(payroll);
+    
+    addRecentItem({
+      id: payroll.id,
+      type: 'payroll',
+      title: `Payroll - ${employeeName}`,
+      subtitle: `Net Salary: $${netSalary.toFixed(2)}`,
+      url: `/payroll/${payroll.id}`,
+      metadata: {
+        employeeName,
+        date: payroll.date,
+        basicSalary: payroll.basicSalary,
+        netSalary,
+      },
+    });
+    
+    navigate(`/payroll/${payroll.id}`);
+  };
 
-    const handleDeleteClick = () => {
-        if (selectedPayroll) {
-            setDeleteModalOpen(true);
-            setAnchorEl(null);
-        }
-    };
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, payroll: IPayroll) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedPayroll(payroll);
+  };
 
-    const handleDeleteConfirm = async () => {
-        if (!selectedPayroll) return;
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedPayroll(null);
+  };
 
-        setIsDeleting(true);
-        try {
-            await deletePayroll(selectedPayroll.id);
-            setDeleteModalOpen(false);
-            setSelectedPayroll(null);
-        } catch (error) {
-            console.error('Error deleting payroll:', error);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
+  const handleEdit = () => {
+    if (selectedPayroll) {
+      navigate(`/payroll/edit/${selectedPayroll.id}`);
+      handleMenuClose();
+    }
+  };
 
-    const handleDeleteCancel = () => {
-        if (!isDeleting) {
-            setDeleteModalOpen(false);
-            setSelectedPayroll(null);
-        }
-    };
+  const handleDeleteClick = () => {
+    if (selectedPayroll) {
+      setDeleteModalOpen(true);
+      setAnchorEl(null);
+    }
+  };
 
-    const handleDeleteMultiple = async (selectedIds: string[]) => {
-        if (!selectedIds.length) return;
-        
-        try {
-            // Use Promise.allSettled to handle any potential failures gracefully
-            const results = await Promise.allSettled(
-                selectedIds.map(id => deletePayroll(id))
-            );
-            
-            // Log any failures for debugging
-            results.forEach((result, index) => {
-                if (result.status === 'rejected') {
-                    console.error(`Failed to delete payroll ${selectedIds[index]}:`, result.reason);
-                }
-            });
-        } catch (error) {
-            console.error('Error deleting multiple payrolls:', error);
-        }
-    };
+  const handleDeleteConfirm = async () => {
+    if (!selectedPayroll) return;
 
-    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, payroll: IPayroll) => {
-        event.stopPropagation();
-        setAnchorEl(event.currentTarget);
-        setSelectedPayroll(payroll);
-    };
+    setIsDeleting(true);
+    try {
+      await deletePayroll(selectedPayroll.id);
+      setDeleteModalOpen(false);
+      setSelectedPayroll(null);
+    } catch (error) {
+      console.error('Error deleting payroll:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-        if (!deleteModalOpen) {
-            setSelectedPayroll(null);
-        }
-    };
+  const handleDeleteCancel = () => {
+    if (!isDeleting) {
+      setDeleteModalOpen(false);
+    }
+  };
 
-    const handleEditPayroll = () => {
-        if (selectedPayroll) {
-            navigate(`/payroll/edit/${selectedPayroll.id}`);
-            handleMenuClose();
-        }
-    };
+  const calculateTotalEarnings = (payroll: IPayroll): number => {
+    return (payroll.basicSalary || 0) +
+           (payroll.da || 0) +
+           (payroll.hra || 0) +
+           (payroll.conveyance || 0) +
+           (payroll.medicalAllowance || 0) +
+           (payroll.otherEarnings || 0);
+  };
 
-    const handleRowClick = (payroll: IPayroll) => {
-        if (payroll?.id) {
-            navigate(`/payroll/${payroll.id}`);
-        }
-    };
+  const calculateTotalDeductions = (payroll: IPayroll): number => {
+    return (payroll.tds || 0) +
+           (payroll.pf || 0) +
+           (payroll.esi || 0) +
+           (payroll.profTax || 0) +
+           (payroll.labourWelfareFund || 0) +
+           (payroll.otherDeductions || 0);
+  };
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-    };
+  const calculateNetSalary = (payroll: IPayroll): number => {
+    return calculateTotalEarnings(payroll) - calculateTotalDeductions(payroll);
+  };
 
-    const formatCurrency = (amount: number | undefined | null) => {
-        if (amount === undefined || amount === null || isNaN(amount)) {
-            return '$0.00';
-        }
+  const formatCurrency = (amount: number): string => {
+    return `$${amount.toFixed(2)}`;
+  };
 
-        try {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(amount);
-        } catch (error) {
-            return `$${amount.toFixed(2)}`;
-        }
-    };
+  const getNetSalaryColor = (netSalary: number) => {
+    if (netSalary >= 5000) return 'success';
+    if (netSalary >= 3000) return 'warning';
+    return 'error';
+  };
 
-    const formatDate = (dateString: string | undefined) => {
-        if (!dateString) return 'N/A';
-
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'Invalid Date';
-
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        } catch (error) {
-            return 'Invalid Date';
-        }
-    };
-
-    const getNetSalaryChip = (netSalary: number | undefined) => {
-        const salary = netSalary || 0;
-        let color: 'success' | 'warning' | 'error' = 'error';
-        
-        if (salary >= 5000) {
-            color = 'success';
-        } else if (salary >= 3000) {
-            color = 'warning';
-        }
+  const columns: Column[] = [
+    {
+      id: 'employee',
+      label: 'Employee',
+      minWidth: 200,
+      render: (value, row: IPayroll) => {
+        const employeeName = row.employee || 'Unknown Employee';
+        const nameParts = employeeName.split('(');
+        const name = nameParts[0]?.trim() || 'Unknown';
+        const role = nameParts.length > 1 
+          ? nameParts[1]?.replace(')', '').trim() || 'Unknown'
+          : 'Unknown';
 
         return (
-            <Chip
-                label={formatCurrency(salary)}
-                color={color}
-                size="small"
-                sx={{ 
-                    fontWeight: 600,
-                    minWidth: '80px'
-                }}
-            />
+          <Box display="flex" alignItems="center" gap={2}>
+            <Avatar>
+              <PaymentsIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {role}
+              </Typography>
+            </Box>
+          </Box>
         );
-    };
-
-    const calculateTotalEarnings = (row: IPayroll): number => {
-        if (!row) return 0;
+      },
+    },
+    {
+      id: 'date',
+      label: 'Payroll Date',
+      minWidth: 120,
+      render: (value: string) => (
+        <Typography variant="body2">
+          {new Date(value).toLocaleDateString()}
+        </Typography>
+      ),
+    },
+    {
+      id: 'basicSalary',
+      label: 'Basic Salary',
+      minWidth: 120,
+      render: (value: number) => (
+        <Typography variant="body2" fontWeight={500}>
+          {formatCurrency(value || 0)}
+        </Typography>
+      ),
+    },
+    {
+      id: 'totalEarnings',
+      label: 'Total Earnings',
+      minWidth: 130,
+      render: (value, row: IPayroll) => (
+        <Typography variant="body2" color="success.main" fontWeight={500}>
+          {formatCurrency(calculateTotalEarnings(row))}
+        </Typography>
+      ),
+    },
+    {
+      id: 'totalDeductions',
+      label: 'Total Deductions',
+      minWidth: 140,
+      render: (value, row: IPayroll) => (
+        <Typography variant="body2" color="error.main" fontWeight={500}>
+          {formatCurrency(calculateTotalDeductions(row))}
+        </Typography>
+      ),
+    },
+    {
+      id: 'netSalary',
+      label: 'Net Salary',
+      minWidth: 120,
+      render: (value, row: IPayroll) => {
+        const netSalary = calculateNetSalary(row);
+        return (
+          <Chip
+            label={formatCurrency(netSalary)}
+            color={getNetSalaryColor(netSalary) as any}
+            size="small"
+            sx={{ fontWeight: 600, minWidth: '80px' }}
+          />
+        );
+      },
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      minWidth: 140,
+      align: 'right',
+      sortable: false,
+      render: (_: unknown, row: IPayroll) => {
+        const employeeName = row.employee || 'Unknown Employee';
+        const netSalary = calculateNetSalary(row);
         
-        return (row.basicSalary || 0) +
-               (row.da || 0) +
-               (row.hra || 0) +
-               (row.conveyance || 0) +
-               (row.medicalAllowance || 0) +
-               (row.otherEarnings || 0);
-    };
+        const favoriteItem = {
+          id: row.id,
+          type: 'payroll' as const,
+          title: `Payroll - ${employeeName}`,
+          subtitle: `Net Salary: ${formatCurrency(netSalary)}`,
+          url: `/payroll/${row.id}`,
+          metadata: {
+            employeeName,
+            date: row.date,
+            basicSalary: row.basicSalary,
+            netSalary,
+          },
+        };
 
-    const calculateTotalDeductions = (row: IPayroll): number => {
-        if (!row) return 0;
-        
-        return (row.tds || 0) +
-               (row.pf || 0) +
-               (row.esi || 0) +
-               (row.profTax || 0) +
-               (row.labourWelfareFund || 0) +
-               (row.otherDeductions || 0);
-    };
-
-    const columns: Column[] = [
-        {
-            id: "employee",
-            label: "Employee",
-            minWidth: 200,
-            sortable: false,
-            render: (_, row: IPayroll) => {
-                if (!row) return <Typography variant="body2">N/A</Typography>;
-                
-                const employeeName = row.employee || 'Unknown Employee';
-                const nameParts = employeeName.split('(');
-                const name = nameParts[0]?.trim() || 'Unknown';
-                const role = nameParts.length > 1
-                    ? nameParts[1]?.replace(')', '').trim()
-                    : 'Employee';
-
-                return (
-                    <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                            {name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            {role}
-                        </Typography>
-                    </Box>
-                );
-            },
-        },
-        {
-            id: "basicSalary",
-            label: "Basic Salary",
-            minWidth: 120,
-            align: "right",
-            sortable: true,
-            render: (_, row: IPayroll) => (
-                <Typography variant="body2" fontWeight={500}>
-                    {formatCurrency(row?.basicSalary)}
-                </Typography>
-            ),
-        },
-        {
-            id: "totalEarnings",
-            label: "Total Earnings",
-            minWidth: 140,
-            align: "right",
-            sortable: false,
-            render: (_, row: IPayroll) => {
-                const totalEarnings = calculateTotalEarnings(row);
-                return (
-                    <Typography variant="body2" fontWeight={500} color="success.main">
-                        {formatCurrency(totalEarnings)}
-                    </Typography>
-                );
-            },
-        },
-        {
-            id: "totalDeductions",
-            label: "Total Deductions",
-            minWidth: 140,
-            align: "right",
-            sortable: false,
-            render: (_, row: IPayroll) => {
-                const totalDeductions = calculateTotalDeductions(row);
-                return (
-                    <Typography variant="body2" fontWeight={500} color="error.main">
-                        {formatCurrency(totalDeductions)}
-                    </Typography>
-                );
-            },
-        },
-        {
-            id: "netSalary",
-            label: "Net Salary",
-            minWidth: 120,
-            align: "right",
-            sortable: true,
-            render: (_, row: IPayroll) => getNetSalaryChip(row?.netSalary),
-        },
-        {
-            id: "date",
-            label: "Date",
-            minWidth: 100,
-            sortable: true,
-            render: (_, row: IPayroll) => (
-                <Typography variant="body2">
-                    {formatDate(row?.date)}
-                </Typography>
-            ),
-        },
-        {
-            id: "actions",
-            label: "Actions",
-            minWidth: 100,
-            align: "center",
-            sortable: false,
-            render: (_, row: IPayroll) => (
-                <Box display="flex" gap={0.5} justifyContent="center">
-                    <Tooltip title="View Details" arrow>
-                        <IconButton
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (row?.id) {
-                                    navigate(`/payroll/${row.id}`);
-                                }
-                            }}
-                            sx={{
-                                '&:hover': {
-                                    backgroundColor: 'primary.light',
-                                    color: 'primary.dark'
-                                }
-                            }}
-                        >
-                            <InfoIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="More Options" arrow>
-                        <IconButton
-                            size="small"
-                            onClick={(event) => handleMenuOpen(event, row)}
-                            sx={{
-                                '&:hover': {
-                                    backgroundColor: 'grey.100'
-                                }
-                            }}
-                        >
-                            <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-            ),
-        },
-    ];
-
-    return (
-        <Box p={3} sx={{ overflowX: "auto" }}>
-            <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={3}
+        return (
+          <Box display="flex" alignItems="center">
+            <FavoriteButton item={favoriteItem} size="small" />
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                addRecentItem({
+                  id: row.id,
+                  type: 'payroll',
+                  title: `Payroll - ${employeeName}`,
+                  subtitle: `Net Salary: ${formatCurrency(netSalary)}`,
+                  url: `/payroll/${row.id}`,
+                  metadata: {
+                    employeeName,
+                    date: row.date,
+                    basicSalary: row.basicSalary,
+                    netSalary,
+                  },
+                });
+                navigate(`/payroll/${row.id}`);
+              }}
+              color="primary"
+              size="small"
             >
-                <Typography variant="h4" fontWeight={600}>
-                    All Payrolls ({payrollList.length})
-                </Typography>
-            </Box>
+              <InfoIcon />
+            </IconButton>
+            <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
+              <MoreVertIcon />
+            </IconButton>
+          </Box>
+        );
+      },
+    },
+  ];
 
-            <Box mb={3}>
-                <SearchBar
-                    onSearch={handleSearch}
-                    placeholder="Search by employee name, date, salary, or ID..."
-                />
-            </Box>
+  return (
+    <Box p={3}>
+      <Typography variant="h4" mb={2}>
+        All Payrolls ({filteredPayrolls.length})
+      </Typography>
+      <Box sx={{ mb: 2 }}>
+        <SearchBar onSearch={handleSearch} placeholder="Search payrolls..." />
+      </Box>
 
-            {payrollList.length === 0 ? (
-                <Box
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
-                    minHeight="400px"
-                    flexDirection="column"
-                >
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No Payrolls Found
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        There are currently no payroll records available.
-                    </Typography>
-                </Box>
-            ) : (
-                <ReusableTable
-                    data={filteredPayrolls}
-                    columns={columns}
-                    onRowClick={handleRowClick}
-                    onDeleteSelected={handleDeleteMultiple}
-                    searchQuery={searchQuery}
-                    emptyMessage="No Payrolls Found"
-                    emptyDescription="No payrolls match your current search criteria."
-                    enableSelection={true}
-                    enablePagination={true}
-                    enableSorting={true}
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                    defaultRowsPerPage={10}
-                />
-            )}
+      <ReusableTable
+        columns={columns}
+        data={filteredPayrolls}
+        onRowClick={handleRowClick}
+        searchQuery={searchQuery}
+        emptyMessage="No Payrolls Found"
+        emptyDescription="There are currently no payroll records."
+      />
 
-            <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                }}
-                PaperProps={{
-                    sx: {
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                        borderRadius: 2,
-                        mt: 1
-                    }
-                }}
-            >
-                <MenuItem 
-                    onClick={handleEditPayroll}
-                    sx={{
-                        '&:hover': {
-                            backgroundColor: 'primary.light',
-                            color: 'primary.dark'
-                        }
-                    }}
-                >
-                    <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                    Edit Payroll
-                </MenuItem>
-                <MenuItem 
-                    onClick={handleDeleteClick}
-                    sx={{
-                        color: 'error.main',
-                        '&:hover': {
-                            backgroundColor: 'error.light',
-                            color: 'error.dark'
-                        }
-                    }}
-                >
-                    <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-                    Delete Payroll
-                </MenuItem>
-            </Menu>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleEdit}>
+          <EditIcon fontSize="small" sx={{ mr: 1 }} />
+          Edit Payroll
+        </MenuItem>
+        <MenuItem onClick={handleDeleteClick}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Payroll
+        </MenuItem>
+      </Menu>
 
-            <DeleteModal
-                open={deleteModalOpen}
-                onClose={handleDeleteCancel}
-                onConfirm={handleDeleteConfirm}
-                title="Delete Payroll"
-                itemName={selectedPayroll 
-                    ? `${selectedPayroll.employee}'s payroll` 
-                    : 'this payroll'
-                }
-                message={selectedPayroll
-                    ? `Are you sure you want to delete the payroll for ${selectedPayroll.employee} dated ${formatDate(selectedPayroll.date)}? This action cannot be undone.`
-                    : 'Are you sure you want to delete this payroll? This action cannot be undone.'
-                }
-                isDeleting={isDeleting}
-            />
-        </Box>
-    );
+      <DeleteModal
+        open={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Payroll"
+        itemName={selectedPayroll ? `Payroll for ${selectedPayroll.employee}` : undefined}
+        isDeleting={isDeleting}
+      />
+    </Box>
+  );
 };
