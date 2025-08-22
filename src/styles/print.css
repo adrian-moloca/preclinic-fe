@@ -1,0 +1,417 @@
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+
+  body {
+    font-family: 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
+    background: white !important;
+  }
+
+  .no-print,
+  .MuiAppBar-root,
+  .MuiDrawer-root,
+  .MuiFab-root,
+  .MuiSpeedDial-root,
+  .MuiDialog-root,
+  .MuiSnackbar-root,
+  .MuiTooltip-tooltip,
+  .MuiMenu-root,
+  .MuiPopover-root,
+  button:not(.print-button),
+  .MuiIconButton-root,
+  .print-hide {
+    display: none !important;
+  }
+
+  .print-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .MuiContainer-root {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .MuiPaper-root {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    margin-bottom: 20pt !important;
+  }
+
+  .MuiCard-root {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+
+  .MuiTypography-h1 {
+    font-size: 24pt !important;
+    font-weight: bold !important;
+    margin-bottom: 16pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-h2 {
+    font-size: 20pt !important;
+    font-weight: bold !important;
+    margin-bottom: 12pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-h3 {
+    font-size: 18pt !important;
+    font-weight: bold !important;
+    margin-bottom: 10pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-h4 {
+    font-size: 16pt !important;
+    font-weight: bold !important;
+    margin-bottom: 8pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-h5 {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    margin-bottom: 6pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-h6 {
+    font-size: 12pt !important;
+    font-weight: bold !important;
+    margin-bottom: 4pt !important;
+    page-break-after: avoid;
+  }
+
+  .MuiTypography-body1 {
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .MuiTypography-body2 {
+    font-size: 11pt !important;
+    line-height: 1.3 !important;
+    margin-bottom: 6pt !important;
+  }
+
+  .MuiTypography-caption {
+    font-size: 9pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .MuiTable-root {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-bottom: 16pt !important;
+  }
+
+  .MuiTableHead-root {
+    background-color: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .MuiTableCell-root {
+    border: 1px solid #ddd !important;
+    padding: 8pt !important;
+    font-size: 11pt !important;
+    line-height: 1.3 !important;
+  }
+
+  .MuiTableHead-root .MuiTableCell-root {
+    font-weight: bold !important;
+    background-color: #f5f5f5 !important;
+  }
+
+  .MuiTableRow-root {
+    page-break-inside: avoid;
+  }
+
+  /* Forms */
+  .MuiFormControl-root {
+    margin-bottom: 12pt !important;
+    page-break-inside: avoid;
+  }
+
+  .MuiFormLabel-root {
+    font-weight: bold !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+  }
+
+  .MuiInputBase-root {
+    border: 1px solid #ddd !important;
+    border-radius: 0 !important;
+    background-color: white !important;
+    padding: 4pt !important;
+  }
+
+  .MuiInputBase-input {
+    font-size: 11pt !important;
+    color: #000 !important;
+  }
+
+  .MuiTextField-root {
+    margin-bottom: 12pt !important;
+  }
+
+  .MuiSelect-root {
+    border: 1px solid #ddd !important;
+    background-color: white !important;
+  }
+
+  .MuiGrid-container {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .MuiGrid-item {
+    padding: 4pt !important;
+  }
+
+  .MuiBox-root {
+    box-shadow: none !important;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  .patient-header {
+    border-bottom: 2pt solid #000 !important;
+    margin-bottom: 16pt !important;
+    padding-bottom: 8pt !important;
+  }
+
+  .patient-info {
+    background-color: #f9f9f9 !important;
+    border: 1px solid #ddd !important;
+    padding: 12pt !important;
+    margin-bottom: 16pt !important;
+    page-break-inside: avoid;
+  }
+
+  .medical-record {
+    border: 1px solid #000 !important;
+    padding: 12pt !important;
+    margin-bottom: 16pt !important;
+    page-break-inside: avoid;
+  }
+
+  .prescription {
+    border: 2px solid #000 !important;
+    padding: 16pt !important;
+    margin-bottom: 20pt !important;
+    page-break-inside: avoid;
+  }
+
+  .invoice-header {
+    text-align: center !important;
+    border-bottom: 2pt solid #000 !important;
+    margin-bottom: 20pt !important;
+    padding-bottom: 12pt !important;
+  }
+
+  .invoice-total {
+    border: 2px solid #000 !important;
+    background-color: #f5f5f5 !important;
+    padding: 12pt !important;
+    font-weight: bold !important;
+    font-size: 14pt !important;
+  }
+
+  .signature-area {
+    border-top: 1px solid #000 !important;
+    margin-top: 40pt !important;
+    padding-top: 8pt !important;
+    page-break-inside: avoid;
+  }
+
+  .doctor-signature {
+    border: 1px solid #ddd !important;
+    height: 60pt !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9pt !important;
+    color: #666 !important;
+    border-top: 1px solid #ddd !important;
+    padding-top: 8pt !important;
+  }
+
+  .emergency-info {
+    border: 3px solid #ff0000 !important;
+    background-color: #ffe6e6 !important;
+    padding: 12pt !important;
+    margin: 16pt 0 !important;
+    font-weight: bold !important;
+    page-break-inside: avoid;
+  }
+
+  .medication-list {
+    border: 1px solid #000 !important;
+    padding: 12pt !important;
+    background-color: #f9f9f9 !important;
+    page-break-inside: avoid;
+  }
+
+  .medication-item {
+    border-bottom: 1px solid #ddd !important;
+    padding: 6pt 0 !important;
+    margin-bottom: 6pt !important;
+  }
+
+  .appointment-details {
+    border: 1px solid #ddd !important;
+    padding: 12pt !important;
+    margin-bottom: 16pt !important;
+    background-color: #f5f5f5 !important;
+    page-break-inside: avoid;
+  }
+
+  .lab-results {
+    border: 1px solid #000 !important;
+    margin-bottom: 16pt !important;
+  }
+
+  .lab-result-item {
+    border-bottom: 1px solid #ddd !important;
+    padding: 8pt !important;
+  }
+
+  .lab-result-abnormal {
+    background-color: #fff3cd !important;
+    font-weight: bold !important;
+  }
+
+  .qr-code,
+  .barcode {
+    max-width: 100pt !important;
+    max-height: 100pt !important;
+  }
+
+  .MuiChart-root,
+  .recharts-wrapper,
+  canvas {
+    display: none !important;
+  }
+
+  .chart-print-alternative {
+    display: block !important;
+    border: 1px solid #ddd !important;
+    padding: 12pt !important;
+    text-align: center !important;
+    background-color: #f9f9f9 !important;
+  }
+
+  .MuiFormHelperText-root {
+    display: none !important;
+  }
+
+  .Mui-error {
+    border-color: #000 !important;
+  }
+
+  @media print and (max-width: 210mm) {
+    .MuiGrid-item {
+      width: 100% !important;
+      flex-basis: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+
+  .print-text-center {
+    text-align: center !important;
+  }
+
+  .print-text-right {
+    text-align: right !important;
+  }
+
+  .print-bold {
+    font-weight: bold !important;
+  }
+
+  .print-underline {
+    text-decoration: underline !important;
+  }
+
+  .print-margin-top {
+    margin-top: 16pt !important;
+  }
+
+  .print-margin-bottom {
+    margin-bottom: 16pt !important;
+  }
+
+  .print-padding {
+    padding: 12pt !important;
+  }
+
+  .print-border {
+    border: 1px solid #000 !important;
+  }
+
+  .print-background-gray {
+    background-color: #f5f5f5 !important;
+  }
+}
+
+@media screen {
+  .print-button {
+    margin: 16px 0;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .print-button:hover {
+    background-color: #1565c0;
+  }
+
+  .print-button svg {
+    width: 18px;
+    height: 18px;
+  }
+}

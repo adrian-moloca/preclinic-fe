@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import './styles/print.css';
 import { BrowserRouter } from 'react-router-dom';
 import Routing from './routes';
 import { ScheduleProvider } from './providers/schedule';
@@ -19,44 +20,49 @@ import { PayrollProvider } from './providers/payroll';
 import { InvoicesProvider } from './providers/invoices';
 import { CasesProvider } from './providers/cases';
 import { ThemeProvider } from './providers/theme';
+import { ToastProvider } from './components/toast-notification-system/context';
+import { ToastContainer } from './components/toast-notification-system/component';
 
 function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <ScheduleProvider>
-            <PatientsProvider>
-              <AppointmentsProvider>
-                <ProfileProvider>
-                  <PrescriptionProvider>
-                    <LeavesProvider>
-                      <ProductsProvider>
-                        <UsersProvider>
-                          <DoctorsProvider>
-                            <AssistentsProvider>
-                              <ServicesProvider>
-                                <DepartmentsProvider>
-                                  <PayrollProvider>
-                                    <InvoicesProvider>
-                                      <CasesProvider>
-                                        <Routing />
-                                      </CasesProvider>
-                                    </InvoicesProvider>
-                                  </PayrollProvider>
-                                </DepartmentsProvider>
-                              </ServicesProvider>
-                            </AssistentsProvider>
-                          </DoctorsProvider>
-                        </UsersProvider>
-                      </ProductsProvider>
-                    </LeavesProvider>
-                  </PrescriptionProvider>
-                </ProfileProvider>
-              </AppointmentsProvider>
-            </PatientsProvider>
-          </ScheduleProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ScheduleProvider>
+              <PatientsProvider>
+                <AppointmentsProvider>
+                  <ProfileProvider>
+                    <PrescriptionProvider>
+                      <LeavesProvider>
+                        <ProductsProvider>
+                          <UsersProvider>
+                            <DoctorsProvider>
+                              <AssistentsProvider>
+                                <ServicesProvider>
+                                  <DepartmentsProvider>
+                                    <PayrollProvider>
+                                      <InvoicesProvider>
+                                        <CasesProvider>
+                                          <Routing />
+                                          <ToastContainer />
+                                        </CasesProvider>
+                                      </InvoicesProvider>
+                                    </PayrollProvider>
+                                  </DepartmentsProvider>
+                                </ServicesProvider>
+                              </AssistentsProvider>
+                            </DoctorsProvider>
+                          </UsersProvider>
+                        </ProductsProvider>
+                      </LeavesProvider>
+                    </PrescriptionProvider>
+                  </ProfileProvider>
+                </AppointmentsProvider>
+              </PatientsProvider>
+            </ScheduleProvider>
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
