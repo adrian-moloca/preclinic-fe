@@ -6,6 +6,7 @@ import {
   Typography,
   Fade,
   useTheme,
+  Badge,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -21,6 +22,7 @@ import {
   Inventory as InventoryIcon,
   Reviews as ReviewsIcon,
   Chat as ChatIcon,
+  MedicalServices,
 } from "@mui/icons-material";
 import { FC, useState } from "react";
 import { useAuthContext } from "../../providers/auth/context";
@@ -33,6 +35,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import FolderIcon from '@mui/icons-material/Folder';
+import { useMedicalDecisionSupport } from "../../providers/medical-decision-support/context";
 
 const drawerWidthOpen = 260;
 const drawerWidthClosed = 70;
@@ -41,6 +44,8 @@ export const SideDrawer: FC = () => {
   const [open, setOpen] = useState(true);
   const { user } = useAuthContext();
   const theme = useTheme(); 
+  const { getCriticalAlerts } = useMedicalDecisionSupport();
+   const criticalAlerts = getCriticalAlerts();
 
   const toggleDrawer = () => setOpen(!open);
 
@@ -85,6 +90,18 @@ export const SideDrawer: FC = () => {
       subItems: [
         { label: "All Prescriptions", icon: <MedicationIcon />, route: "/prescriptions/all", permission: "view_prescriptions" },
         { label: "Add Prescription", icon: <PersonAddIcon />, route: "/prescriptions/create", permission: "manage_prescriptions" },
+      ]
+    },
+     {
+      label: "Medical Alerts",
+      icon: (
+        <Badge badgeContent={criticalAlerts.length} color="error" max={99}>
+          <MedicalServices />
+        </Badge>
+      ),
+      resource: "medical-alerts",
+      subItems: [
+        { label: "Alert Dashboard", icon: <MedicalServices />, route: "/medical-alerts", permission: "view_dashboard" },
       ]
     },
     {

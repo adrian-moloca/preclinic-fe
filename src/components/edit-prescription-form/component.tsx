@@ -18,6 +18,8 @@ import {
   PatentDetailsWrapper,
 } from "../prescription-form/style";
 import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
+import { MedicalAlert } from '../../providers/medical-decision-support/types';
+import PrescriptionSafetyChecker from "../prescription-safety-checker";
 
 export const EditPrescriptionForm: FC = () => {
   const { prescription, updatePrescription } = usePrescriptionContext();
@@ -27,6 +29,7 @@ export const EditPrescriptionForm: FC = () => {
 
   const [form, setForm] = useState<Prescription | null>(null);
   const [errors, setErrors] = useState<any>(null);
+  const [safetyAlerts, setSafetyAlerts] = useState<MedicalAlert[]>([]);
 
   const patientsArray: PatientsEntry[] = Array.isArray(patients)
     ? (patients as PatientsEntry[])
@@ -167,6 +170,9 @@ export const EditPrescriptionForm: FC = () => {
     },
   };
 
+  const criticalAlerts = safetyAlerts.filter(alert => alert.severity === 'critical');
+  const hasBlockingAlerts = criticalAlerts.length > 0;
+
   if (!form || !errors) return <Typography>Loading...</Typography>;
 
   return (
@@ -250,6 +256,16 @@ export const EditPrescriptionForm: FC = () => {
         />
       </PatentDetailsWrapper>
 
+      {form.patientId && (
+        <Box sx={{ mb: 3, maxWidth: 1020, mx: 'auto' }}>
+          <PrescriptionSafetyChecker
+            patientId={form.patientId}
+            medications={form.medications.map(med => med.name).filter(Boolean)}
+            onAlertsChange={setSafetyAlerts}
+          />
+        </Box>
+      )}
+
       <Typography variant="h5" gutterBottom>
         Medications
       </Typography>
@@ -326,13 +342,35 @@ export const EditPrescriptionForm: FC = () => {
         </Box>
       ))}
 
-      <Box display="flex" gap={2} justifyContent={"center"}>
-        <Button variant="outlined" onClick={addMedication}>
-          + Add Medication
-        </Button>
-        <Button variant="contained" onClick={handleSubmit}>
-          Save Prescription
-        </Button>
+      {/* UPDATED BUTTON SECTION WITH SAFETY ALERTS */}
+      <Box display="flex" gap={2} justifyContent={"center"} flexDirection="column" alignItems="center">
+        <Box display="flex" gap={2}>
+          <Button variant="outlined" onClick={addMedication}>
+            + Add Medication
+          </Button>
+          <Button 
+            variant="contained" 
+            disabled={hasBlockingAlerts}
+            onClick={handleSubmit}
+            color={hasBlockingAlerts ? 'error' : 'primary'}
+            sx={{ minWidth: 200 }}
+          >
+            {hasBlockingAlerts ? 'Resolve Critical Alerts First' : 'Update Prescription'}
+          </Button>
+        </Box>
+        
+        {safetyAlerts.length > 0 && (
+          <Box display="flex" alignItems="center" gap={1} mt={1}>
+            <Typography variant="body2" color="text.secondary">
+              {safetyAlerts.length} safety alert{safetyAlerts.length > 1 ? 's' : ''} detected
+            </Typography>
+            {criticalAlerts.length > 0 && (
+              <Typography variant="body2" color="error.main" fontWeight={600}>
+                ({criticalAlerts.length} critical)
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
     </PaperFormWrapper>
   );

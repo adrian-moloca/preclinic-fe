@@ -24,6 +24,9 @@ import { useCasesContext } from "../../../providers/cases/context";
 import ReusableTable from "../../../components/table";
 import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
+import { MedicalServices } from "@mui/icons-material";
+import { useMedicalAlerts } from "../../../hooks/medical-alerts";
+import AlertPanel from "../../../components/medical-alert-system/alert-panel";
 
 export const PatientDetails: FC = () => {
   const { id } = useParams();
@@ -37,11 +40,13 @@ export const PatientDetails: FC = () => {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
   const { addRecentItem } = useRecentItems();
+  const { getAlertsForPatient } = useMedicalAlerts();
 
   const allPatients = Object.values(patients).flat();
   const patient = allPatients.find((p) => p.id === id);
 
   const patientCases = patient ? getCasesByPatientId(patient.id) : [];
+  const patientAlerts = patient ? getAlertsForPatient(patient.id) : [];
 
   useEffect(() => {
     if (patient && id) {
@@ -195,6 +200,25 @@ export const PatientDetails: FC = () => {
                   {patient.firstName} {patient.lastName}
                 </Typography>
                 <FavoriteButton item={favoriteItem} />
+                {patientAlerts.length > 0 && (
+                  <Tooltip title={`${patientAlerts.length} active medical alert${patientAlerts.length > 1 ? 's' : ''}`}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: patientAlerts.some(a => a.severity === 'critical') ? 'error.main' : 'warning.main',
+                        color: 'white',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      <MedicalServices sx={{ fontSize: 16, mr: 0.5 }} />
+                      {patientAlerts.length}
+                    </Box>
+                  </Tooltip>
+                )}
               </Box>
               <Typography variant="body1" color="text.secondary">
                 {patient.email}
@@ -263,9 +287,71 @@ export const PatientDetails: FC = () => {
               <Typography variant="subtitle2">Zip Code</Typography>
               <Typography>{patient.zipCode}</Typography>
             </Box>
+
+            {(patient.allergies || patient.medicalHistory || patient.currentMedications) && (
+              <>
+                <Divider sx={{ width: '100%', my: 2 }} />
+                <Typography variant="h6" sx={{ width: '100%', mb: 2, color: 'primary.main' }}>
+                  Medical Information
+                </Typography>
+                
+                {patient.allergies && (
+                  <Box width={{ xs: "100%", sm: "45%" }}>
+                    <Typography variant="subtitle2" color="error.main">Known Allergies</Typography>
+                    <Typography>{patient.allergies}</Typography>
+                  </Box>
+                )}
+
+                {patient.medicalHistory && (
+                  <Box width={{ xs: "100%", sm: "45%" }}>
+                    <Typography variant="subtitle2">Medical History</Typography>
+                    <Typography>{patient.medicalHistory}</Typography>
+                  </Box>
+                )}
+
+                {patient.currentMedications && (
+                  <Box width={{ xs: "100%", sm: "45%" }}>
+                    <Typography variant="subtitle2">Current Medications</Typography>
+                    <Typography>{patient.currentMedications}</Typography>
+                  </Box>
+                )}
+              </>
+            )}
           </PatientDetailsWrapper>
         </CardContent>
       </Card>
+
+      <Box mt={4}>
+        <Box display="flex" alignItems="center" gap={2} mb={2}>
+          <MedicalServices color="primary" />
+          <Typography variant="h5">
+            Medical Alerts for This Patient
+          </Typography>
+          {patientAlerts.length > 0 && (
+            <Box
+              sx={{
+                backgroundColor: patientAlerts.some(a => a.severity === 'critical') ? 'error.main' : 'warning.main',
+                color: 'white',
+                px: 2,
+                py: 0.5,
+                borderRadius: 2,
+                fontSize: '0.875rem',
+                fontWeight: 600
+              }}
+            >
+              {patientAlerts.length} Active Alert{patientAlerts.length > 1 ? 's' : ''}
+            </Box>
+          )}
+        </Box>
+        
+        <Card elevation={2}>
+          <AlertPanel 
+            patientId={patient.id}
+            showOnlyPatient={true}
+            maxHeight={400}
+          />
+        </Card>
+      </Box>
 
       <Box mt={4}>
         <Typography variant="h5" gutterBottom>

@@ -68,6 +68,7 @@ const LocalFileManager = lazy(() => import("../views/file-manager/index"));
 const AppointmentDetails = lazy(() => import("../views/appointments/appointment-details/index"));
 const CaseDetails = lazy(() => import("../views/cases/case-details/index"));
 const EditCase = lazy(() => import("../views/cases/edit-case/index"));
+const MedicalAlertsDashboard = lazy(() => import("../components/medical-alerts-dashboard/index"));
 
 export const Routing: FC = () => {
   return (
@@ -104,6 +105,12 @@ export const Routing: FC = () => {
         <Route path="/patients/edit/:id" element={
           <ProtectedRoute requiredPermission="manage_patients">
             <EditPatient />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/medical-alerts" element={
+          <ProtectedRoute requiredPermission="view_dashboard">
+            <MedicalAlertsDashboard />
           </ProtectedRoute>
         } />
 

@@ -22,6 +22,7 @@ import { CasesProvider } from './providers/cases';
 import { ThemeProvider } from './providers/theme';
 import { ToastProvider } from './components/toast-notification-system/context';
 import { ToastContainer } from './components/toast-notification-system/component';
+import { MedicalDecisionSupportProvider } from './providers/medical-decision-support/provider';
 
 function App() {
   return (
@@ -29,38 +30,40 @@ function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
-            <ScheduleProvider>
-              <PatientsProvider>
-                <AppointmentsProvider>
-                  <ProfileProvider>
-                    <PrescriptionProvider>
-                      <LeavesProvider>
-                        <ProductsProvider>
-                          <UsersProvider>
-                            <DoctorsProvider>
-                              <AssistentsProvider>
-                                <ServicesProvider>
-                                  <DepartmentsProvider>
-                                    <PayrollProvider>
-                                      <InvoicesProvider>
-                                        <CasesProvider>
-                                          <Routing />
-                                          <ToastContainer />
-                                        </CasesProvider>
-                                      </InvoicesProvider>
-                                    </PayrollProvider>
-                                  </DepartmentsProvider>
-                                </ServicesProvider>
-                              </AssistentsProvider>
-                            </DoctorsProvider>
-                          </UsersProvider>
-                        </ProductsProvider>
-                      </LeavesProvider>
-                    </PrescriptionProvider>
-                  </ProfileProvider>
-                </AppointmentsProvider>
-              </PatientsProvider>
-            </ScheduleProvider>
+            <MedicalDecisionSupportProvider>
+              <ScheduleProvider>
+                <PatientsProvider>
+                  <AppointmentsProvider>
+                    <ProfileProvider>
+                      <PrescriptionProvider>
+                        <LeavesProvider>
+                          <ProductsProvider>
+                            <UsersProvider>
+                              <DoctorsProvider>
+                                <AssistentsProvider>
+                                  <ServicesProvider>
+                                    <DepartmentsProvider>
+                                      <PayrollProvider>
+                                        <InvoicesProvider>
+                                          <CasesProvider>
+                                            <Routing />
+                                            <ToastContainer />
+                                          </CasesProvider>
+                                        </InvoicesProvider>
+                                      </PayrollProvider>
+                                    </DepartmentsProvider>
+                                  </ServicesProvider>
+                                </AssistentsProvider>
+                              </DoctorsProvider>
+                            </UsersProvider>
+                          </ProductsProvider>
+                        </LeavesProvider>
+                      </PrescriptionProvider>
+                    </ProfileProvider>
+                  </AppointmentsProvider>
+                </PatientsProvider>
+              </ScheduleProvider>
+            </MedicalDecisionSupportProvider>
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
