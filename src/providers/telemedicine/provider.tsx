@@ -1,19 +1,12 @@
-// src/providers/telemedicine/provider.tsx
 import React, { FC, ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { TelemedicineContext } from './context';
-import { CallSession, CallParticipant, ChatMessage } from './types';
+import { CallSession, ChatMessage } from './types';
 import { useAuthContext } from '../auth/context';
-import { useAppointmentsContext } from '../appointments/context';
-import { usePatientsContext } from '../patients/context';
-import { useDoctorsContext } from '../doctor/context';
 
 const STORAGE_KEY = 'telemedicine_sessions';
 
 export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuthContext();
-  const { appointments } = useAppointmentsContext();
-  const { patients } = usePatientsContext();
-  const { doctors } = useDoctorsContext();
 
   const [currentCall, setCurrentCall] = useState<CallSession | null>(null);
   const [callHistory, setCallHistory] = useState<CallSession[]>([]);
@@ -27,7 +20,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
   const isScreenSharing = useRef(false);
   const isMountedRef = useRef(true);
 
-  // Load call history from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -43,7 +35,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
     }
   }, []);
 
-  // Save call history to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(callHistory));
@@ -52,16 +43,13 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [callHistory]);
 
-  // Cleanup on unmount - MODIFIED TO BE LESS AGGRESSIVE
   useEffect(() => {
     return () => {
       console.log('🚨 TelemedicineProvider is being unmounted!');
       isMountedRef.current = false;
       
-      // Don't immediately stop streams - let them continue briefly
       setTimeout(() => {
         if (localStream) {
-          console.log('🛑 Cleaning up local stream after delay');
           localStream.getTracks().forEach(track => track.stop());
         }
         
@@ -76,11 +64,11 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
           mediaRecorder.current.stop();
         }
-      }, 1000); // 1 second delay to allow for quick remounting
+      }, 1000);
     };
-  }, []); // Remove dependencies to prevent re-running
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Debug current call state
   useEffect(() => {
     console.log('🔄 Call state changed:', {
       hasCurrentCall: !!currentCall,
@@ -91,7 +79,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
     });
   }, [currentCall, localStream, isInitializingCall]);
 
-  // Get appointments directly from localStorage or create a fallback
   const getAppointmentDirectly = useCallback((appointmentId: string) => {
     console.log('🔍 Searching for appointment directly:', appointmentId);
     
@@ -99,7 +86,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
       const storedAppointments = localStorage.getItem('appointments');
       if (storedAppointments) {
         const parsed = JSON.parse(storedAppointments);
-        console.log('📋 Found stored appointments:', parsed);
         
         let appointmentsList: any[] = [];
         
@@ -121,7 +107,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         );
         
         if (foundAppointment) {
-          console.log('✅ Found appointment in localStorage:', foundAppointment);
           return foundAppointment;
         }
       }
@@ -129,7 +114,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
       console.error('Error reading appointments from localStorage:', error);
     }
     
-    console.log('⚠️ Creating mock appointment for testing purposes');
     return {
       id: appointmentId,
       patientId: 'test-patient-1',
@@ -146,11 +130,9 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
 
   const startCall = useCallback(async (appointmentId: string): Promise<void> => {
     if (!user || isInitializingCall) {
-      console.log('❌ Cannot start call - user not found or already initializing');
       return;
     }
 
-    console.log('🚀 Starting call for appointment:', appointmentId);
     setIsInitializingCall(true);
     
     try {
@@ -160,25 +142,17 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         throw new Error(`Appointment with ID ${appointmentId} not found. Please ensure the appointment exists.`);
       }
 
-      console.log('✅ Found appointment:', {
-        id: appointment.id,
-        type: appointment.appointmentType,
-        date: appointment.date,
-        patientId: appointment.patientId
-      });
-
       if (appointment.appointmentType?.toLowerCase() !== 'online') {
         throw new Error(`This appointment is configured as "${appointment.appointmentType}" type. Only "online" appointments support video calls.`);
       }
 
-      // Create call session FIRST and set it to ACTIVE immediately
       const callSession: CallSession = {
         id: crypto.randomUUID(),
         appointmentId: String(appointment.id),
         patientId: String(appointment.patientId),
         doctorId: String(appointment.doctorId || user.id),
         startTime: new Date().toISOString(),
-        status: 'active', // Set to active immediately
+        status: 'active', 
         participants: [
           {
             id: user.id,
@@ -193,24 +167,16 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         chatMessages: [],
       };
 
-      // Set call session immediately
       setCurrentCall(callSession);
-      console.log('📞 Call session created and set to ACTIVE');
 
-      console.log('🎥 Requesting media access...');
-
-      // Get user media
       let stream: MediaStream;
       try {
-        console.log('🔊 Checking media devices...');
         
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('getUserMedia is not supported in this browser');
         }
 
         const devices = await navigator.mediaDevices.enumerateDevices();
-        console.log('📱 Available devices:', devices.map(d => ({ kind: d.kind, label: d.label })));
-
         const hasVideo = devices.some(d => d.kind === 'videoinput');
         const hasAudio = devices.some(d => d.kind === 'audioinput');
 
@@ -229,7 +195,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
           } : false,
         };
 
-        console.log('🎬 Requesting media with constraints:', constraints);
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         
         console.log('✅ Media stream obtained:', {
@@ -242,7 +207,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
       } catch (mediaError) {
         console.error('❌ Failed to get user media:', mediaError);
         
-        // Update call status to failed but keep the call
         const failedCall = { ...callSession, status: 'failed' as const };
         setCurrentCall(failedCall);
         
@@ -263,13 +227,8 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         throw new Error(errorMessage);
       }
 
-      // REMOVE the isMountedRef check that was causing the issue
-      console.log('✅ Media access granted, setting up call...');
-      
-      // Set the stream immediately
       setLocalStream(stream);
 
-      // Add system message
       const systemMessage: ChatMessage = {
         id: crypto.randomUUID(),
         senderId: 'system',
@@ -279,20 +238,16 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         type: 'system',
       };
 
-      // Update the call with the system message
       const updatedCall = { 
         ...callSession, 
         chatMessages: [systemMessage] 
       };
       setCurrentCall(updatedCall);
 
-      console.log('🎉 Call started successfully!');
 
     } catch (error) {
-      console.error('❌ Failed to start call:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      // Only clear call state if we haven't set it yet
       if (!currentCall || currentCall.status === 'connecting') {
         setCurrentCall(null);
         setLocalStream(null);
@@ -318,7 +273,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
   const endCall = useCallback(() => {
     try {
       if (currentCall) {
-        console.log('🛑 Ending call:', currentCall.id);
         
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
@@ -362,7 +316,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         });
 
         setCurrentCall(null);
-        console.log('✅ Call ended successfully');
       }
     } catch (error) {
       console.error('Error ending call:', error);
@@ -500,6 +453,7 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
       console.error('Failed to start screen share:', error);
       alert('Failed to start screen sharing. Please try again.');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localStream, currentCall, user]);
 
   const stopScreenShare = useCallback(async (): Promise<void> => {
