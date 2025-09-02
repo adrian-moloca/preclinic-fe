@@ -69,6 +69,7 @@ const AppointmentDetails = lazy(() => import("../views/appointments/appointment-
 const CaseDetails = lazy(() => import("../views/cases/case-details/index"));
 const EditCase = lazy(() => import("../views/cases/edit-case/index"));
 const MedicalAlertsDashboard = lazy(() => import("../components/medical-alerts-dashboard/index"));
+const WorkflowDashboard = lazy(() => import("../components/workflow-automation/workflow-dashboard/index"));
 
 export const Routing: FC = () => {
   return (
@@ -111,6 +112,12 @@ export const Routing: FC = () => {
         <Route path="/medical-alerts" element={
           <ProtectedRoute requiredPermission="view_dashboard">
             <MedicalAlertsDashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/workflow-automation" element={
+          <ProtectedRoute requiredPermission="view_workflow_automation">
+            <WorkflowDashboard />
           </ProtectedRoute>
         } />
 

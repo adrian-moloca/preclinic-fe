@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { usePatientsContext } from "../../providers/patients";
 import { useNavigate } from "react-router-dom";
 import AutoSaveFormWrapper from "../auto-save-form";
+import { useWorkflowEvents } from "../../providers/workflow-automation/integrations";
 
 interface PatientFormData {
   firstName: string;
@@ -24,6 +25,7 @@ interface PatientFormData {
 
 export const CreatePatientForm: FC = () => {
   const { addPatient } = usePatientsContext();
+  const { emitPatientRegistered } = useWorkflowEvents();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<PatientFormData>({
@@ -67,6 +69,7 @@ export const CreatePatientForm: FC = () => {
     };
 
     addPatient(newPatient);
+    emitPatientRegistered(newPatient);
     navigate("/patients/all-patients");
   };
 

@@ -57,7 +57,6 @@ const appointmentStatuses = [
     "no_show"
 ];
 
-// NEW: Props interface for calendar integration
 interface CreateAppointmentFormProps {
     defaultDate?: string;
     defaultTime?: string;
@@ -97,14 +96,13 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         patientId: "",
         appointmentType: "",
         type: "",
-        date: defaultDate || "", // NEW: Use default date from calendar
-        time: defaultTime || "", // NEW: Use default time from calendar
+        date: defaultDate || "", 
+        time: defaultTime || "", 
         reason: "",
         status: "scheduled",
         department: undefined,
     });
 
-    // NEW: Update appointment when default values change
     useEffect(() => {
         if (defaultDate) {
             setAppointment(prev => ({ ...prev, date: defaultDate }));
@@ -170,7 +168,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
             });
         }
 
-        // NEW: Handle calendar integration
         if (embedded && onSave) {
             onSave();
         } else {
@@ -189,7 +186,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         }
     };
 
-    // NEW: Handle cancel for calendar integration
     const handleCancel = () => {
         if (embedded && onCancel) {
             onCancel();
@@ -208,7 +204,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         appointment.status !== "" &&
         appointment.department;
 
-    // NEW: Wrapper component for embedded mode
     const FormWrapper = embedded ? Box : PaperFormWrapper;
     const wrapperProps = embedded ? {} : { elevation: 3 };
 
@@ -364,13 +359,12 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                     </FormFieldWrapper>
                 </Box>
 
-                {/* NEW: Button layout for embedded vs standalone */}
                 <Box display="flex" justifyContent="center" gap={2} mt={3}>
                     {embedded && (
                         <Button
                             variant="outlined"
                             onClick={handleCancel}
-                            sx={{ width: 150 }}
+                            sx={{ width: 300 }}
                         >
                             Cancel
                         </Button>
@@ -379,7 +373,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                         variant="contained"
                         onClick={handleSubmit}
                         disabled={!isFormValid}
-                        sx={{ width: embedded ? 150 : 300 }}
+                        sx={{ width: 300 }}
                     >
                         Create Appointment
                     </Button>

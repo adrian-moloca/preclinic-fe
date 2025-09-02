@@ -7,8 +7,26 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { DateClickArg } from "@fullcalendar/interaction";
 import type { EventClickArg, EventDropArg } from "@fullcalendar/core";
 import { useNavigate } from "react-router-dom";
-import { Box, Paper, Chip, Typography, Fab, Zoom, ButtonGroup, Button } from "@mui/material";
-import { Keyboard as KeyboardIcon, Warning as ConflictIcon } from "@mui/icons-material";
+import {
+  Box,
+  Paper,
+  Chip,
+  Typography,
+  Fab,
+  Zoom,
+  ButtonGroup,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton
+} from "@mui/material";
+import {
+  Keyboard as KeyboardIcon,
+  Warning as ConflictIcon,
+  Close as CloseIcon
+} from "@mui/icons-material";
+import { format } from "date-fns";
 import { useAppointmentsContext } from "../../providers/appointments/context";
 import { usePatientsContext } from "../../providers/patients/context";
 import { useDoctorsContext } from "../../providers/doctor/context";
@@ -17,6 +35,7 @@ import MiniCalendarWidget from "./components/mini-calendar-widget";
 import ConflictDetector from "./components/conflict-detector";
 import EventDialog from "./components/event-dialog";
 import CalendarShortcuts from "./components/calendar-shortcuts";
+import CreateAppointmentForm from "../create-appointment-form";
 
 export const ScheduleCalendar: React.FC = () => {
   const { appointments } = useAppointmentsContext();
@@ -39,6 +58,9 @@ export const ScheduleCalendar: React.FC = () => {
   const [dialogTitle, setDialogTitle] = useState("");
   const [dialogColor, setDialogColor] = useState("#2196F3");
 
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [appointmentFormDate, setAppointmentFormDate] = useState<string>("");
+
   useEffect(() => {
     const saved = localStorage.getItem("enhanced-calendar-events");
     if (saved) {
@@ -56,133 +78,80 @@ export const ScheduleCalendar: React.FC = () => {
 
   const normalizeDoctorsData = useMemo(() => {
     if (!doctors) return [];
-    
+
     if (Array.isArray(doctors)) {
       return doctors;
     }
-    
+
     if (typeof doctors === 'object') {
       return Object.values(doctors).flat();
     }
-    
+
     return [];
   }, [doctors]);
 
   const orderedDoctorIds = useMemo(() => {
     if (!appointments || !Array.isArray(appointments)) return [];
-    
+
     const uniqueIds = Array.from(new Set(
       appointments
         .map(apt => apt.doctorId)
         .filter(id => id && id.trim() !== '')
     ));
-    
+
     return uniqueIds.sort();
   }, [appointments]);
 
   const orderedDepartments = useMemo(() => {
     if (!appointments || !Array.isArray(appointments)) return [];
-    
-    const uniqueDepts = new Set<string>();
-    
-    appointments.forEach(apt => {
-      let departmentName = '';
-      if (typeof apt.department === 'string') {
-        departmentName = (apt.department as string).toLowerCase();
-      } else if (
-        apt.department &&
-        typeof apt.department === 'object' &&
-        typeof apt.department.name === 'string'
-      ) {
-        departmentName = apt.department.name.toLowerCase();
-      }
-      
-      if (departmentName && departmentName.trim() !== '') {
-        uniqueDepts.add(departmentName);
-      }
-    });
-    
-    return Array.from(uniqueDepts).sort();
-  }, [appointments]);
 
-  const orderedTypes = useMemo(() => {
-    if (!appointments || !Array.isArray(appointments)) return [];
-    
-    const uniqueTypes = Array.from(new Set(
+    const uniqueDepartments = Array.from(new Set(
       appointments
-        .map(apt => apt.type)
-        .filter(type => type && typeof type === 'string' && type.trim() !== '')
+        .map(apt => {
+          if (typeof apt.department === 'string') {
+            return apt.department;
+          } else if (apt.department && typeof apt.department === 'object' && apt.department.name) {
+            return apt.department.name;
+          }
+          return '';
+        })
+        .filter(dept => dept && dept.trim() !== '')
     ));
-    
-    return uniqueTypes.sort();
+
+    return uniqueDepartments.sort();
   }, [appointments]);
 
-  const getAppointmentColor = useCallback((appointment: any): string => {
-    if (colorBy === 'doctor') {
-      if (!appointment.doctorId) return '#9E9E9E';
-      
-      const index = orderedDoctorIds.indexOf(appointment.doctorId);
-      if (index === -1) return '#9E9E9E';
-      
-      const color = DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-      return color;
-    }
-    
-    if (colorBy === 'department') {
-      let departmentName = '';
-      if (typeof appointment.department === 'string') {
-        departmentName = appointment.department.toLowerCase();
-      } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
-        departmentName = appointment.department.name.toLowerCase();
-      }
-      
-      if (!departmentName) return '#607D8B';
-      
-      if (DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS]) {
-        return DEPARTMENT_COLORS[departmentName as keyof typeof DEPARTMENT_COLORS];
-      }
-      
-      const index = orderedDepartments.indexOf(departmentName);
-      if (index === -1) return '#607D8B';
-      
-      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-    }
-    
-    if (colorBy === 'type') {
-      const appointmentType = appointment.type;
-      if (!appointmentType) return '#2196F3';
-      
-      if (APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS]) {
-        return APPOINTMENT_TYPE_COLORS[appointmentType as keyof typeof APPOINTMENT_TYPE_COLORS];
-      }
-      
-      const index = orderedTypes.indexOf(appointmentType);
-      if (index === -1) return '#2196F3';
-      
-      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-    }
-    
-    return '#2196F3';
-  }, [colorBy, orderedDoctorIds, orderedDepartments, orderedTypes]);
+  const getAppointmentColor = useCallback((appointment: { appointmentType: keyof typeof APPOINTMENT_TYPE_COLORS; doctorId?: string; department?: any }) => {
+    switch (colorBy) {
+      case 'type':
+        return APPOINTMENT_TYPE_COLORS[appointment.appointmentType] || '#2196F3';
 
-  const appointmentEvents = useMemo((): CalendarEvent[] => {
+      case 'doctor':
+        const doctorIndex = orderedDoctorIds.indexOf(appointment.doctorId ?? '');
+        return DOCTOR_COLORS[doctorIndex % DOCTOR_COLORS.length] || '#2196F3';
+
+      case 'department':
+        let departmentName = '';
+        if (typeof appointment.department === 'string') {
+          departmentName = appointment.department;
+        } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
+          departmentName = appointment.department.name;
+        }
+        const departmentIndex = orderedDepartments.indexOf(departmentName);
+        const departmentColorsArray = Object.values(DEPARTMENT_COLORS);
+        return departmentColorsArray[departmentIndex % departmentColorsArray.length] || '#2196F3';
+
+      default:
+        return '#2196F3';
+    }
+  }, [colorBy, orderedDoctorIds, orderedDepartments]);
+
+  const appointmentEvents = useMemo(() => {
     if (!appointments || !Array.isArray(appointments)) return [];
 
-    return appointments.map(appointment => {
-      let patientsArray: any[] = [];
-      if (Array.isArray(patients)) {
-        patientsArray = patients;
-      } else if (patients && typeof patients === 'object') {
-        const patientsValues = Object.values(patients);
-        if (patientsValues.length > 0 && Array.isArray(patientsValues[0])) {
-          patientsArray = patientsValues[0] as any[];
-        } else {
-          patientsArray = patientsValues.flat();
-        }
-      }
-      
-      const patient = patientsArray.find((p: any) => p.id === appointment.patientId);
-      const patientName = patient 
+    return appointments.map((appointment: any) => {
+      const patient = patients?.find?.((p: any) => p.id === appointment.patientId);
+      const patientName = patient
         ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
         : 'Unknown Patient';
 
@@ -222,7 +191,7 @@ export const ScheduleCalendar: React.FC = () => {
         }
       };
     });
-  }, [appointments, patients, getAppointmentColor, refreshKey, colorBy]); 
+  }, [appointments, patients, getAppointmentColor, refreshKey, colorBy]);
 
   useEffect(() => {
     setEvents([...appointmentEvents, ...customEvents]);
@@ -235,16 +204,15 @@ export const ScheduleCalendar: React.FC = () => {
   };
 
   const handleDateClick = (info: DateClickArg) => {
-    setSelectedDate(info.dateStr);
-    setEditingEvent(null);
-    setDialogTitle("");
-    setDialogColor("#2196F3");
-    setDialogOpen(true);
+    const clickedDate = info.dateStr;
+    setSelectedDate(clickedDate);
+    setAppointmentFormDate(clickedDate);
+    setShowAppointmentForm(true);
   };
 
   const handleEventClick = (info: EventClickArg) => {
     const eventProps = info.event.extendedProps;
-    
+
     if (eventProps.type === 'appointment' && eventProps.appointmentId) {
       navigate(`/appointments/${eventProps.appointmentId}`);
       return;
@@ -316,14 +284,24 @@ export const ScheduleCalendar: React.FC = () => {
     navigate(`/appointments/${appointmentId}`);
   };
 
+  const handleAppointmentFormSave = () => {
+    setShowAppointmentForm(false);
+    setAppointmentFormDate("");
+  };
+
+  const handleAppointmentFormCancel = () => {
+    setShowAppointmentForm(false);
+    setAppointmentFormDate("");
+  };
+
   const renderEventContent = (eventInfo: any) => {
     const { event } = eventInfo;
     const isAppointment = event.extendedProps.type === 'appointment';
     const hasConflicts = event.extendedProps.conflictsWith?.length > 0;
 
     return (
-      <Box sx={{ 
-        p: 0.5, 
+      <Box sx={{
+        p: 0.5,
         position: 'relative',
         height: '100%',
         display: 'flex',
@@ -331,181 +309,136 @@ export const ScheduleCalendar: React.FC = () => {
         justifyContent: 'center'
       }}>
         {hasConflicts && showConflicts && (
-          <ConflictIcon 
-            sx={{ 
-              position: 'absolute', 
-              top: 2, 
-              right: 2, 
-              fontSize: '12px', 
+          <ConflictIcon
+            sx={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              fontSize: '12px',
               color: '#fff',
               backgroundColor: 'rgba(255,0,0,0.8)',
               borderRadius: '50%',
               padding: '1px'
-            }} 
+            }}
           />
         )}
-        
-        <Typography variant="caption" sx={{ 
-          fontWeight: isAppointment ? 600 : 400,
-          display: 'block',
-          lineHeight: 1.1,
-          fontSize: '0.75rem',
-          color: 'white',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
+
+        <Typography variant="caption" sx={{
+          fontWeight: isAppointment ? 500 : 400,
+          fontSize: '0.7rem',
+          lineHeight: 1.2,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
         }}>
           {event.title}
         </Typography>
-        
-        {isAppointment && event.extendedProps.reason && (
-          <Typography variant="caption" sx={{ 
-            fontSize: '0.65rem', 
-            opacity: 0.9,
-            display: 'block',
-            fontStyle: 'italic',
-            color: 'white',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.7)',
-            mt: 0.25
-          }}>
-            {event.extendedProps.reason}
-          </Typography>
-        )}
       </Box>
     );
   };
 
-  const getLegendColor = (item: string, index: number, mode: 'doctor' | 'department' | 'type'): string => {
-    if (mode === 'doctor') {
-      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-    }
-    
-    if (mode === 'department') {
-      if (DEPARTMENT_COLORS[item as keyof typeof DEPARTMENT_COLORS]) {
-        return DEPARTMENT_COLORS[item as keyof typeof DEPARTMENT_COLORS];
-      }
-      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-    }
-    
-    if (mode === 'type') {
-      if (APPOINTMENT_TYPE_COLORS[item as keyof typeof APPOINTMENT_TYPE_COLORS]) {
-        return APPOINTMENT_TYPE_COLORS[item as keyof typeof APPOINTMENT_TYPE_COLORS];
-      }
-      return DOCTOR_COLORS[index % DOCTOR_COLORS.length];
-    }
-    
-    return '#2196F3';
-  };
+  const colorModeOptions = [
+    { value: 'doctor', label: 'By Doctor' },
+    { value: 'type', label: 'By Type' },
+    { value: 'department', label: 'By Department' }
+  ];
 
   return (
-    <Box sx={{ maxWidth: 1400, margin: "auto", p: 2 }}>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-          <Typography variant="h5" fontWeight={600}>
-            Medical Schedule Calendar
-          </Typography>
-          
-          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-            <Box display="flex" gap={1} alignItems="center">
-              <Typography variant="body2" sx={{ minWidth: 'max-content' }}>Color by:</Typography>
-              <ButtonGroup variant="outlined" size="small">
-                <Button 
-                  variant={colorBy === 'doctor' ? 'contained' : 'outlined'}
-                  onClick={() => handleColorByChange('doctor')}
-                >
-                  Doctor
-                </Button>
-                <Button 
-                  variant={colorBy === 'department' ? 'contained' : 'outlined'}
-                  onClick={() => handleColorByChange('department')}
-                >
-                  Department
-                </Button>
-                <Button 
-                  variant={colorBy === 'type' ? 'contained' : 'outlined'}
-                  onClick={() => handleColorByChange('type')}
-                >
-                  Type
-                </Button>
-              </ButtonGroup>
-            </Box>
+    <Box sx={{ height: '100vh', width: '100%', marginTop: "10px" }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" fontWeight="bold">
+          Schedule Calendar
+        </Typography>
 
-            <Button
-              size="small"
-              variant={showConflicts ? 'contained' : 'outlined'}
-              color={showConflicts ? 'error' : 'inherit'}
-              onClick={() => setShowConflicts(!showConflicts)}
-              startIcon={<ConflictIcon />}
-            >
-              Conflicts
-            </Button>
+        <Box display="flex" gap={1} alignItems="center">
+          <ButtonGroup variant="outlined" size="small">
+            {colorModeOptions.map((option) => (
+              <Button
+                key={option.value}
+                onClick={() => handleColorByChange(option.value as 'type' | 'doctor' | 'department')}
+                variant={colorBy === option.value ? 'contained' : 'outlined'}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </ButtonGroup>
 
-            <Button
-              size="small"
-              variant={showMiniCalendar ? 'contained' : 'outlined'}
-              onClick={() => setShowMiniCalendar(!showMiniCalendar)}
-            >
-              Navigation
-            </Button>
-          </Box>
+          <Button
+            variant={showConflicts ? "contained" : "outlined"}
+            size="small"
+            onClick={() => setShowConflicts(!showConflicts)}
+            startIcon={<ConflictIcon />}
+          >
+            Conflicts
+          </Button>
+
+          <Button
+            variant={showMiniCalendar ? "contained" : "outlined"}
+            size="small"
+            onClick={() => setShowMiniCalendar(!showMiniCalendar)}
+          >
+            Mini Calendar
+          </Button>
         </Box>
+      </Box>
 
-        <Box mt={2} display="flex" flexWrap="wrap" gap={1} alignItems="center">
-          <Typography variant="subtitle2" sx={{ mr: 2, fontWeight: 600 }}>
-            Color Legend ({colorBy}):
-          </Typography>
-          
+      <Paper sx={{ mb: 2, p: 2 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Color Legend
+        </Typography>
+        <Box display="flex" flexWrap="wrap" gap={1}>
           {colorBy === 'doctor' && orderedDoctorIds.map((doctorId, index) => {
-            const doctor = normalizeDoctorsData.find((d: any) => d && d.id === doctorId);
-            const color = getLegendColor(doctorId ?? '', index, 'doctor');
+            const doctor = normalizeDoctorsData.find((d: any) => d.id === doctorId);
             const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
-              ? `Dr. ${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
+              ? `Dr. ${(doctor as any).firstName} ${(doctor as any).lastName}`
               : `Doctor ${doctorId}`;
-            
+            const color = DOCTOR_COLORS[index % DOCTOR_COLORS.length];
+
             return (
               <Chip
                 key={doctorId}
                 label={doctorName}
                 size="small"
-                sx={{ 
-                  bgcolor: color, 
-                  color: 'white', 
+                sx={{
+                  bgcolor: color,
+                  color: 'white',
                   fontSize: '0.75rem',
                   fontWeight: 500
                 }}
               />
             );
           })}
-          
-          {colorBy === 'department' && orderedDepartments.map((dept, index) => {
-            const color = getLegendColor(dept, index, 'department');
-            
-            return (
-              <Chip
-                key={dept}
-                label={dept.charAt(0).toUpperCase() + dept.slice(1)}
-                size="small"
-                sx={{ 
-                  bgcolor: color, 
-                  color: 'white', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 500 
-                }}
-              />
-            );
-          })}
-          
-          {colorBy === 'type' && orderedTypes.map((type, index) => {
-            const color = getLegendColor(type, index, 'type');
-            
+
+          {colorBy === 'type' && Object.entries(APPOINTMENT_TYPE_COLORS).map(([type, color]) => {
             return (
               <Chip
                 key={type}
                 label={type.charAt(0).toUpperCase() + type.slice(1)}
                 size="small"
-                sx={{ 
-                  bgcolor: color, 
-                  color: 'white', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 500 
+                sx={{
+                  bgcolor: color,
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: 500
+                }}
+              />
+            );
+          })}
+
+          {colorBy === 'department' && orderedDepartments.map((department, index) => {
+            const departmentColorsArray = Object.values(DEPARTMENT_COLORS);
+            const color = departmentColorsArray[index % departmentColorsArray.length];
+
+            return (
+              <Chip
+                key={department}
+                label={department.charAt(0).toUpperCase() + department.slice(1)}
+                size="small"
+                sx={{
+                  bgcolor: color,
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: 500
                 }}
               />
             );
@@ -522,7 +455,7 @@ export const ScheduleCalendar: React.FC = () => {
               events={events}
               conflicts={showConflicts}
             />
-            
+
             <ConflictDetector
               events={events}
               onConflictSelect={(eventId) => {
@@ -538,7 +471,7 @@ export const ScheduleCalendar: React.FC = () => {
         <Box sx={{ flex: 1 }}>
           <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
             <FullCalendar
-              key={`calendar-${colorBy}-${refreshKey}`} 
+              key={`calendar-${colorBy}-${refreshKey}`}
               ref={setCalendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
               initialView="dayGridMonth"
@@ -563,9 +496,9 @@ export const ScheduleCalendar: React.FC = () => {
               slotMaxTime="20:00:00"
               slotDuration="00:30:00"
               slotLabelInterval="01:00:00"
-              
+
               eventClassNames={() => ['custom-event', 'appointment-event']}
-              
+
               eventDidMount={(info) => {
                 const props = info.event.extendedProps;
                 if (props.type === 'appointment') {
@@ -573,7 +506,7 @@ export const ScheduleCalendar: React.FC = () => {
                   const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
                     ? `Dr. ${(doctor as any).firstName} ${(doctor as any).lastName}`
                     : 'Unassigned';
-                  
+
                   const tooltip = `
 Patient: ${info.event.title}
 Doctor: ${doctorName}
@@ -583,19 +516,19 @@ ${props.reason ? `Reason: ${props.reason}` : ''}
 Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   `.trim();
                   info.el.title = tooltip;
-                  
+
                   const expectedColor = props.expectedColor;
                   const actualColor = info.event.backgroundColor;
-                  
+
                   console.log(`🎨 EventDidMount: ${info.event.id} | Expected: ${expectedColor} | Actual: ${actualColor} | Mode: ${props.colorMode}`);
-                  
+
                   if (info.event.backgroundColor) {
                     info.el.style.backgroundColor = info.event.backgroundColor;
                     info.el.style.borderColor = info.event.backgroundColor;
                   }
                 }
               }}
-              
+
               dayCellDidMount={(info) => {
                 if (info.date.getDay() === 0 || info.date.getDay() === 6) {
                   info.el.style.backgroundColor = '#fafafa';
@@ -641,47 +574,68 @@ Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit
         }}
       />
 
+      <Dialog
+        open={showAppointmentForm}
+        onClose={handleAppointmentFormCancel}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText'
+        }}>
+          <Typography variant="h6">
+            Create Appointment - {appointmentFormDate && format(new Date(appointmentFormDate), 'MMM d, yyyy')}
+          </Typography>
+          <IconButton
+            onClick={handleAppointmentFormCancel}
+            sx={{ color: 'primary.contrastText' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent>
+          <Box>
+            <CreateAppointmentForm
+              defaultDate={appointmentFormDate}
+              onSave={handleAppointmentFormSave}
+              onCancel={handleAppointmentFormCancel}
+              embedded={true}
+            />
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       <style>{`
         .fc-event.custom-event,
         .fc-event.appointment-event {
           border-radius: 6px !important;
           border: 1px solid rgba(255, 255, 255, 0.3) !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-          font-weight: 500 !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          font-size: 12px !important;
+          padding: 2px 4px !important;
         }
         
-        .fc-event.appointment-event:hover {
+        .fc-event:hover {
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
           transform: translateY(-1px) !important;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
           transition: all 0.2s ease !important;
-          filter: brightness(1.1) !important;
         }
         
-        .fc-event.conflict-event {
-          border: 2px solid #f44336 !important;
-          animation: pulse 2s infinite;
+        .fc-daygrid-day:hover {
+          background-color: rgba(63, 61, 255, 0.05) !important;
+          cursor: pointer !important;
         }
         
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
-          70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
-        }
-        
-        .fc-timegrid-slot-minor {
-          border-top: 1px dotted #e0e0e0;
-        }
-        
-        .fc-event-title {
-          font-weight: 600 !important;
-        }
-        
-        .fc-event {
-          color: white !important;
-        }
-        
-        .fc-event-main {
-          color: inherit !important;
+        .fc-day-today {
+          background-color: rgba(63, 61, 255, 0.1) !important;
         }
       `}</style>
     </Box>

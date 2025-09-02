@@ -18,11 +18,13 @@ import { useNavigate } from "react-router-dom";
 import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
 import { MedicalAlert } from '../../providers/medical-decision-support/types';
 import PrescriptionSafetyChecker from "../prescription-safety-checker";
+import { useWorkflowEvents } from "../../providers/workflow-automation/integrations";
 
 export const PrescriptionForm: FC = () => {
   const { addPrescription } = usePrescriptionContext();
   const { patients } = usePatientsContext();
   const navigate = useNavigate();
+  const { emitPrescriptionAdded } = useWorkflowEvents();
 
   const [safetyAlerts, setSafetyAlerts] = useState<MedicalAlert[]>([]);
 
@@ -160,6 +162,10 @@ export const PrescriptionForm: FC = () => {
 
     addPrescription(prescription);
 
+    const patient = patientsArray.find(p => p.id === prescription.patientId);
+    if (patient) {
+      emitPrescriptionAdded(prescription, patient);
+    }
     setPrescription({
       id: crypto.randomUUID(),
       patientId: "",
@@ -356,9 +362,9 @@ export const PrescriptionForm: FC = () => {
             <Button variant="outlined" onClick={addMedication}>
               + Add Medication
             </Button>
-            <Button 
-              variant="contained" 
-              disabled={!isFormValid() || hasBlockingAlerts} 
+            <Button
+              variant="contained"
+              disabled={!isFormValid() || hasBlockingAlerts}
               onClick={handleSubmit}
               color={hasBlockingAlerts ? 'error' : 'primary'}
               sx={{ minWidth: 200 }}
@@ -366,7 +372,7 @@ export const PrescriptionForm: FC = () => {
               {hasBlockingAlerts ? 'Resolve Critical Alerts First' : 'Save Prescription'}
             </Button>
           </Box>
-          
+
           {safetyAlerts.length > 0 && (
             <Box display="flex" alignItems="center" gap={1} mt={1}>
               <Typography variant="body2" color="text.secondary">

@@ -19,7 +19,7 @@ export const FormFieldWrapper = styled(Box)<BoxProps>({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    width: "90%",
+    width: "100%",
     marginTop: "12px",
     justifyContent: "space-between"
 });
