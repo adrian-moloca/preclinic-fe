@@ -24,6 +24,7 @@ import { ToastProvider } from './components/toast-notification-system/context';
 import { ToastContainer } from './components/toast-notification-system/component';
 import { MedicalDecisionSupportProvider } from './providers/medical-decision-support/provider';
 import WorkflowAutomationProvider from './providers/workflow-automation/provider';
+import { TelemedicineProvider } from './providers/telemedicine';
 
 function App() {
   return (
@@ -47,10 +48,12 @@ function App() {
                                       <DepartmentsProvider>
                                         <PayrollProvider>
                                           <InvoicesProvider>
-                                            <CasesProvider>
-                                              <Routing />
-                                              <ToastContainer />
-                                            </CasesProvider>
+                                            <TelemedicineProvider>
+                                              <CasesProvider>
+                                                <Routing />
+                                                <ToastContainer />
+                                              </CasesProvider>
+                                            </TelemedicineProvider>
                                           </InvoicesProvider>
                                         </PayrollProvider>
                                       </DepartmentsProvider>

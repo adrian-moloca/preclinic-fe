@@ -38,6 +38,8 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import FolderIcon from '@mui/icons-material/Folder';
 import { useMedicalDecisionSupport } from "../../providers/medical-decision-support/context";
 import { useWorkflowAutomation } from "../../providers/workflow-automation/context";
+import VideocamIcon from '@mui/icons-material/Videocam';
+import HistoryIcon from '@mui/icons-material/History';
 
 const drawerWidthOpen = 260;
 const drawerWidthClosed = 70;
@@ -161,6 +163,15 @@ export const SideDrawer: FC = () => {
       icon: <ChatIcon />,
       route: "/chat",
       resource: "chat"
+    },
+    {
+      label: "Telemedicine",
+      icon: <VideocamIcon />,
+      resource: "telemedicine",
+      subItems: [
+        { label: "Video Calls", icon: <VideocamIcon />, route: "/telemedicine", permission: "access_telemedicine" },
+        { label: "Call History", icon: <HistoryIcon />, route: "/telemedicine/history", permission: "view_telemedicine_history" },
+      ]
     },
   ];
 

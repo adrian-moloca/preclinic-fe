@@ -31,7 +31,7 @@ const ChatAssistant = lazy(() => import("../views/ai-chat/index"));
 const AllOnlineAppointments = lazy(() => import("../views/appointments/online-appointments/all-online-appointments/index"));
 const ManageOnlineAppointment = lazy(() => import("../views/appointments/online-appointments/manage-online-appointment/index"));
 const CreateProduct = lazy(() => import("../views/products/create-product/index"));
-const AllProducts = lazy(() => import ("../views/products/all-products/index"));
+const AllProducts = lazy(() => import("../views/products/all-products/index"));
 const EditProduct = lazy(() => import("../views/products/edit-product/index"));
 const ProductDetails = lazy(() => import("../views/products/product-details/index"));
 const AllReviews = lazy(() => import("../views/reviews/all-reviews/index"));
@@ -70,6 +70,9 @@ const CaseDetails = lazy(() => import("../views/cases/case-details/index"));
 const EditCase = lazy(() => import("../views/cases/edit-case/index"));
 const MedicalAlertsDashboard = lazy(() => import("../components/medical-alerts-dashboard/index"));
 const WorkflowDashboard = lazy(() => import("../components/workflow-automation/workflow-dashboard/index"));
+const TelemedicineDashboard = lazy(() => import("../components/telemedicine/dashboard/index"));
+const VideoCallView = lazy(() => import("../views/video-call/index"));
+const WaitingRoomView = lazy(() => import("../views/waiting-room/index"));
 
 export const Routing: FC = () => {
   return (
@@ -80,13 +83,29 @@ export const Routing: FC = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
-        
+
+        <Route path="/telemedicine" element={
+          <ProtectedRoute requiredPermission="access_telemedicine">
+            <TelemedicineDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/telemedicine/call/:appointmentId" element={
+          <ProtectedRoute requiredPermission="access_telemedicine">
+            <VideoCallView />
+          </ProtectedRoute>
+        } />
+        <Route path="/telemedicine/waiting/:appointmentId" element={
+          <ProtectedRoute requiredPermission="access_telemedicine">
+            <WaitingRoomView />
+          </ProtectedRoute>
+        } />
+
         <Route path="/schedule" element={
           <ProtectedRoute requiredResource="schedule">
             <Schedule />
           </ProtectedRoute>
         } />
-        
+
         {/* Patient routes */}
         <Route path="/patients/create" element={
           <ProtectedRoute requiredPermission="manage_patients">
@@ -183,7 +202,7 @@ export const Routing: FC = () => {
             <EditAssistent />
           </ProtectedRoute>
         } />
-        
+
         {/* Appointment routes */}
         <Route path="/appointments/all" element={
           <ProtectedRoute requiredResource="appointments">
@@ -288,14 +307,14 @@ export const Routing: FC = () => {
             <Chat />
           </ProtectedRoute>
         } />
-        
+
         {/* Profile routes */}
         <Route path="/profile/settings" element={
           <ProtectedRoute>
             <ProfileSettings />
           </ProtectedRoute>
         } />
-        
+
         {/* Settings routes */}
         <Route path="settings" element={
           <ProtectedRoute requiredPermission="manage_settings">
@@ -343,7 +362,7 @@ export const Routing: FC = () => {
         {/* Doctor and Assistant routes */}
 
         {/* Chat routes */}
-        
+
         {/* Prescription routes */}
         <Route path="/prescriptions/all" element={
           <ProtectedRoute requiredResource="prescriptions">
@@ -365,7 +384,7 @@ export const Routing: FC = () => {
             <PrescriptionDetails />
           </ProtectedRoute>
         } />
-        
+
         {/* Leave routes */}
         <Route path="/leaves/create" element={
           <ProtectedRoute requiredPermission="request_leaves">
@@ -382,14 +401,14 @@ export const Routing: FC = () => {
             <EditLeave />
           </ProtectedRoute>
         } />
-        
+
         {/* AI Assistant route */}
         <Route path="/ai-assistant" element={
           <ProtectedRoute requiredResource="ai-assistant">
             <ChatAssistant />
           </ProtectedRoute>
         } />
-        
+
         {/* Product routes */}
         <Route path="/products/create" element={
           <ProtectedRoute requiredPermission="manage_products">
@@ -411,7 +430,7 @@ export const Routing: FC = () => {
             <ProductDetails />
           </ProtectedRoute>
         } />
-        
+
         {/* Reviews route */}
         <Route path="/reviews/all" element={
           <ProtectedRoute requiredResource="reviews">
@@ -420,10 +439,10 @@ export const Routing: FC = () => {
         } />
 
         <Route path="/privacy-policy" element={
-            <PrivacyAndPolicy />
+          <PrivacyAndPolicy />
         } />
         <Route path="/terms-and-conditions" element={
-            <TermsAndConditions />
+          <TermsAndConditions />
         } />
       </Route>
 
