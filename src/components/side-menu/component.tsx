@@ -39,7 +39,6 @@ import FolderIcon from '@mui/icons-material/Folder';
 import { useMedicalDecisionSupport } from "../../providers/medical-decision-support/context";
 import { useWorkflowAutomation } from "../../providers/workflow-automation/context";
 import VideocamIcon from '@mui/icons-material/Videocam';
-import HistoryIcon from '@mui/icons-material/History';
 
 const drawerWidthOpen = 260;
 const drawerWidthClosed = 70;
@@ -170,7 +169,6 @@ export const SideDrawer: FC = () => {
       resource: "telemedicine",
       subItems: [
         { label: "Video Calls", icon: <VideocamIcon />, route: "/telemedicine", permission: "access_telemedicine" },
-        { label: "Call History", icon: <HistoryIcon />, route: "/telemedicine/history", permission: "view_telemedicine_history" },
       ]
     },
   ];
@@ -232,7 +230,6 @@ export const SideDrawer: FC = () => {
     }
   ];
 
-  // Show automationItems as a section, but it's just a page, not a menu
   const automationItems = [
     {
       label: "Workflow Automation",
@@ -396,7 +393,6 @@ export const SideDrawer: FC = () => {
             requiredPermission="manage_settings"
           />
 
-          {/* Automation section as a single page */}
           <MenuSection
             title="Automation"
             items={automationItems}
