@@ -34,6 +34,17 @@ import {
   Badge,
   Divider,
   ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Alert,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import CloudUpload from '@mui/icons-material/CloudUpload';
 import Search from '@mui/icons-material/Search';
@@ -58,6 +69,10 @@ import Edit from '@mui/icons-material/Edit';
 import Visibility from '@mui/icons-material/Visibility';
 import History from '@mui/icons-material/History';
 import Science from '@mui/icons-material/Science';
+import Code from '@mui/icons-material/Code';
+import Description from '@mui/icons-material/Description';
+import Article from '@mui/icons-material/Article';
+import Close from '@mui/icons-material/Close';
 import { HIPAADashboard } from './components/hipaa-dashboard/component';
 import { DICOMViewer } from './components/dicom-viewer/component';
 import { ClinicalDecisionSupport } from './components/clinical-decision/component';
@@ -85,6 +100,10 @@ interface FileItem {
   accessCount?: number;
   description?: string;
   priority: 'low' | 'medium' | 'high';
+  // Add file storage properties
+  fileData?: ArrayBuffer;
+  fileBlob?: Blob;
+  originalFile?: File;
 }
 
 type FileCategory = 
@@ -148,11 +167,57 @@ const FILE_CATEGORIES = [
   { value: 'other', label: 'Other', color: '#8BC34A', icon: 'insert_drive_file' }
 ];
 
+const FILE_FORMATS = [
+  { value: 'pdf', label: 'PDF Document', mimeType: 'application/pdf', icon: PictureAsPdf },
+  { value: 'html', label: 'HTML Document', mimeType: 'text/html', icon: Code },
+  { value: 'htm', label: 'HTML Document', mimeType: 'text/html', icon: Code },
+  { value: 'txt', label: 'Text Document', mimeType: 'text/plain', icon: Article },
+  { value: 'doc', label: 'Word Document', mimeType: 'application/msword', icon: Description },
+  { value: 'docx', label: 'Word Document (DOCX)', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', icon: Description },
+  { value: 'jpg', label: 'JPEG Image', mimeType: 'image/jpeg', icon: Image },
+  { value: 'jpeg', label: 'JPEG Image', mimeType: 'image/jpeg', icon: Image },
+  { value: 'png', label: 'PNG Image', mimeType: 'image/png', icon: Image },
+  { value: 'gif', label: 'GIF Image', mimeType: 'image/gif', icon: Image },
+  { value: 'mp4', label: 'MP4 Video', mimeType: 'video/mp4', icon: VideoFile },
+  { value: 'avi', label: 'AVI Video', mimeType: 'video/avi', icon: VideoFile },
+  { value: 'mp3', label: 'MP3 Audio', mimeType: 'audio/mpeg', icon: AudioFile },
+  { value: 'wav', label: 'WAV Audio', mimeType: 'audio/wav', icon: AudioFile },
+  { value: 'xml', label: 'XML Document', mimeType: 'text/xml', icon: Code },
+  { value: 'csv', label: 'CSV File', mimeType: 'text/csv', icon: Article },
+];
+
 const mockPatients = [
   { id: '1', firstName: 'John', lastName: 'Doe' },
   { id: '2', firstName: 'Jane', lastName: 'Smith' },
   { id: '3', firstName: 'Bob', lastName: 'Johnson' },
 ];
+
+// Mock users for sharing
+const mockUsers = [
+  { id: '1', name: 'Dr. Sarah Wilson', email: 'sarah.wilson@clinic.com', role: 'Doctor' },
+  { id: '2', name: 'Nurse Mary Johnson', email: 'mary.johnson@clinic.com', role: 'Nurse' },
+  { id: '3', name: 'Admin John Smith', email: 'john.smith@clinic.com', role: 'Administrator' },
+  { id: '4', name: 'Dr. Michael Brown', email: 'michael.brown@clinic.com', role: 'Doctor' },
+];
+
+function TabPanel(props: any) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`preview-tabpanel-${index}`}
+      aria-labelledby={`preview-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 export const LocalFileManager: React.FC = () => {
   const theme = useTheme(); 
@@ -186,6 +251,27 @@ export const LocalFileManager: React.FC = () => {
   
   const [currentPreviewFile, setCurrentPreviewFile] = useState<FileItem | null>(null);
   const [currentOCRFile, setCurrentOCRFile] = useState<FileItem | null>(null);
+
+  // Dialog states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  
+  // Edit states
+  const [editingFile, setEditingFile] = useState<FileItem | null>(null);
+  const [editFileName, setEditFileName] = useState('');
+  const [editFileExtension, setEditFileExtension] = useState('');
+  const [editFileDescription, setEditFileDescription] = useState('');
+  const [editFileCategory, setEditFileCategory] = useState<FileCategory>('other');
+  const [editFileTags, setEditFileTags] = useState<string[]>([]);
+
+  // Share states
+  const [sharingFile, setSharingFile] = useState<FileItem | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [shareMessage, setShareMessage] = useState('');
+
+  // Preview states
+  const [previewTabValue, setPreviewTabValue] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -241,18 +327,19 @@ export const LocalFileManager: React.FC = () => {
 
   const pageFiles = sortedFiles.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
+  // FIXED: Proper file upload handling
   const addFiles = useCallback((fileList: FileList) => {
     setLoading(true);
-    Array.from(fileList).forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = () => {
+    
+    const promises = Array.from(fileList).map((file, index) => {
+      return new Promise<void>((resolve) => {
+        // Create file item immediately with original file
         const fileItem: FileItem = {
           id: `${Date.now()}-${index}`,
           name: file.name,
           size: file.size,
           type: file.type,
           date: new Date().toISOString(),
-          content: file.type.startsWith('image/') ? reader.result as string : undefined,
           patientId: selectedPatientForUpload?.id,
           patientName: selectedPatientForUpload ? `${selectedPatientForUpload.firstName} ${selectedPatientForUpload.lastName}` : undefined,
           category: selectedCategory,
@@ -262,17 +349,30 @@ export const LocalFileManager: React.FC = () => {
           processingStatus: 'pending',
           accessCount: 0,
           sharedWith: [],
+          originalFile: file, // Store the original file
         };
-        setFiles(prev => [...prev, fileItem]);
-        logFileAccess(fileItem.id, 'view');
-      };
-      if (file.type.startsWith('image/')) {
-        reader.readAsDataURL(file);
-      } else {
-        reader.readAsArrayBuffer(file);
-      }
+
+        // For images, also read as data URL for preview
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            fileItem.content = reader.result as string;
+            setFiles(prev => [...prev, fileItem]);
+            logFileAccess(fileItem.id, 'view');
+            resolve();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setFiles(prev => [...prev, fileItem]);
+          logFileAccess(fileItem.id, 'view');
+          resolve();
+        }
+      });
     });
-    setTimeout(() => setLoading(false), 1000);
+
+    Promise.all(promises).then(() => {
+      setLoading(false);
+    });
   }, [selectedPatientForUpload, selectedCategory, fileTags, isConfidential]);
 
   const logFileAccess = (fileId: string, action: AccessLogEntry['action'], userId?: string) => {
@@ -299,6 +399,227 @@ export const LocalFileManager: React.FC = () => {
   const getCategoryInfo = (category: FileCategory) => {
     return FILE_CATEGORIES.find(cat => cat.value === category) || FILE_CATEGORIES[FILE_CATEGORIES.length - 1];
   };
+
+  function getFileIcon(fileType: string, size: number = 24) {
+    const iconProps = { sx: { fontSize: size } };
+    
+    if (fileType.startsWith("image/")) return <Image {...iconProps} sx={{ ...iconProps.sx, color: '#4CAF50' }} />;
+    if (fileType === "application/pdf") return <PictureAsPdf {...iconProps} sx={{ ...iconProps.sx, color: '#F44336' }} />;
+    if (fileType.startsWith("video/")) return <VideoFile {...iconProps} sx={{ ...iconProps.sx, color: '#2196F3' }} />;
+    if (fileType.startsWith("audio/")) return <AudioFile {...iconProps} sx={{ ...iconProps.sx, color: '#FF9800' }} />;
+    if (fileType.includes("html") || fileType.includes("xml")) return <Code {...iconProps} sx={{ ...iconProps.sx, color: '#FF5722' }} />;
+    if (fileType.includes("text/")) return <Article {...iconProps} sx={{ ...iconProps.sx, color: '#607D8B' }} />;
+    if (fileType.includes("word") || fileType.includes("document")) return <Description {...iconProps} sx={{ ...iconProps.sx, color: '#1976D2' }} />;
+    return <InsertDriveFile {...iconProps} sx={{ ...iconProps.sx, color: '#757575' }} />;
+  }
+
+  function getFileExtension(filename: string): string {
+    return filename.split('.').pop()?.toUpperCase() || 'FILE';
+  }
+
+  function renderPreview(file: FileItem) {
+    if (file.type.startsWith("image/") && file.content) {
+      return (
+        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+          <Avatar
+            src={file.content}
+            alt={file.name}
+            sx={{ width: 50, height: 50, borderRadius: 1 }}
+          />
+          <Chip 
+            label={getFileExtension(file.name)} 
+            size="small"
+            sx={{ 
+              position: 'absolute',
+              bottom: -8,
+              right: -8,
+              fontSize: '0.65rem',
+              height: 18,
+              bgcolor: theme.palette.primary.main,
+              color: 'white',
+              fontWeight: 'bold'
+            }}
+          />
+        </Box>
+      );
+    }
+    
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-block' }}>
+        <Avatar sx={{ 
+          width: 50, 
+          height: 50, 
+          borderRadius: 1, 
+          bgcolor: theme.palette.background.default,
+          border: 1,
+          borderColor: 'divider'
+        }}>
+          {getFileIcon(file.type, 28)}
+        </Avatar>
+        <Chip 
+          label={getFileExtension(file.name)} 
+          size="small"
+          sx={{ 
+            position: 'absolute',
+            bottom: -8,
+            right: -8,
+            fontSize: '0.65rem',
+            height: 18,
+            bgcolor: theme.palette.primary.main,
+            color: 'white',
+            fontWeight: 'bold'
+          }}
+        />
+      </Box>
+    );
+  }
+
+  // FIXED: Proper download functionality
+  function handleDownloadFile(fileId: string) {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    logFileAccess(fileId, 'download');
+
+    // Use the original file if available
+    if (file.originalFile) {
+      const url = URL.createObjectURL(file.originalFile);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    // Fallback for images with base64 content
+    if (file.type.startsWith('image/') && file.content) {
+      try {
+        // Convert data URL to blob
+        const arr = file.content.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return;
+      } catch (error) {
+        console.error('Error downloading image:', error);
+      }
+    }
+
+    // If no original file or content is available, show error
+    alert('File content is not available for download. The original file may have been lost.');
+  }
+
+  // Download multiple files
+  function downloadSelected() {
+    selectedFiles.forEach(fileId => {
+      handleDownloadFile(fileId);
+    });
+  }
+
+  // Preview functionality
+  function handlePreviewFile(fileId: string) {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    logFileAccess(fileId, 'view');
+    setCurrentPreviewFile(file);
+    setPreviewDialogOpen(true);
+    setPreviewTabValue(0);
+  }
+
+  // Share functionality
+  function handleShareFile(fileId: string) {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    setSharingFile(file);
+    setSelectedUsers(file.sharedWith || []);
+    setShareMessage('');
+    setShareDialogOpen(true);
+  }
+
+  function handleSaveShare() {
+    if (!sharingFile) return;
+
+    // Update file with new shared users
+    const updatedFile = {
+      ...sharingFile,
+      sharedWith: selectedUsers
+    };
+
+    setFiles(prev => prev.map(f => f.id === sharingFile.id ? updatedFile : f));
+    logFileAccess(sharingFile.id, 'share');
+
+    // In a real app, you would send notifications/emails to selected users
+    console.log(`Sharing ${sharingFile.name} with:`, selectedUsers.map(id => {
+      const user = mockUsers.find(u => u.id === id);
+      return user?.email;
+    }));
+
+    setShareDialogOpen(false);
+    setSharingFile(null);
+    setSelectedUsers([]);
+  }
+
+  // Edit file functions
+  function handleEditFile(fileId: string) {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+    
+    const fileName = file.name.substring(0, file.name.lastIndexOf('.'));
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.') + 1);
+    
+    setEditingFile(file);
+    setEditFileName(fileName || file.name);
+    setEditFileExtension(fileExtension || '');
+    setEditFileDescription(file.description || '');
+    setEditFileCategory(file.category);
+    setEditFileTags(file.tags);
+    setEditDialogOpen(true);
+  }
+
+  function handleSaveEdit() {
+    if (!editingFile) return;
+
+    const newFileName = editFileExtension 
+      ? `${editFileName}.${editFileExtension}` 
+      : editFileName;
+
+    const formatInfo = FILE_FORMATS.find(f => f.value === editFileExtension.toLowerCase());
+    const newMimeType = formatInfo?.mimeType || editingFile.type;
+
+    const updatedFile: FileItem = {
+      ...editingFile,
+      name: newFileName,
+      type: newMimeType,
+      description: editFileDescription,
+      category: editFileCategory,
+      tags: editFileTags,
+    };
+
+    setFiles(prev => prev.map(f => f.id === editingFile.id ? updatedFile : f));
+    logFileAccess(editingFile.id, 'edit');
+    
+    setEditDialogOpen(false);
+    setEditingFile(null);
+  }
 
   function onFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
@@ -338,42 +659,12 @@ export const LocalFileManager: React.FC = () => {
     setMenuFileId("");
   }
 
-  function getFileIcon(fileType: string) {
-    if (fileType.startsWith("image/")) return <Image sx={{ color: '#4CAF50' }} />;
-    if (fileType === "application/pdf") return <PictureAsPdf sx={{ color: '#F44336' }} />;
-    if (fileType.startsWith("video/")) return <VideoFile sx={{ color: '#2196F3' }} />;
-    if (fileType.startsWith("audio/")) return <AudioFile sx={{ color: '#FF9800' }} />;
-    return <InsertDriveFile sx={{ color: '#757575' }} />;
-  }
-
   function formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
-
-  function renderPreview(file: FileItem) {
-    if (file.type.startsWith("image/") && file.content) {
-      return (
-        <Avatar
-          src={file.content}
-          alt={file.name}
-          sx={{ width: 40, height: 40, borderRadius: 1 }}
-        />
-      );
-    }
-    return (
-      <Avatar sx={{ 
-        width: 40, 
-        height: 40, 
-        borderRadius: 1, 
-        bgcolor: theme.palette.action.hover,
-      }}>
-        {getFileIcon(file.type)}
-      </Avatar>
-    );
   }
 
   function toggleSelect(fileId: string) {
@@ -410,16 +701,6 @@ export const LocalFileManager: React.FC = () => {
     });
     setFiles(prev => prev.filter(f => !selectedFiles.has(f.id)));
     setSelectedFiles(new Set());
-  }
-
-  function downloadSelected() {
-    selectedFiles.forEach(fileId => {
-      const file = files.find(f => f.id === fileId);
-      if (file) {
-        logFileAccess(fileId, 'download');
-        console.log(`Downloading ${file.name}`);
-      }
-    });
   }
 
   function handleSort(field: 'name' | 'size' | 'date' | 'category' | 'patient') {
@@ -893,22 +1174,21 @@ export const LocalFileManager: React.FC = () => {
         />
       </Card>
 
+      {/* Context Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
         <MenuItem onClick={() => {
-          const file = files.find(f => f.id === menuFileId);
-          if (file) {
-            logFileAccess(file.id, 'view');
-          }
+          handlePreviewFile(menuFileId);
           handleMenuClose();
         }}>
           <ListItemIcon><Visibility /></ListItemIcon>
           Preview
         </MenuItem>
         <MenuItem onClick={() => {
+          handleEditFile(menuFileId);
           handleMenuClose();
         }}>
           <ListItemIcon><Edit /></ListItemIcon>
@@ -931,7 +1211,7 @@ export const LocalFileManager: React.FC = () => {
         
         <MenuItem onClick={() => {
           const file = files.find(f => f.id === menuFileId);
-          if (file && (file.type.includes('dicom') || file.category === 'imaging')) {
+          if (file) {
             setCurrentPreviewFile(file);
             setDicomViewerOpen(true);
           }
@@ -952,10 +1232,7 @@ export const LocalFileManager: React.FC = () => {
         <Divider />
         
         <MenuItem onClick={() => {
-          const file = files.find(f => f.id === menuFileId);
-          if (file) {
-            logFileAccess(file.id, 'download');
-          }
+          handleDownloadFile(menuFileId);
           handleMenuClose();
         }}>
           <ListItemIcon><Download /></ListItemIcon>
@@ -963,10 +1240,7 @@ export const LocalFileManager: React.FC = () => {
         </MenuItem>
         
         <MenuItem onClick={() => {
-          const file = files.find(f => f.id === menuFileId);
-          if (file) {
-            logFileAccess(file.id, 'share');
-          }
+          handleShareFile(menuFileId);
           handleMenuClose();
         }}>
           <ListItemIcon><Share /></ListItemIcon>
@@ -986,6 +1260,434 @@ export const LocalFileManager: React.FC = () => {
         </MenuItem>
       </Menu>
 
+      {/* Preview Dialog */}
+      <Dialog 
+        open={previewDialogOpen} 
+        onClose={() => setPreviewDialogOpen(false)} 
+        maxWidth="lg" 
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Avatar sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider' }}>
+                {currentPreviewFile && getFileIcon(currentPreviewFile.type, 24)}
+              </Avatar>
+              <Box>
+                <Typography variant="h6">File Preview</Typography>
+                {currentPreviewFile && (
+                  <Typography variant="caption" color="text.secondary">
+                    {getFileExtension(currentPreviewFile.name)} • {formatFileSize(currentPreviewFile.size)}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {currentPreviewFile?.isOcrProcessed && (
+                <Chip
+                  icon={<TextFields />}
+                  label="OCR Processed"
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              )}
+              {currentPreviewFile?.isConfidential && (
+                <Chip
+                  icon={<Security />}
+                  label="Confidential"
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                />
+              )}
+            </Box>
+          </Box>
+          <IconButton onClick={() => setPreviewDialogOpen(false)}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        {currentPreviewFile && (
+          <>
+            <Tabs 
+              value={previewTabValue} 
+              onChange={(_, newValue) => setPreviewTabValue(newValue)} 
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab label="File Details" />
+              <Tab label="Content Preview" />
+              {currentPreviewFile.accessLog && <Tab label="Access History" />}
+            </Tabs>
+
+            <DialogContent sx={{ p: 0 }}>
+              <TabPanel value={previewTabValue} index={0}>
+                <Grid container spacing={3}>
+                  <Grid>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                      <Avatar 
+                        sx={{ 
+                          width: 60, 
+                          height: 60, 
+                          bgcolor: 'background.paper', 
+                          border: 2, 
+                          borderColor: 'primary.main' 
+                        }}
+                      >
+                        {getFileIcon(currentPreviewFile.type, 30)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6">{getFileExtension(currentPreviewFile.name)} File</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {currentPreviewFile.type}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Typography variant="subtitle2" color="text.secondary">File Name</Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>{currentPreviewFile.name}</Typography>
+                    
+                    <Typography variant="subtitle2" color="text.secondary">Category</Typography>
+                    <Chip 
+                      label={getCategoryInfo(currentPreviewFile.category).label}
+                      size="small"
+                      sx={{ bgcolor: getCategoryInfo(currentPreviewFile.category).color, color: 'white', mb: 2 }}
+                    />
+                    
+                    {currentPreviewFile.patientName && (
+                      <>
+                        <Typography variant="subtitle2" color="text.secondary">Patient</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Person sx={{ fontSize: 16, mr: 0.5, color: 'primary.main' }} />
+                          <Typography variant="body1">{currentPreviewFile.patientName}</Typography>
+                        </Box>
+                      </>
+                    )}
+                  </Grid>
+                  
+                  <Grid>
+                    <Typography variant="subtitle2" color="text.secondary">Size</Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>{formatFileSize(currentPreviewFile.size)}</Typography>
+                    
+                    <Typography variant="subtitle2" color="text.secondary">Upload Date</Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {new Date(currentPreviewFile.date).toLocaleString()}
+                    </Typography>
+                    
+                    {currentPreviewFile.lastAccessed && (
+                      <>
+                        <Typography variant="subtitle2" color="text.secondary">Last Accessed</Typography>
+                        <Typography variant="body1" sx={{ mb: 2 }}>
+                          {new Date(currentPreviewFile.lastAccessed).toLocaleString()}
+                        </Typography>
+                      </>
+                    )}
+                    
+                    {currentPreviewFile.accessCount && (
+                      <>
+                        <Typography variant="subtitle2" color="text.secondary">Access Count</Typography>
+                        <Typography variant="body1" sx={{ mb: 2 }}>{currentPreviewFile.accessCount}</Typography>
+                      </>
+                    )}
+                  </Grid>
+                </Grid>
+                
+                {currentPreviewFile.description && (
+                  <>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>Description</Typography>
+                    <Typography variant="body1">{currentPreviewFile.description}</Typography>
+                  </>
+                )}
+                
+                {currentPreviewFile.tags.length > 0 && (
+                  <>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>Tags</Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {currentPreviewFile.tags.map((tag, index) => (
+                        <Chip key={index} label={tag} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  </>
+                )}
+
+                {currentPreviewFile.sharedWith && currentPreviewFile.sharedWith.length > 0 && (
+                  <>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>Shared With</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {currentPreviewFile.sharedWith.length} people
+                    </Typography>
+                  </>
+                )}
+              </TabPanel>
+
+              <TabPanel value={previewTabValue} index={1}>
+                {currentPreviewFile.type.startsWith('image/') && currentPreviewFile.content && (
+                  <Box sx={{ textAlign: 'center' }}>
+                    <img 
+                      src={currentPreviewFile.content} 
+                      alt={currentPreviewFile.name}
+                      style={{ maxWidth: '100%', maxHeight: '600px', borderRadius: 8 }}
+                    />
+                  </Box>
+                )}
+                
+                {currentPreviewFile.originalFile && !currentPreviewFile.type.startsWith('image/') && (
+                  <Alert severity="info">
+                    File preview is available through download. The original {currentPreviewFile.name} file is ready for download.
+                  </Alert>
+                )}
+                
+                {!currentPreviewFile.content && !currentPreviewFile.originalFile && (
+                  <Alert severity="warning">
+                    Preview not available for this file type. The file may not have been properly uploaded.
+                  </Alert>
+                )}
+              </TabPanel>
+
+              {currentPreviewFile.accessLog && (
+                <TabPanel value={previewTabValue} index={2}>
+                  <Typography variant="h6" gutterBottom>Access History</Typography>
+                  <List>
+                    {currentPreviewFile.accessLog.map((entry, index) => (
+                      <ListItem key={index} divider>
+                        <ListItemText
+                          primary={`${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)} action`}
+                          secondary={`${new Date(entry.timestamp).toLocaleString()} - ${entry.location}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </TabPanel>
+              )}
+            </DialogContent>
+          </>
+        )}
+
+        <DialogActions>
+          <Button 
+            startIcon={<Download />} 
+            onClick={() => currentPreviewFile && handleDownloadFile(currentPreviewFile.id)}
+          >
+            Download
+          </Button>
+          <Button 
+            startIcon={<Share />} 
+            onClick={() => currentPreviewFile && handleShareFile(currentPreviewFile.id)}
+          >
+            Share
+          </Button>
+          <Button onClick={() => setPreviewDialogOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog 
+        open={shareDialogOpen} 
+        onClose={() => setShareDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Share />
+            Share File: {sharingFile?.name}
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Typography variant="subtitle1" gutterBottom>
+            Select users to share with:
+          </Typography>
+          
+          <List>
+            {mockUsers.map((user) => (
+              <ListItem key={user.id}>
+                <ListItemAvatar>
+                  <Avatar>
+                    <Person />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={user.name}
+                  secondary={`${user.email} • ${user.role}`}
+                />
+                <Checkbox
+                  checked={selectedUsers.includes(user.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedUsers(prev => [...prev, user.id]);
+                    } else {
+                      setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                    }
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+          
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Message (optional)"
+            value={shareMessage}
+            onChange={(e) => setShareMessage(e.target.value)}
+            placeholder="Add a message for the recipients..."
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setShareDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveShare}
+            disabled={selectedUsers.length === 0}
+            startIcon={<Share />}
+          >
+            Share with {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit File Dialog */}
+      <Dialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Edit File Details</Typography>
+          <IconButton onClick={() => setEditDialogOpen(false)}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={3} sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Grid>
+                <TextField
+                  fullWidth
+                  label="File Name (without extension)"
+                  value={editFileName}
+                  onChange={(e) => setEditFileName(e.target.value)}
+                  placeholder="Enter file name"
+                  sx={{ width: "420px" }}
+                />
+              </Grid>
+              
+              <Grid>
+                <FormControl fullWidth sx={{ width: "420px" }}>
+                  <InputLabel>File Type</InputLabel>
+                  <Select
+                    value={editFileExtension}
+                    label="File Type"
+                    onChange={(e) => setEditFileExtension(e.target.value)}
+                  >
+                    {FILE_FORMATS.map((format) => {
+                      const IconComponent = format.icon;
+                      return (
+                        <MenuItem key={format.value} value={format.value}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconComponent sx={{ fontSize: 20 }} />
+                            <Box>
+                              <Typography variant="body2">{format.label}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                .{format.value.toUpperCase()}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid>
+                <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1, border: 1, borderColor: 'primary.200', maxWidth: "420px" }}>
+                  <Typography variant="body2" color="primary.main">
+                    <strong>Full file name:</strong> {editFileName || 'filename'}.{editFileExtension || 'ext'}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid>
+                <Divider />
+              </Grid>
+
+              <Grid>
+                <FormControl fullWidth sx={{ width: "420px" }}>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={editFileCategory}
+                    label="Category"
+                    onChange={(e) => setEditFileCategory(e.target.value as FileCategory)}
+                  >
+                    {FILE_CATEGORIES.map((cat) => (
+                      <MenuItem key={cat.value} value={cat.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: cat.color, mr: 1 }} />
+                          {cat.label}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={3}
+                  value={editFileDescription}
+                  onChange={(e) => setEditFileDescription(e.target.value)}
+                  placeholder="Enter file description..."
+                  sx={{ width: "420px" }}
+                />
+              </Grid>
+              
+              <Grid>
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  value={editFileTags}
+                  onChange={(_, newValue) => setEditFileTags(newValue)}
+                  options={[]}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip variant="outlined" label={option} {...getTagProps({ index })} key={index} />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} label="Tags" placeholder="Add tags..." sx={{ width: "420px" }} />
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSaveEdit}>
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Existing Dialogs */}
       <MedicalClassificationDialog 
         fileManager={{
           medicalClassificationOpen,
@@ -1036,6 +1738,7 @@ export const LocalFileManager: React.FC = () => {
         }} 
       />
 
+      {/* Drag and Drop Overlay */}
       {dragging && (
         <Box
           sx={{
