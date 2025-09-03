@@ -71,7 +71,6 @@ export const AppointmentDetails: FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [showMedicalCase, setShowMedicalCase] = useState(false);
 
-  // Find the medical case for this appointment
   const medicalCase = cases.find(
     (c) => String(c.appointmentId) === String(appointmentId)
   );
@@ -198,7 +197,6 @@ export const AppointmentDetails: FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, margin: '0 auto' }}>
-      {/* Appointment Details Section */}
       <Box sx={{ mb: showMedicalCase ? 2 : 3 }}>
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
@@ -241,7 +239,7 @@ export const AppointmentDetails: FC = () => {
 
         <Grid container spacing={3}>
           <Grid>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ width: "300px", height: "300px" }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar 
@@ -303,7 +301,7 @@ export const AppointmentDetails: FC = () => {
           </Grid>
 
           <Grid>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ width: "300px", height: "300px" }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Appointment Information
@@ -363,7 +361,7 @@ export const AppointmentDetails: FC = () => {
           </Grid>
 
           <Grid>
-            <Card>
+            <Card sx={{ width: "300px", height: "300px" }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Appointment Details
@@ -499,7 +497,6 @@ export const AppointmentDetails: FC = () => {
         </Grid>
       </Box>
 
-      {/* Medical Case Section - Renders below when showMedicalCase is true */}
       {showMedicalCase && (
         <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'between', alignItems: 'center' }}>

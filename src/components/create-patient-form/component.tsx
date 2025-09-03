@@ -1,198 +1,186 @@
-import React, { FC, useState } from "react";
-import { Box, TextField, Button, Grid, MenuItem } from "@mui/material";
-import { v4 as uuidv4 } from "uuid";
+import {
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Button,
+  Typography,
+  Box,
+} from "@mui/material";
+import { FC, useState, useEffect } from "react";
+import ProfileImageUploader from "../profile-image";
+import { Country, State, City } from "country-state-city";
+import { PatientsEntry } from "../../providers/patients/types";
 import { usePatientsContext } from "../../providers/patients";
 import { useNavigate } from "react-router-dom";
-import AutoSaveFormWrapper from "../auto-save-form";
-import { useWorkflowEvents } from "../../providers/workflow-automation/integrations";
-
-interface PatientFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  birthDate: string;
-  gender: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  zipCode: string;
-  bloodGroup: string;
-  allergies: string;
-  currentMedications: string;
-}
+import { PatentDetailsWrapper, CreatePatientFormWrapper } from "./style";
+import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
 
 export const CreatePatientForm: FC = () => {
   const { addPatient } = usePatientsContext();
-  const { emitPatientRegistered } = useWorkflowEvents();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<PatientFormData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    birthDate: "",
-    gender: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    zipCode: "",
-    bloodGroup: "",
-    allergies: "",
-    currentMedications: "",
-  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [address, setAddress] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [country, setCountry] = useState("");
+  const [state, setState] = useState("");
+  const [city, setCity] = useState("");
+  const [profileImg, setProfileImg] = useState("");
 
-  const handleInputChange = (field: keyof PatientFormData) => (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
+  const countries = Country.getAllCountries();
+  const selectedCountry = countries.find((c) => c.name === country);
+  const states = selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : [];
+  const selectedState = states.find((s) => s.name === state);
+  const cities = selectedState && selectedCountry
+    ? City.getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode)
+    : [];
+
+  const validateEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
   };
 
-  const handleRestoreDraft = (draftData: Record<string, any>) => {
-    setFormData(draftData as PatientFormData);
+  const validatePhone = (value: string) => {
+    const phoneRegex = /^[0-9+\-()\s]{10,15}$/;
+    return phoneRegex.test(value);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    const newPatient = {
-      id: uuidv4(),
-      ...formData,
-      profileImg: "",
-      createdAt: new Date().toISOString(),
+  const isFormValid =
+    firstName.trim() &&
+    lastName.trim() &&
+    phoneNumber.trim() &&
+    email.trim() &&
+    validatePhone(phoneNumber) &&
+    validateEmail(email) &&
+    birthDate &&
+    gender &&
+    bloodGroup &&
+    address &&
+    zipCode &&
+    country &&
+    state &&
+    city;
+
+  const handleSubmit = () => {
+    if (!isFormValid) return;
+
+    const patient: PatientsEntry = {
+      id: crypto.randomUUID(),
+      profileImg,
+      firstName,
+      lastName,
+      phoneNumber,
+      email,
+      birthDate,
+      gender,
+      bloodGroup,
+      address,
+      zipCode,
+      country,
+      state,
+      city,
     };
 
-    addPatient(newPatient);
-    emitPatientRegistered(newPatient);
+    addPatient(patient);
     navigate("/patients/all-patients");
   };
 
+  useEffect(() => {
+    setEmailError(email && !validateEmail(email) ? "Invalid email format" : "");
+    setPhoneError(phoneNumber && !validatePhone(phoneNumber) ? "Invalid phone number" : "");
+  }, [email, phoneNumber]);
+
   return (
-    <AutoSaveFormWrapper
-      formType="create-patient"
-      formData={formData}
-      onRestoreDraft={handleRestoreDraft}
-      autoSaveInterval={15000} 
-    >
-      <Box component="form" onSubmit={handleSubmit} p={3}>
-        <Grid container spacing={3}>
-          <Grid>
-            <TextField
-              fullWidth
-              label="First Name"
-              value={formData.firstName}
-              onChange={handleInputChange("firstName")}
-              required
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Last Name"
-              value={formData.lastName}
-              onChange={handleInputChange("lastName")}
-              required
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange("email")}
-              required
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Phone Number"
-              value={formData.phoneNumber}
-              onChange={handleInputChange("phoneNumber")}
-              required
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Birth Date"
-              type="date"
-              value={formData.birthDate}
-              onChange={handleInputChange("birthDate")}
-              InputLabelProps={{ shrink: true }}
-              required
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              select
-              label="Gender"
-              value={formData.gender}
-              onChange={handleInputChange("gender")}
-              required
+    <CreatePatientFormWrapper>
+      <PaperFormWrapper>
+        <Typography variant="h5" gutterBottom>
+          Create Patient
+        </Typography>
+        <DividerFormWrapper />
+        
+        <Box display="flex" justifyContent="center" sx={{ mb: 2 }}>
+          <ProfileImageUploader image={profileImg} setImage={setProfileImg} />
+        </Box>
+
+        <PatentDetailsWrapper>
+          <TextField
+            label="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+          <TextField
+            label="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+          <TextField
+            label="Phone Number"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            error={!!phoneError}
+            helperText={phoneError}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+          <TextField
+            label="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={!!emailError}
+            helperText={emailError}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+          <TextField
+            label="Birth Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+            <InputLabel id="gender-label">Gender</InputLabel>
+            <Select 
+              labelId="gender-label" 
+              value={gender} 
+              label="Gender" 
+              onChange={(e) => setGender(e.target.value)}
             >
               <MenuItem value="male">Male</MenuItem>
               <MenuItem value="female">Female</MenuItem>
               <MenuItem value="other">Other</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Address"
-              value={formData.address}
-              onChange={handleInputChange("address")}
-              multiline
-              rows={2}
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="City"
-              value={formData.city}
-              onChange={handleInputChange("city")}
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="State"
-              value={formData.state}
-              onChange={handleInputChange("state")}
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Country"
-              value={formData.country}
-              onChange={handleInputChange("country")}
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Zip Code"
-              value={formData.zipCode}
-              onChange={handleInputChange("zipCode")}
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              select
-              label="Blood Group"
-              value={formData.bloodGroup}
-              onChange={handleInputChange("bloodGroup")}
+              <MenuItem value="prefer-not">Prefer not to say</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+            <InputLabel id="blood-group-label">Blood Group</InputLabel>
+            <Select 
+              labelId="blood-group-label" 
+              value={bloodGroup} 
+              label="Blood Group" 
+              onChange={(e) => setBloodGroup(e.target.value)}
             >
               <MenuItem value="A+">A+</MenuItem>
               <MenuItem value="A-">A-</MenuItem>
@@ -202,51 +190,95 @@ export const CreatePatientForm: FC = () => {
               <MenuItem value="AB-">AB-</MenuItem>
               <MenuItem value="O+">O+</MenuItem>
               <MenuItem value="O-">O-</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Allergies"
-              value={formData.allergies}
-              onChange={handleInputChange("allergies")}
-              multiline
-              rows={2}
-              placeholder="List any known allergies..."
-            />
-          </Grid>
-          <Grid>
-            <TextField
-              fullWidth
-              label="Current Medications"
-              value={formData.currentMedications}
-              onChange={handleInputChange("currentMedications")}
-              multiline
-              rows={2}
-              placeholder="List current medications..."
-            />
-          </Grid>
-          <Grid>
-            <Box display="flex" gap={2}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                size="large"
-              >
-                Create Patient
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => navigate("/patients/all-patients")}
-                size="large"
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-    </AutoSaveFormWrapper>
+            </Select>
+          </FormControl>
+          <TextField
+            label="Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+            rows={2}
+          />
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+            <InputLabel id="country-label">Country</InputLabel>
+            <Select
+              labelId="country-label"
+              value={country}
+              label="Country"
+              onChange={(e) => {
+                setCountry(e.target.value);
+                setState("");
+                setCity("");
+              }}
+            >
+              {countries.map((c) => (
+                <MenuItem key={c.isoCode} value={c.name}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} disabled={!country} required>
+            <InputLabel id="state-label">State</InputLabel>
+            <Select
+              labelId="state-label"
+              value={state}
+              label="State"
+              onChange={(e) => {
+                setState(e.target.value);
+                setCity("");
+              }}
+            >
+              {states.map((s) => (
+                <MenuItem key={s.isoCode} value={s.name}>
+                  {s.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} disabled={!state} required>
+            <InputLabel id="city-label">City</InputLabel>
+            <Select
+              labelId="city-label"
+              value={city}
+              label="City"
+              onChange={(e) => setCity(e.target.value)}
+            >
+              {cities.map((c) => (
+                <MenuItem key={c.name} value={c.name}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Zip Code"
+            value={zipCode}
+            onChange={(e) => setZipCode(e.target.value)}
+            fullWidth
+            sx={{ width: 500, marginY: 1 }}
+            required
+          />
+        </PatentDetailsWrapper>
+
+        <Box display="flex" gap={2} justifyContent={"center"}>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate("/patients/all-patients")}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!isFormValid}
+          >
+            Create Patient
+          </Button>
+        </Box>
+      </PaperFormWrapper>
+    </CreatePatientFormWrapper>
   );
 };

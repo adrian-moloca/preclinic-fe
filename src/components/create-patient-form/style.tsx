@@ -1,6 +1,21 @@
 import { Box, BoxProps, styled } from "@mui/material";
 
-export const CreatePatientFormWrapper = styled(Box)<BoxProps>({
+export const CreatePatientFormWrapper = styled(Box)<BoxProps>(({ theme }) => ({
+    display: "flex",
+    justifyContent: "center",
+    color: theme.palette.text.primary, 
+}));
+
+export const PatentDetailsWrapper = styled(Box)<BoxProps>(({ theme }) => ({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    justifyContent: "center",
+    color: theme.palette.text.primary, 
+}));
+
+// Legacy components for backward compatibility (if needed elsewhere)
+export const CreatePatientFormWrapperLegacy = styled(Box)<BoxProps>({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -19,7 +34,7 @@ export const FormFieldWrapper = styled(Box)<BoxProps>({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    width: "100%",
+    width: "90%",
     marginTop: "12px",
     justifyContent: "space-between"
 });

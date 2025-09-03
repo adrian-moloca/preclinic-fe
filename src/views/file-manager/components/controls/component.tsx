@@ -1,14 +1,14 @@
 import React from "react";
-import { 
-  Card, 
-  CardContent, 
-  Box, 
-  Typography, 
-  Button, 
-  TextField, 
-  Select, 
-  MenuItem, 
-  FormControl, 
+import {
+  Card,
+  CardContent,
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
   InputLabel,
   Grid,
   Autocomplete,
@@ -19,7 +19,7 @@ import {
   Chip,
   Divider
 } from "@mui/material";
-import { 
+import {
   CloudUpload,
   Delete,
   Download,
@@ -30,13 +30,14 @@ import {
   CreateNewFolder,
   NoteAdd,
   Search,
-  Sort,
   CameraAlt,
   TextFields,
-  PictureAsPdf,
   Security,
   SearchOff,
-  FilterList
+  FilterList,
+  Psychology,
+  Settings,
+  LocalHospital
 } from "@mui/icons-material";
 
 interface FileManagerControlsProps {
@@ -58,14 +59,14 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
                 startIcon={<CloudUpload />}
                 onClick={() => fileManager.fileInputRef.current?.click()}
                 size="large"
-                sx={{ 
+                sx={{
                   background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                   boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)'
                 }}
               >
                 Upload Files
               </Button>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<CreateNewFolder />}
@@ -74,7 +75,7 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
               >
                 New Folder
               </Button>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<NoteAdd />}
@@ -83,150 +84,255 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
               >
                 From Template
               </Button>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<CameraAlt />}
                 onClick={() => fileManager.setMobileIntegrationsOpen(true)}
                 color="success"
+                size="large"
               >
                 Camera Capture
               </Button>
-              
+
               <Button
                 variant="outlined"
-                startIcon={<TextFields />}
-                onClick={() => fileManager.setOcrDialogOpen(true)}
-                color="info"
+                startIcon={<Psychology />}
+                onClick={() => fileManager.setMedicalClassificationOpen(true)}
+                color="secondary"
+                size="large"
               >
-                OCR Processing
+                AI Classification
               </Button>
-              
-              <Button
-                variant="outlined"
-                startIcon={<PictureAsPdf />}
-                onClick={() => fileManager.setFileProcessingOpen(true)}
-                color="warning"
-              >
-                File Tools
-              </Button>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<Security />}
                 onClick={() => fileManager.setSecurityDashboardOpen(true)}
                 color="error"
+                size="large"
               >
-                Security
+                HIPAA Dashboard
+              </Button>
+
+              <Button
+                variant="outlined"
+                startIcon={<Settings />}
+                onClick={() => fileManager.setDicomViewerOpen(true)}
+                color="info"
+                size="large"
+              >
+                DICOM Viewer
+              </Button>
+
+              <Button
+                variant="outlined"
+                startIcon={<LocalHospital />}
+                onClick={() => fileManager.setClinicalDecisionOpen(true)}
+                color="warning"
+                size="large"
+              >
+                Clinical Support
+              </Button>
+
+              <Button
+                variant="outlined"
+                startIcon={<TextFields />}
+                onClick={() => fileManager.setOcrDialogOpen(true)}
+                disabled={fileManager.selectedFiles.size === 0}
+              >
+                OCR Process
               </Button>
             </Box>
+          </Box>
 
-            {fileManager.selectedFiles.size > 0 && (
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', p: 2, bgcolor: 'action.selected', borderRadius: 2 }}>
-                <Typography variant="subtitle2" sx={{ alignSelf: 'center', mr: 2 }}>
-                  {fileManager.selectedFiles.size} files selected:
-                </Typography>
-                
-                <Button
-                  variant="outlined"
-                  startIcon={<Delete />}
-                  onClick={fileManager.deleteSelected}
-                  color="error"
-                  size="small"
-                >
-                  Delete
-                </Button>
-                
+          {fileManager.selectedFiles.size > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                Bulk Actions ({fileManager.selectedFiles.size} selected)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
                   variant="outlined"
                   startIcon={<Download />}
-                  onClick={fileManager.downloadSelected}
-                  color="success"
-                  size="small"
+                  color="primary"
+                  onClick={fileManager.downloadSelectedFiles}
                 >
                   Download
                 </Button>
-                
-                <Button
-                  variant="outlined"
-                  startIcon={<FolderOpen />}
-                  onClick={() => fileManager.setMoveFilesOpen(true)}
-                  size="small"
-                >
-                  Move
-                </Button>
-                
-                <Button
-                  variant="outlined"
-                  startIcon={<Edit />}
-                  onClick={() => fileManager.setBulkEditOpen(true)}
-                  size="small"
-                >
-                  Bulk Edit
-                </Button>
-                
                 <Button
                   variant="outlined"
                   startIcon={<Share />}
                   onClick={() => fileManager.setShareDialogOpen(true)}
-                  size="small"
+                  color="info"
                 >
                   Share
                 </Button>
                 <Button
                   variant="outlined"
-                  startIcon={<TextFields />}
-                  onClick={() => {
-                    fileManager.setSelectedFilesForProcessing(Array.from(fileManager.selectedFiles));
-                    fileManager.setOcrDialogOpen(true);
-                  }}
-                  color="info"
-                  size="small"
+                  startIcon={<FolderOpen />}
+                  onClick={() => fileManager.setMoveFilesOpen(true)}
+                  color="warning"
                 >
-                  OCR Selected
+                  Move
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Edit />}
+                  onClick={() => fileManager.setBulkEditOpen(true)}
+                  color="secondary"
+                >
+                  Edit Details
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Delete />}
+                  onClick={fileManager.deleteSelectedFiles}
+                  color="error"
+                >
+                  Delete
                 </Button>
               </Box>
-            )}
-
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={<Undo />}
-                onClick={fileManager.undo}
-                disabled={fileManager.undoStack.length === 0}
-              >
-                Undo
-              </Button>
-              
-              <Button
-                variant="outlined"
-                startIcon={<SearchOff />}
-                onClick={fileManager.clearSearch}
-                disabled={!fileManager.searchTerm && Object.keys(fileManager.searchFilters).length === 0}
-              >
-                Clear Filters
-              </Button>
             </Box>
+          )}
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Search & Filter
+            </Typography>
+            <Grid container spacing={2} alignItems="center">
+              <Grid>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search files..."
+                  value={fileManager.searchTerm}
+                  onChange={(e) => {
+                    fileManager.setSearchTerm(e.target.value);
+                    if (e.target.value) {
+                      fileManager.addToSearchHistory(e.target.value);
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                    endAdornment: fileManager.searchTerm && (
+                      <IconButton size="small" onClick={() => fileManager.setSearchTerm('')}>
+                        <SearchOff />
+                      </IconButton>
+                    )
+                  }}
+                />
+              </Grid>
+
+              <Grid>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={fileManager.categoryFilter}
+                    label="Category"
+                    onChange={(e) => fileManager.setCategoryFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Categories</MenuItem>
+                    {fileManager.FILE_CATEGORIES.map((cat: any) => (
+                      <MenuItem key={cat.value} value={cat.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              bgcolor: cat.color,
+                              mr: 1
+                            }}
+                          />
+                          {cat.label}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid>
+                <Autocomplete
+                  size="small"
+                  options={fileManager.patients}
+                  getOptionLabel={(option: any) => `${option.firstName} ${option.lastName}`}
+                  value={fileManager.patients.find((p: any) => p.id === fileManager.patientFilter) || null}
+                  onChange={(_, newValue) => fileManager.setPatientFilter(newValue?.id || null)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Patient"
+                      placeholder="Select patient..."
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Tags"
+                  value={fileManager.tagFilter}
+                  onChange={(e) => fileManager.setTagFilter(e.target.value)}
+                  placeholder="Filter by tags..."
+                />
+              </Grid>
+
+              <Grid>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={fileManager.showOnlyShared}
+                        onChange={(e) => fileManager.setShowOnlyShared(e.target.checked)}
+                      />
+                    }
+                    label="Shared"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={fileManager.showOnlyConfidential}
+                        onChange={(e) => fileManager.setShowOnlyConfidential(e.target.checked)}
+                      />
+                    }
+                    label="Confidential"
+                  />
+                  <Button
+                    size="small"
+                    startIcon={<FilterList />}
+                    onClick={() => fileManager.setAdvancedSearchOpen(true)}
+                  >
+                    Advanced
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
-
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Upload Configuration
             </Typography>
             <Grid container spacing={2}>
               <Grid>
                 <Autocomplete
+                  size="small"
+                  options={fileManager.patients}
+                  getOptionLabel={(option: any) => `${option.firstName} ${option.lastName}`}
                   value={fileManager.selectedPatientForUpload}
                   onChange={(_, newValue) => fileManager.setSelectedPatientForUpload(newValue)}
-                  options={fileManager.patients}
-                  getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Link to Patient"
-                      size="small"
+                      label="Default Patient"
                       placeholder="Select patient..."
                     />
                   )}
@@ -293,172 +399,9 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
             </Grid>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
-
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Search & Filters
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<FilterList />}
-                onClick={() => fileManager.setAdvancedSearchOpen(true)}
-                size="small"
-              >
-                Advanced Search
-              </Button>
-            </Box>
-            
-            <Grid container spacing={2} alignItems="center">
-              <Grid>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search files, OCR text, patients..."
-                  value={fileManager.searchTerm}
-                  onChange={(e) => {
-                    fileManager.setSearchTerm(e.target.value);
-                    fileManager.setCurrentPage(1);
-                  }}
-                  InputProps={{
-                    startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />
-                  }}
-                />
-              </Grid>
-              
-              <Grid>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={fileManager.categoryFilter}
-                    label="Category"
-                    onChange={(e) => {
-                      fileManager.setCategoryFilter(e.target.value);
-                      fileManager.setCurrentPage(1);
-                    }}
-                  >
-                    <MenuItem value="all">All Categories</MenuItem>
-                    {fileManager.FILE_CATEGORIES.map((cat: any) => (
-                      <MenuItem key={cat.value} value={cat.value}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Box
-                            sx={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              bgcolor: cat.color,
-                              mr: 1
-                            }}
-                          />
-                          {cat.label}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid>
-                <Autocomplete
-                  value={fileManager.patients.find((p: any) => p.id === fileManager.patientFilter) || null}
-                  onChange={(_, newValue) => {
-                    fileManager.setPatientFilter(newValue?.id || null);
-                    fileManager.setCurrentPage(1);
-                  }}
-                  options={fileManager.patients}
-                  getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Filter by Patient"
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-              
-              <Grid>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Filter by Tags"
-                  value={fileManager.tagFilter}
-                  onChange={(e) => {
-                    fileManager.setTagFilter(e.target.value);
-                    fileManager.setCurrentPage(1);
-                  }}
-                  placeholder="Enter tag..."
-                />
-              </Grid>
-              
-              <Grid>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Sort by</InputLabel>
-                  <Select
-                    value={fileManager.sortBy}
-                    label="Sort by"
-                    onChange={(e) => fileManager.setSortBy(e.target.value)}
-                  >
-                    <MenuItem value="name">Name</MenuItem>
-                    <MenuItem value="date">Date</MenuItem>
-                    <MenuItem value="size">Size</MenuItem>
-                    <MenuItem value="category">Category</MenuItem>
-                    <MenuItem value="patient">Patient</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid>
-                <IconButton
-                  onClick={() => fileManager.setSortDir(fileManager.sortDir === "asc" ? "desc" : "asc")}
-                  color="primary"
-                  sx={{ 
-                    bgcolor: 'primary.50', 
-                    '&:hover': { bgcolor: 'primary.100' }
-                  }}
-                >
-                  <Sort sx={{ transform: fileManager.sortDir === 'desc' ? 'rotate(180deg)' : 'none' }} />
-                </IconButton>
-              </Grid>
-              
-              <Grid>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={fileManager.showOnlyShared}
-                        onChange={(e) => {
-                          fileManager.setShowOnlyShared(e.target.checked);
-                          fileManager.setCurrentPage(1);
-                        }}
-                      />
-                    }
-                    label="Shared"
-                    sx={{ m: 0 }}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={fileManager.showOnlyConfidential}
-                        onChange={(e) => {
-                          fileManager.setShowOnlyConfidential(e.target.checked);
-                          fileManager.setCurrentPage(1);
-                        }}
-                      />
-                    }
-                    label="Confidential"
-                    sx={{ m: 0 }}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
-
-            {(Object.keys(fileManager.searchFilters).length > 0 || fileManager.searchTerm || 
-              fileManager.categoryFilter !== 'all' || fileManager.patientFilter || fileManager.tagFilter) && (
-              <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {(fileManager.searchTerm || fileManager.categoryFilter !== 'all' || fileManager.patientFilter || fileManager.tagFilter) && (
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary">Active filters:</Typography>
                 {fileManager.searchTerm && (
                   <Chip label={`Search: "${fileManager.searchTerm}"`} size="small" onDelete={() => fileManager.setSearchTerm('')} />
@@ -473,58 +416,57 @@ export function FileManagerControls({ fileManager }: FileManagerControlsProps) {
                   <Chip label={`Tag: ${fileManager.tagFilter}`} size="small" onDelete={() => fileManager.setTagFilter('')} />
                 )}
               </Box>
-            )}
-
-            {fileManager.searchHistory.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  Recent searches:
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {fileManager.searchHistory.slice(0, 5).map((search: string, index: number) => (
-                    <Chip
-                      key={index}
-                      label={search}
-                      size="small"
-                      variant="outlined"
-                      onClick={() => fileManager.setSearchTerm(search)}
-                      sx={{ cursor: 'pointer' }}
-                    />
-                  ))}
+              {fileManager.searchHistory.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Recent searches:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {fileManager.searchHistory.slice(0, 5).map((term: string, index: number) => (
+                      <Chip
+                        key={index}
+                        label={term}
+                        size="small"
+                        variant="outlined"
+                        clickable
+                        onClick={() => fileManager.setSearchTerm(term)}
+                      />
+                    ))}
+                  </Box>
                 </Box>
-              </Box>
-            )}
-          </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Undo Stack */}
+          {fileManager.undoStack.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Button
+                startIcon={<Undo />}
+                size="small"
+                onClick={() => {
+                  const lastAction = fileManager.undoStack[fileManager.undoStack.length - 1];
+                  if (lastAction.type === 'delete') {
+                    fileManager.setFiles((prev: any) => [...prev, ...lastAction.files]);
+                  }
+                  fileManager.setUndoStack((prev: any) => prev.slice(0, -1));
+                }}
+              >
+                Undo Last Action
+              </Button>
+            </Box>
+          )}
+
+          {fileManager.loading && (
+            <Box sx={{ mt: 2 }}>
+              <LinearProgress />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Processing files...
+              </Typography>
+            </Box>
+          )}
         </CardContent>
       </Card>
-
-      {fileManager.loading && (
-        <Box sx={{ mb: 2 }}>
-          <LinearProgress />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            Processing files...
-          </Typography>
-        </Box>
-      )}
-
-      {Object.keys(fileManager.ocrProgress).length > 0 && (
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Typography variant="subtitle2" sx={{ mb: 2 }}>OCR Processing Progress:</Typography>
-            {Object.entries(fileManager.ocrProgress).map(([fileId, progress]) => {
-              const file = fileManager.files.find((f: any) => f.id === fileId);
-              return (
-                <Box key={fileId} sx={{ mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {file?.name || 'Unknown file'}
-                  </Typography>
-                  <LinearProgress variant="determinate" value={(progress as number) * 100} sx={{ mt: 0.5 }} />
-                </Box>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
-    </>
+      </>
   );
-}
+};

@@ -23,25 +23,29 @@ export interface FileItem {
   priority: 'low' | 'medium' | 'high';
   isConfidential: boolean;
   
-  // NEW: OCR and Processing Features
+  // OCR and Processing Features
   ocrText?: string;
   isOcrProcessed?: boolean;
   ocrLanguage?: string;
   extractedData?: ExtractedMedicalData;
   processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
   
-  // NEW: Access tracking
+  // Access tracking
   accessLog?: AccessLogEntry[];
   lastAccessed?: string;
   accessCount?: number;
   
-  // NEW: Mobile features
+  // Mobile features
   capturedLocation?: GeolocationCoordinates;
   voiceNotes?: VoiceNote[];
   
-  // NEW: File processing
+  // File processing
   originalFileId?: string;
   processedFrom?: string;
+  
+  // NEW: Medical AI annotations
+  annotations?: any;
+  clinicalInsights?: MedicalInsight[];
 }
 
 export interface FolderItem {
@@ -70,9 +74,18 @@ export interface ExtractedMedicalData {
   medicalRecordNumber?: string;
   doctorName?: string;
   facilityName?: string;
+  documentType?: string;
+  dateOfService?: string;
   medications?: string[];
   testResults?: string[];
-  [key: string]: string | string[] | undefined;
+  diagnoses?: string[];
+  vitalSigns?: {
+    temperature?: string;
+    heartRate?: string;
+    bloodPressure?: string;
+    [key: string]: string | undefined;
+  };
+  [key: string]: string | string[] | object | undefined;
 }
 
 export interface AccessLogEntry {
@@ -102,6 +115,74 @@ export interface SearchFilters {
   isConfidential?: boolean;
   isShared?: boolean;
   accessedRecently?: boolean;
+}
+
+// NEW: Medical AI interfaces
+export interface MedicalInsight {
+  type: 'medication' | 'vital' | 'diagnosis' | 'appointment' | 'warning';
+  text: string;
+  confidence: number;
+  source: string;
+}
+
+export interface ClinicalRecommendation {
+  id: string;
+  type: 'medication_interaction' | 'follow_up' | 'screening' | 'lifestyle' | 'referral';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  title: string;
+  description: string;
+  evidence: string;
+  actionRequired: boolean;
+  relatedFiles: string[];
+}
+
+export interface ComplianceMetrics {
+  encryptionStatus: number;
+  accessControlCompliance: number;
+  auditTrailCoverage: number;
+  retentionPolicyCompliance: number;
+  overallScore: number;
+}
+
+export interface SecurityAlert {
+  id: string;
+  type: 'unauthorized_access' | 'retention_violation' | 'encryption_issue' | 'access_pattern';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  timestamp: string;
+  fileId?: string;
+  userId?: string;
+  resolved: boolean;
+}
+
+export interface DICOMMetadata {
+  patientName?: string;
+  studyDate?: string;
+  modality?: string;
+  bodyPart?: string;
+  studyDescription?: string;
+  seriesDescription?: string;
+  instanceNumber?: number;
+  sliceThickness?: string;
+  pixelSpacing?: string;
+}
+
+export interface Measurement {
+  id: string;
+  type: 'line' | 'angle' | 'area' | 'circle';
+  points: { x: number; y: number }[];
+  value: number;
+  unit: string;
+}
+
+export interface PatientSummary {
+  patientId: string;
+  patientName: string;
+  totalDocuments: number;
+  recentVisits: number;
+  activeConditions: string[];
+  currentMedications: string[];
+  riskFactors: string[];
 }
 
 export type FileCategory = 
