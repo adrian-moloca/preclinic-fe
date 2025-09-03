@@ -75,8 +75,8 @@ import Article from '@mui/icons-material/Article';
 import Close from '@mui/icons-material/Close';
 import { HIPAADashboard } from './components/hipaa-dashboard/component';
 import { DICOMViewer } from './components/dicom-viewer/component';
-import { ClinicalDecisionSupport } from './components/clinical-decision/component';
 import MedicalClassificationDialog from './components/medical-clasification';
+import { ClinicalDecisionSupport } from './components/clinical-decision/component';
 
 interface FileItem {
   id: string;
