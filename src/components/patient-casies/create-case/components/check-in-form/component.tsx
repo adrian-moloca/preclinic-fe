@@ -1,6 +1,5 @@
-// src/components/patient-casies/create-case/components/check-in-form/component.tsx
 import React, { useState } from "react";
-import { Box, TextField, Button, Stack, Typography, Chip } from "@mui/material";
+import { Box, TextField, Button, Stack, Typography, Chip, Alert } from "@mui/material";
 
 export interface CheckIn {
   id: string;
@@ -22,7 +21,9 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
   appointmentId,
   onSubmit,
 }) => {
-  const [checkInTime, setCheckInTime] = useState<string>("");
+  const [checkInTime, setCheckInTime] = useState<string>(
+    new Date().toISOString().slice(0, 16) // Default to current time
+  );
   const [symptomInput, setSymptomInput] = useState<string>("");
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>("");
@@ -55,6 +56,12 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!checkInTime) {
+      alert("Please select a check-in time");
+      return;
+    }
+
     const checkInData: CheckIn = {
       id: `${appointmentId}-${Date.now()}`,
       patientId,
@@ -63,13 +70,34 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
       symptoms,
       notes,
     };
+    
+    console.log("📋 Check-in form submitted:", checkInData);
     onSubmit(checkInData);
   };
 
+  if (!patientId || !appointmentId) {
+    return (
+      <Alert severity="error">
+        <Typography variant="h6">Check-In Form Error</Typography>
+        <Typography variant="body2">
+          Missing patient ID or appointment ID. Cannot proceed with check-in.
+        </Typography>
+      </Alert>
+    );
+  }
+
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ p: 2 }}>
-      <Stack spacing={2}>
-        <Typography variant="h6">Check-In</Typography>
+      <Stack spacing={3}>
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Patient Check-In
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Patient ID: {patientId} | Appointment ID: {appointmentId}
+          </Typography>
+        </Box>
+
         <TextField
           label="Check-In Time"
           type="datetime-local"
@@ -77,10 +105,12 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
           onChange={(e) => setCheckInTime(e.target.value)}
           InputLabelProps={{ shrink: true }}
           required
+          fullWidth
         />
+        
         <Box>
           <TextField
-            label="Add Symptom"
+            label="Add Symptoms"
             value={symptomInput}
             onChange={handleSymptomsInput}
             onKeyDown={(e) => {
@@ -91,34 +121,54 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({
             }}
             helperText="Press Enter or use comma to add multiple symptoms"
             fullWidth
+            placeholder="e.g., headache, fever, cough"
           />
           <Button
             variant="outlined"
-            sx={{ ml: 1, mt: 1 }}
+            sx={{ mt: 1 }}
             onClick={handleAddSymptom}
+            disabled={!symptomInput.trim()}
           >
-            Add
+            Add Symptom
           </Button>
         </Box>
-        <Box>
-          {symptoms.map((symptom) => (
-            <Chip
-              key={symptom}
-              label={symptom}
-              onDelete={() => handleRemoveSymptom(symptom)}
-              sx={{ mr: 1, mb: 1 }}
-            />
-          ))}
-        </Box>
+
+        {symptoms.length > 0 && (
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Reported Symptoms:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {symptoms.map((symptom) => (
+                <Chip
+                  key={symptom}
+                  label={symptom}
+                  onDelete={() => handleRemoveSymptom(symptom)}
+                  color="primary"
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
+
         <TextField
-          label="Notes"
+          label="Additional Notes"
           multiline
-          rows={3}
+          rows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
+          placeholder="Any additional notes about the patient's condition or concerns..."
+          fullWidth
         />
-        <Button type="submit" variant="contained">
-          Save Check-In
+
+        <Button 
+          type="submit" 
+          variant="contained" 
+          size="large"
+          sx={{ py: 1.5 }}
+        >
+          Complete Check-In & Continue to Medical Case
         </Button>
       </Stack>
     </Box>

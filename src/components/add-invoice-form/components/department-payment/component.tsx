@@ -22,7 +22,7 @@ export const DepartmentPaymentInfo: FC<DepartmentPaymentInfoProps> = ({
                 <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: "#424242" }}>
                     Department & Payment Details
                 </Typography>
-                <Grid container spacing={3}>
+                <Grid container spacing={3} sx={{ width: '100%', display: "flex", alignItems: 'center', justifyContent: 'center' }}>
                     <Grid>
                         <TextField
                             select

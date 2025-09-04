@@ -71,6 +71,7 @@ export const AppointmentDetails: FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [showMedicalCase, setShowMedicalCase] = useState(false);
 
+  // Find the medical case for this appointment
   const medicalCase = cases.find(
     (c) => String(c.appointmentId) === String(appointmentId)
   );
@@ -125,10 +126,16 @@ export const AppointmentDetails: FC = () => {
   };
 
   const handleStartCase = () => {
+    console.log("🚀 Starting medical case for:", {
+      appointmentId,
+      patientId: appointment?.patientId,
+      patient: patient?.firstName + " " + patient?.lastName
+    });
     setShowMedicalCase(true);
   };
 
   const handleCloseMedicalCase = () => {
+    console.log("❌ Closing medical case");
     setShowMedicalCase(false);
   };
 
@@ -197,6 +204,7 @@ export const AppointmentDetails: FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, margin: '0 auto' }}>
+      {/* Appointment Details Section */}
       <Box sx={{ mb: showMedicalCase ? 2 : 3 }}>
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
@@ -221,6 +229,7 @@ export const AppointmentDetails: FC = () => {
                 startIcon={<MedicalIcon />}
                 onClick={handleStartCase}
                 color="primary"
+                disabled={!appointment.patientId}
               >
                 Start Medical Case
               </Button>
@@ -239,7 +248,7 @@ export const AppointmentDetails: FC = () => {
 
         <Grid container spacing={3}>
           <Grid>
-            <Card sx={{ width: "300px", height: "300px" }}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar 
@@ -261,38 +270,28 @@ export const AppointmentDetails: FC = () => {
                 <Divider sx={{ mb: 2 }} />
                 
                 {patient ? (
-                  <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PhoneIcon color="action" fontSize="small" />
-                      <Typography variant="body2">
-                        {patient.phoneNumber || 'Not provided'}
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <EmailIcon color="action" fontSize="small" />
-                      <Typography variant="body2">
-                        {patient.email || 'Not provided'}
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationIcon color="action" fontSize="small" />
-                      <Typography variant="body2">
-                        {patient.address || 'Not provided'}
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon color="action" fontSize="small" />
-                      <Typography variant="body2">
-                        {patient.gender || 'Not specified'} • 
-                        Born: {patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not provided'}
-                      </Typography>
-                    </Box>
-                  </Stack>
+                  <Grid container spacing={2}>
+                    <Grid>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2">{patient.email}</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2">{patient.phoneNumber}</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <LocationIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2">{patient.address}</Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="error">
                     Patient information not available
                   </Typography>
                 )}
@@ -301,160 +300,89 @@ export const AppointmentDetails: FC = () => {
           </Grid>
 
           <Grid>
-            <Card sx={{ width: "300px", height: "300px" }}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Appointment Information
                 </Typography>
                 
-                <Divider sx={{ mb: 2 }} />
-                
-                <Stack spacing={2}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CalendarIcon color="action" fontSize="small" />
-                    <Typography variant="body2">
-                      {formatDate(appointment.date)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ScheduleIcon color="action" fontSize="small" />
-                    <Typography variant="body2">
-                      {formatTime(appointment.time)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <MedicalIcon color="action" fontSize="small" />
-                    <Typography variant="body2">
-                      Method: {appointment.appointmentType}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="body2" sx={{ mr: 1 }}>
-                      Type:
-                    </Typography>
-                    <Chip 
-                      label={appointment.type?.charAt(0).toUpperCase() + appointment.type?.slice(1)} 
-                      size="small"
-                      sx={{ 
-                        bgcolor: getConsultationTypeColor(appointment.type), 
-                        color: 'white' 
-                      }}
-                    />
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="body2" sx={{ mr: 1 }}>
-                      Status:
-                    </Typography>
-                    <Chip 
-                      label={appointment.status?.replace('_', ' ').toUpperCase()} 
-                      color={getStatusColor(appointment.status) as any}
-                      size="small"
-                    />
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid>
-            <Card sx={{ width: "300px", height: "300px" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Appointment Details
-                </Typography>
-                
-                <Divider sx={{ mb: 2 }} />
-                
                 <Grid container spacing={2}>
                   <Grid>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Reason for Visit:
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {appointment.reason || 'Not specified'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        {formatDate(appointment.date)}
+                      </Typography>
+                    </Box>
                   </Grid>
-                  
                   <Grid>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Additional Notes:
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {appointment.notes || 'No additional notes'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <ScheduleIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        {formatTime(appointment.time)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid>
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">Status:</Typography>
+                      <Chip 
+                        label={appointment.status} 
+                        color={getStatusColor(appointment.status)}
+                        size="small"
+                        sx={{ mt: 0.5 }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid>
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">Type:</Typography>
+                      <Chip 
+                        label={appointment.type}
+                        size="small"
+                        sx={{ 
+                          mt: 0.5,
+                          backgroundColor: getConsultationTypeColor(appointment.type),
+                          color: 'white'
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid>
+                    <Typography variant="body2" color="text.secondary">Reason:</Typography>
+                    <Typography variant="body2">{appointment.reason}</Typography>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
           </Grid>
 
-          {patient && (
+          {/* Existing Medical Case Info */}
+          {medicalCase && (
             <Grid>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    Medical Information
+                    Existing Medical Case
                   </Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Grid container spacing={3}>
-                    <Grid>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Medical History:
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {medicalCase?.notes ||
-                          patient.medicalHistory ||
-                          "No medical history recorded"}
-                      </Typography>
-                    </Grid>
-                    <Grid>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Known Allergies:
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {patient.allergies || "No known allergies"}
-                      </Typography>
-                    </Grid>
-                    <Grid>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Current Medications:
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {patient.currentMedications || "No current medications"}
-                      </Typography>
-                    </Grid>
-                    {medicalCase && (
-                      <>
-                        <Grid>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Diagnosis:
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {medicalCase.diagnosis || "No diagnosis recorded"}
-                          </Typography>
-                        </Grid>
-                        <Grid>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Treatment Plan:
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {medicalCase.treatmentPlan || "No treatment plan recorded"}
-                          </Typography>
-                        </Grid>
-                        <Grid>
-                          <Typography variant="subtitle2" gutterBottom>
-                            Vital Signs:
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            BP: {medicalCase.vitalSigns?.bloodPressure || "-"}, HR: {medicalCase.vitalSigns?.heartRate || "-"}, Temp: {medicalCase.vitalSigns?.temperature || "-"}, Weight: {medicalCase.vitalSigns?.weight || "-"}, Height: {medicalCase.vitalSigns?.height || "-"}
-                          </Typography>
-                        </Grid>
-                      </>
-                    )}
+                  <Grid container spacing={2}>
+                    <>
+                      <Grid>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Diagnosis:</strong> {medicalCase.diagnosis || "-"}
+                        </Typography>
+                      </Grid>
+                      <Grid>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Services:</strong> {medicalCase.services?.length || 0} items
+                        </Typography>
+                      </Grid>
+                      <Grid>
+                        <Typography variant="body2" color="text.secondary">
+                          BP: {medicalCase.vitalSigns?.bloodPressure || "-"}, HR: {medicalCase.vitalSigns?.heartRate || "-"}, Temp: {medicalCase.vitalSigns?.temperature || "-"}, Weight: {medicalCase.vitalSigns?.weight || "-"}, Height: {medicalCase.vitalSigns?.height || "-"}
+                        </Typography>
+                      </Grid>
+                    </>
                   </Grid>
                 </CardContent>
               </Card>
@@ -471,6 +399,7 @@ export const AppointmentDetails: FC = () => {
                     startIcon={<AssignmentIcon />}
                     onClick={handleStartCase}
                     sx={{ minWidth: 200 }}
+                    disabled={!appointment.patientId}
                   >
                     Start Medical Case
                   </Button>
@@ -497,18 +426,40 @@ export const AppointmentDetails: FC = () => {
         </Grid>
       </Box>
 
-      {showMedicalCase && (
+      {/* Medical Case Section - Fixed PatientId Issue */}
+      {showMedicalCase && appointment && appointment.patientId ? (
         <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'between', alignItems: 'center' }}>
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h5" gutterBottom>
               Medical Case Management
             </Typography>
+            <Button 
+              variant="outlined" 
+              startIcon={<CloseIcon />}
+              onClick={handleCloseMedicalCase}
+              color="error"
+            >
+              Close Medical Case
+            </Button>
           </Box>
           <MedicalCase 
             appointmentId={appointmentId!}
+            patientId={appointment.patientId}  // ← FIXED! No longer empty string
             onClose={handleCloseMedicalCase} 
-            patientId={""}         
-             />
+          />
+        </Box>
+      ) : showMedicalCase && (!appointment || !appointment.patientId) && (
+        <Box sx={{ mt: 3, pt: 3, borderTop: '2px solid #e0e0e0' }}>
+          <Typography variant="h6" color="error">
+            Cannot start medical case: Patient information not found
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={handleCloseMedicalCase}
+            sx={{ mt: 2 }}
+          >
+            Close
+          </Button>
         </Box>
       )}
     </Box>
