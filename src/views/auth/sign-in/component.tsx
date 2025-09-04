@@ -27,25 +27,29 @@ import {
 } from "./style";
 import SocialButtons from "../../../components/social-buttons";
 import { useAuthContext } from "../../../providers/auth/context";
+import { useSignInContext } from "../../../providers/sign-in";
 import { UserRole } from "../../../providers/auth/types";
 
 export const SignIn: FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthContext();
+  const { 
+    addSignIn, 
+    validateSignInData, 
+    availableCabinets, 
+    availableRoles,
+    getLastSignInForEmail,
+    clearSignInData
+  } = useSignInContext();
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cabinet, setCabinet] = useState("");
   const [selectedRole, setSelectedRole] = useState<UserRole>('doctor');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const [cabinetList] = useState<string[]>([
-    "Cabinet A",
-    "Cabinet B", 
-    "Cabinet C",
-  ]);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -67,9 +71,33 @@ export const SignIn: FC = () => {
     }
   }, [email, password, cabinet]);
 
+  useEffect(() => {
+    if (email && validateEmail(email)) {
+      const lastSignIn = getLastSignInForEmail(email);
+      if (lastSignIn && lastSignIn.rememberMe) {
+        setCabinet(lastSignIn.cabinet);
+        setSelectedRole(lastSignIn.role as UserRole);
+        setRememberMe(true);
+      }
+    }
+  }, [email, getLastSignInForEmail]);
+
   const handleSubmit = async () => {
     let hasError = false;
     setError("");
+
+    const validation = validateSignInData({
+      email,
+      password,
+      cabinet,
+      role: selectedRole,
+      rememberMe
+    });
+
+    if (!validation.isValid) {
+      setError(validation.errors.join(", "));
+      return;
+    }
 
     if (!email) {
       setEmailError("Email is required");
@@ -98,11 +126,23 @@ export const SignIn: FC = () => {
     if (!hasError) {
       setIsLoading(true);
       try {
-        const success = await login(email, password, cabinet, selectedRole);
-        if (success) {
-          navigate("/");
+        const signInSuccess = await addSignIn({
+          email,
+          password,
+          cabinet,
+          role: selectedRole,
+          rememberMe
+        });
+
+        if (signInSuccess) {
+          const success = await login(email, password, cabinet, selectedRole);
+          if (success) {
+            navigate("/");
+          } else {
+            setError("Invalid credentials. Try: owner@preclinic.com, doctor@preclinic.com, or assistant@preclinic.com with password: password123");
+          }
         } else {
-          setError("Invalid credentials. Try: owner@preclinic.com, doctor@preclinic.com, or assistant@preclinic.com with password: password123");
+          setError("Failed to save sign-in data");
         }
       } catch (err) {
         setError("Login failed. Please try again.");
@@ -112,7 +152,6 @@ export const SignIn: FC = () => {
     }
   };
 
-  // Quick login buttons for demo
   const handleQuickLogin = (role: UserRole) => {
     const emails = {
       'owner-doctor': 'owner@preclinic.com',
@@ -122,8 +161,18 @@ export const SignIn: FC = () => {
     
     setEmail(emails[role]);
     setPassword('password123');
-    setCabinet('Cabinet A');
+    setCabinet(availableCabinets[0] || 'Cabinet A');
     setSelectedRole(role);
+    setRememberMe(false);
+  };
+
+  const handleClearRememberedData = () => {
+    clearSignInData();
+    setEmail("");
+    setPassword("");
+    setCabinet("");
+    setSelectedRole('doctor');
+    setRememberMe(false);
   };
 
   return (
@@ -146,7 +195,6 @@ export const SignIn: FC = () => {
           </Alert>
         )}
 
-        {/* Quick Login Demo Buttons */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
             Quick Demo Login:
@@ -157,6 +205,7 @@ export const SignIn: FC = () => {
               variant="outlined" 
               onClick={() => handleQuickLogin('owner-doctor')}
               sx={{ textTransform: 'none' }}
+              disabled={isLoading}
             >
               Owner-Doctor
             </Button>
@@ -165,6 +214,7 @@ export const SignIn: FC = () => {
               variant="outlined" 
               onClick={() => handleQuickLogin('doctor')}
               sx={{ textTransform: 'none' }}
+              disabled={isLoading}
             >
               Doctor
             </Button>
@@ -173,8 +223,21 @@ export const SignIn: FC = () => {
               variant="outlined" 
               onClick={() => handleQuickLogin('assistant')}
               sx={{ textTransform: 'none' }}
+              disabled={isLoading}
             >
               Assistant
+            </Button>
+          </Box>
+          
+          <Box sx={{ mt: 1 }}>
+            <Button 
+              size="small" 
+              variant="text" 
+              onClick={handleClearRememberedData}
+              sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+              disabled={isLoading}
+            >
+              Clear Remembered Data
             </Button>
           </Box>
         </Box>
@@ -188,6 +251,7 @@ export const SignIn: FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           error={!!emailError}
           helperText={emailError}
+          disabled={isLoading}
         />
 
         {validateEmail(email) && (
@@ -198,8 +262,9 @@ export const SignIn: FC = () => {
                 value={cabinet}
                 label="Select Cabinet"
                 onChange={(e) => setCabinet(e.target.value)}
+                disabled={isLoading}
               >
-                {cabinetList.map((cabin) => (
+                {availableCabinets.map((cabin) => (
                   <MenuItem key={cabin} value={cabin}>
                     {cabin}
                   </MenuItem>
@@ -218,10 +283,15 @@ export const SignIn: FC = () => {
                 value={selectedRole}
                 label="Login as"
                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                disabled={isLoading}
               >
-                <MenuItem value="owner-doctor">Owner-Doctor</MenuItem>
-                <MenuItem value="doctor">Doctor</MenuItem>
-                <MenuItem value="assistant">Assistant</MenuItem>
+                {availableRoles.map((role) => (
+                  <MenuItem key={role} value={role}>
+                    {role === 'owner-doctor' ? 'Owner-Doctor' : 
+                     role === 'doctor' ? 'Doctor' : 
+                     role === 'assistant' ? 'Assistant' : role}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </>
@@ -234,9 +304,14 @@ export const SignIn: FC = () => {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
             endAdornment={
               <InputAdornment position="end">
-                <IconButton onClick={handleClickShowPassword} edge="end">
+                <IconButton 
+                  onClick={handleClickShowPassword} 
+                  edge="end"
+                  disabled={isLoading}
+                >
                   {showPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
               </InputAdornment>
@@ -252,7 +327,12 @@ export const SignIn: FC = () => {
 
         <SectionWrapper>
           <RemindMeWrapper>
-            <Checkbox size="small" />
+            <Checkbox 
+              size="small" 
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isLoading}
+            />
             <Typography variant="body2">Remember Me</Typography>
           </RemindMeWrapper>
           <Link to="/forgot-password" style={{ textDecoration: "none" }}>
