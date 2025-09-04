@@ -10,16 +10,21 @@ import {
     OutlinedInput,
     TextField,
     Typography,
+    Alert,
 } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { CardWrapper, LogoWrapper, RemindMeWrapper } from "../sign-in/style";
 import Logo from "../../../assets/preclinic-logo.svg";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SocialButtons from "../../../components/social-buttons";
 import { RegisterWrapper, SignInSectionWrapper, TitleWrapper } from "./style";
+import { useRegisterContext } from "../../../providers/register";
 
 export const Register: FC = () => {
+    const navigate = useNavigate();
+    const { addRegister, isEmailTaken, validateRegistration } = useRegisterContext();
+
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -28,11 +33,14 @@ export const Register: FC = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const [termsChecked, setTermsChecked] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [fullNameError, setFullNameError] = useState("");
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
+    const [registerError, setRegisterError] = useState("");
+    const [registerSuccess, setRegisterSuccess] = useState("");
 
     const handleClickShowPassword = () => setShowPassword((prev) => !prev);
     const handleClickShowConfirmPassword = () => setShowConfirmPassword((prev) => !prev);
@@ -52,29 +60,43 @@ export const Register: FC = () => {
         };
     };
 
-useEffect(() => {
-  const { isValid } = validatePassword(password);
-  const valid =
-    fullName.trim().length > 0 &&
-    validateEmail(email) &&
-    isValid &&
-    confirmPassword === password &&
-    termsChecked;  
+    useEffect(() => {
+        const { isValid } = validatePassword(password);
+        const valid =
+            fullName.trim().length > 0 &&
+            validateEmail(email) &&
+            isValid &&
+            confirmPassword === password &&
+            termsChecked;  
 
-  setIsButtonDisabled(!valid);
-}, [fullName, email, password, confirmPassword, termsChecked])
+        setIsButtonDisabled(!valid);
+    }, [fullName, email, password, confirmPassword, termsChecked]);
 
-useEffect(() => {
-    if (!confirmPassword) {
-        setConfirmPasswordError("");
-    } else if (password !== confirmPassword) {
-        setConfirmPasswordError("Passwords do not match");
-    } else {
-        setConfirmPasswordError("");
-    }
-}, [password, confirmPassword]);
+    useEffect(() => {
+        if (!confirmPassword) {
+            setConfirmPasswordError("");
+        } else if (password !== confirmPassword) {
+            setConfirmPasswordError("Passwords do not match");
+        } else {
+            setConfirmPasswordError("");
+        }
+    }, [password, confirmPassword]);
 
-    const handleSubmit = () => {
+    useEffect(() => {
+        if (email && validateEmail(email) && isEmailTaken(email)) {
+            setEmailError("This email is already registered");
+        } else if (email && !validateEmail(email)) {
+            setEmailError("Enter a valid email");
+        } else {
+            setEmailError("");
+        }
+    }, [email, isEmailTaken]);
+
+    const handleSubmit = async () => {
+        setIsLoading(true);
+        setRegisterError("");
+        setRegisterSuccess("");
+
         let hasError = false;
 
         if (!fullName.trim()) {
@@ -90,14 +112,17 @@ useEffect(() => {
         } else if (!validateEmail(email)) {
             setEmailError("Enter a valid email");
             hasError = true;
+        } else if (isEmailTaken(email)) {
+            setEmailError("This email is already registered");
+            hasError = true;
         } else {
             setEmailError("");
         }
 
         if (!termsChecked) {
-            alert("You must agree to the Terms of Service and Privacy Policy");
-         hasError = true;
-}
+            setRegisterError("You must agree to the Terms of Service and Privacy Policy");
+            hasError = true;
+        }
 
         const { hasUpperCase, hasSpecialChar } = validatePassword(password);
 
@@ -128,8 +153,52 @@ useEffect(() => {
             setConfirmPasswordError("");
         }
 
-        if (!hasError) {
-            console.log("Register with:", { fullName, email, password });
+        if (hasError) {
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const validation = validateRegistration({
+                fullName,
+                email,
+                password,
+                confirmPassword
+            });
+
+            if (!validation.isValid) {
+                setRegisterError(validation.errors.join(", "));
+                setIsLoading(false);
+                return;
+            }
+
+            const success = await addRegister({
+                fullName,
+                email,
+                password,
+                confirmPassword
+            });
+
+            if (success) {
+                setRegisterSuccess("Registration successful! Please check your email for verification.");
+                
+                setFullName("");
+                setEmail("");
+                setPassword("");
+                setConfirmPassword("");
+                setTermsChecked(false);
+                
+                setTimeout(() => {
+                    navigate("/sign-in");
+                }, 2000);
+            } else {
+                setRegisterError("Registration failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Registration error:", error);
+            setRegisterError("An unexpected error occurred. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -149,6 +218,18 @@ useEffect(() => {
                     </Typography>
                 </TitleWrapper>
 
+                {registerError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {registerError}
+                    </Alert>
+                )}
+
+                {registerSuccess && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        {registerSuccess}
+                    </Alert>
+                )}
+
                 <TextField
                     fullWidth
                     label="Full Name"
@@ -158,6 +239,7 @@ useEffect(() => {
                     onChange={(e) => setFullName(e.target.value)}
                     error={!!fullNameError}
                     helperText={fullNameError}
+                    disabled={isLoading}
                 />
 
                 <TextField
@@ -169,6 +251,7 @@ useEffect(() => {
                     onChange={(e) => setEmail(e.target.value)}
                     error={!!emailError}
                     helperText={emailError}
+                    disabled={isLoading}
                 />
 
                 <FormControl fullWidth variant="outlined" margin="normal" error={!!passwordError}>
@@ -178,9 +261,14 @@ useEffect(() => {
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton onClick={handleClickShowPassword} edge="end">
+                                <IconButton 
+                                    onClick={handleClickShowPassword} 
+                                    edge="end"
+                                    disabled={isLoading}
+                                >
                                     {showPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>
@@ -212,9 +300,14 @@ useEffect(() => {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isLoading}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton onClick={handleClickShowConfirmPassword} edge="end">
+                                <IconButton 
+                                    onClick={handleClickShowConfirmPassword} 
+                                    edge="end"
+                                    disabled={isLoading}
+                                >
                                     {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>
@@ -232,10 +325,10 @@ useEffect(() => {
                     fullWidth
                     variant="contained"
                     sx={{ mt: 3, bgcolor: "#2C2C9E", textTransform: "none" }}
-                    disabled={isButtonDisabled}
+                    disabled={isButtonDisabled || isLoading}
                     onClick={handleSubmit}
                 >
-                    Register
+                    {isLoading ? "Creating Account..." : "Register"}
                 </Button>
 
                 <RemindMeWrapper>
@@ -243,8 +336,11 @@ useEffect(() => {
                         size="small"
                         checked={termsChecked}
                         onChange={(e) => setTermsChecked(e.target.checked)}
+                        disabled={isLoading}
                     />
-                    <Typography variant="body2">I agree to the <Link to="#" color="#2C2C9E">Terms of Service</Link> & <Link to="#" color="#2C2C9E">Privacy Policy</Link></Typography>
+                    <Typography variant="body2">
+                        I agree to the <Link to="#" style={{ color: "#2C2C9E" }}>Terms of Service</Link> & <Link to="#" style={{ color: "#2C2C9E" }}>Privacy Policy</Link>
+                    </Typography>
                 </RemindMeWrapper>
 
                 <Divider sx={{ my: 2 }}>OR</Divider>
@@ -252,7 +348,9 @@ useEffect(() => {
                 <SocialButtons />
 
                 <SignInSectionWrapper>
-                    <Typography>Already have an account yet? <Link to="/sign-in" color="#2C2C9E">Login</Link></Typography>
+                    <Typography>
+                        Already have an account yet? <Link to="/sign-in" style={{ color: "#2C2C9E" }}>Login</Link>
+                    </Typography>
                 </SignInSectionWrapper>
             </CardWrapper>
             <Box>
