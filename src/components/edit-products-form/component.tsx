@@ -1,63 +1,65 @@
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Divider,
   Alert,
+  CircularProgress,
   Button,
-  Tabs,
-  Tab
-} from "@mui/material";
-import { FC, useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { Product } from "../../providers/products/types";
-import { useProductsContext } from "../../providers/products";
-import ProductBasicInfo from "../add-products-form/components/basic-info";
-import MedicationDetails from "../add-products-form/components/medications-details";
-import SupplierInfo from "../add-products-form/components/supplier-info";
-import AdditionalInfo from "../add-products-form/components/additional-info";
-import EditProductFormActions from "./components/form-actions";
-import ProductNotFound from "./components/not-found";
-import LoadingState from "./components/loading-state";
-import { StockBatchesList } from "../stock-batches-list/component";
-import { StockBatchForm } from "../stock-batch-form/component";
+  IconButton
+} from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import EditProductFormActions from './components/form-actions';
+import { DosageForm, MeasurementUnit, Product, ProductType, StockBatch } from '../../providers/products/types';
+import { useProductsContext } from '../../providers/products/provider';
+import ProductBasicInfo from '../add-products-form/components/basic-info';
+import MedicationDetails from '../add-products-form/components/medications-details';
+import InventoryPricing from '../add-products-form/components/inventory-component';
+import SupplierInfo from '../add-products-form/components/supplier-info';
+import AdditionalInfo from '../add-products-form/components/additional-info';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface FormData {
+  name: string;
+  type: ProductType;
+  category: string;
+  manufacturer: string;
+  activeIngredient: string;
+  dosageForm: DosageForm;
+  strength: string;
+  unit: MeasurementUnit;
+  description: string;
+  prescriptionRequired: boolean;
+  storageConditions: string;
+  barcode: string;
+  supplierInfo: {
+    name: string;
+    contactNumber: string;
+    email: string;
+    address: string;
+  };
+  status: 'active' | 'discontinued';
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  unitPrice: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-    </div>
-  );
-}
-
-export const EditProductForm: FC = () => {
+export const EditProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getProduct, getProductWithStock, updateProduct, deleteStockBatch } = useProductsContext();
   const navigate = useNavigate();
+  const { getProduct, getBatchesForProduct, updateProduct, updateStockBatch, getAllProductsWithStock } = useProductsContext();
 
-  const [formData, setFormData] = useState<Partial<Product>>({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     type: 'medication',
     category: '',
     manufacturer: '',
-    unit: 'pieces',
-    description: '',
     activeIngredient: '',
     dosageForm: 'tablet',
     strength: '',
+    unit: 'pieces',
+    description: '',
     prescriptionRequired: false,
     storageConditions: '',
     barcode: '',
@@ -67,209 +69,255 @@ export const EditProductForm: FC = () => {
       email: '',
       address: ''
     },
-    status: 'active'
+    status: 'active',
+    batchNumber: '',
+    expiryDate: '',
+    quantity: 0,
+    unitPrice: 0
   });
 
+  const [originalProduct, setOriginalProduct] = useState<Product | null>(null);
+  const [originalBatches, setOriginalBatches] = useState<StockBatch[]>([]);
+  const [primaryBatch, setPrimaryBatch] = useState<StockBatch | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [productNotFound, setProductNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [showAddBatchForm, setShowAddBatchForm] = useState(false);
-
-  const productWithStock = getProductWithStock(id || '');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       const product = getProduct(id);
+      const batches = getBatchesForProduct(id);
+
       if (product) {
+        setOriginalProduct(product);
+        setOriginalBatches(batches);
+
+        const activeBatches = batches.filter(b => b.status === 'active');
+        const latestBatch = activeBatches.length > 0 
+          ? activeBatches.sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())[0]
+          : null;
+
+        setPrimaryBatch(latestBatch);
+
         setFormData({
-          ...product,
-          supplierInfo: product.supplierInfo || {
-            name: '',
-            contactNumber: '',
-            email: '',
-            address: ''
-          }
+          name: product.name,
+          type: product.type,
+          category: product.category,
+          manufacturer: product.manufacturer,
+          activeIngredient: product.activeIngredient || '',
+          dosageForm: product.dosageForm || 'tablet',
+          strength: product.strength || '',
+          unit: product.unit,
+          description: product.description,
+          prescriptionRequired: product.prescriptionRequired,
+          storageConditions: product.storageConditions,
+          barcode: product.barcode || '',
+          supplierInfo: product.supplierInfo,
+          status: product.status,
+          batchNumber: latestBatch?.batchNumber || '',
+          expiryDate: latestBatch?.expiryDate.split('T')[0] || '',
+          quantity: latestBatch?.quantity || 0,
+          unitPrice: latestBatch?.unitPrice || 0
         });
+
         setIsLoading(false);
       } else {
         setProductNotFound(true);
         setIsLoading(false);
       }
     }
-  }, [id, getProduct]);
+  }, [id, getProduct, getBatchesForProduct]);
 
-  const validateForm = useCallback(() => {
+  const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) newErrors.name = 'Product name is required';
     if (!formData.category?.trim()) newErrors.category = 'Category is required';
     if (!formData.manufacturer?.trim()) newErrors.manufacturer = 'Manufacturer is required';
-    if (!formData.supplierInfo?.name?.trim()) newErrors['supplier.name'] = 'Supplier name is required';
-    if (!formData.supplierInfo?.contactNumber?.trim()) newErrors['supplier.contactNumber'] = 'Supplier contact is required';
+    if (!formData.supplierInfo?.name?.trim()) newErrors.supplierName = 'Supplier name is required';
+    if (!formData.supplierInfo?.contactNumber?.trim()) newErrors.supplierContact = 'Supplier contact is required';
+
+    if (!formData.batchNumber?.trim()) newErrors.batchNumber = 'Batch number is required';
+    if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
+    if (!formData.quantity || formData.quantity <= 0) newErrors.quantity = 'Quantity must be greater than 0';
+    if (!formData.unitPrice || formData.unitPrice <= 0) newErrors.unitPrice = 'Unit price must be greater than 0';
 
     if (formData.supplierInfo?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email)) {
-      newErrors['supplier.email'] = 'Invalid email format';
-    }
-
-    if (formData.type === 'medication') {
-      if (!formData.activeIngredient?.trim()) newErrors.activeIngredient = 'Active ingredient is required for medications';
-      if (!formData.dosageForm) newErrors.dosageForm = 'Dosage form is required for medications';
+      newErrors.supplierEmail = 'Invalid email format';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  };
 
-  const handleInputChange = useCallback((field: string, value: any) => {
+  const handleInputChange = (field: string, value: any) => {
     if (field.startsWith('supplier.')) {
       const supplierField = field.split('.')[1];
       setFormData(prev => ({
         ...prev,
         supplierInfo: {
-          ...prev.supplierInfo!,
+          ...prev.supplierInfo,
           [supplierField]: value
         }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
     }
 
-    // Clear error for this field
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[field];
-      if (field.startsWith('supplier.')) {
-        const supplierField = field.split('.')[1];
-        delete newErrors[`supplier.${supplierField}`];
-      }
-      return newErrors;
-    });
-  }, []);
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
 
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm() || !id) return;
+  const handleSubmit = async () => {
+    if (!validateForm() || !id || !originalProduct) return;
 
     setIsSubmitting(true);
-    
+    setError(null);
+
     try {
       const updatedProduct: Partial<Product> = {
-        ...formData,
-        name: formData.name?.trim(),
-        category: formData.category?.trim(),
-        manufacturer: formData.manufacturer?.trim(),
-        description: formData.description?.trim(),
-        storageConditions: formData.storageConditions?.trim(),
-        activeIngredient: formData.activeIngredient?.trim() || undefined,
-        strength: formData.strength?.trim() || undefined,
-        barcode: formData.barcode?.trim() || undefined,
+        name: formData.name.trim(),
+        type: formData.type,
+        category: formData.category.trim(),
+        manufacturer: formData.manufacturer.trim(),
+        activeIngredient: formData.activeIngredient?.trim(),
+        dosageForm: formData.dosageForm,
+        strength: formData.strength?.trim(),
+        unit: formData.unit,
+        description: formData.description.trim(),
+        prescriptionRequired: formData.prescriptionRequired,
+        storageConditions: formData.storageConditions.trim(),
+        barcode: formData.barcode?.trim(),
         supplierInfo: {
-          name: formData.supplierInfo?.name?.trim() || '',
-          contactNumber: formData.supplierInfo?.contactNumber?.trim() || '',
-          email: formData.supplierInfo?.email?.trim() || '',
-          address: formData.supplierInfo?.address?.trim() || ''
+          name: formData.supplierInfo.name.trim(),
+          contactNumber: formData.supplierInfo.contactNumber.trim(),
+          email: formData.supplierInfo.email.trim(),
+          address: formData.supplierInfo.address.trim()
         },
+        status: formData.status,
         updatedAt: new Date().toISOString()
       };
 
       updateProduct(id, updatedProduct);
-      navigate(`/products/${id}`);
-    } catch (error) {
-      console.error('Error updating product:', error);
-      setErrors(prev => ({ ...prev, submit: 'Failed to update product. Please try again.' }));
+
+      if (primaryBatch) {
+        const updatedBatch: Partial<StockBatch> = {
+          batchNumber: formData.batchNumber.trim(),
+          expiryDate: formData.expiryDate,
+          quantity: formData.quantity,
+          unitPrice: formData.unitPrice,
+          updatedAt: new Date().toISOString()
+        };
+
+        updateStockBatch(primaryBatch.id, updatedBatch);
+      }
+
+      setTimeout(() => {
+        getAllProductsWithStock();
+        navigate('/products');
+      }, 500);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update product');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, id, updateProduct, navigate, validateForm]);
+  };
 
-  const handleCancel = useCallback(() => {
-    navigate(`/products/${id}`);
-  }, [navigate, id]);
+  const handleCancel = () => {
+    navigate('/products/all');
+  };
 
-  const handleDeleteBatch = useCallback((batchId: string) => {
-    deleteStockBatch(batchId);
-  }, [deleteStockBatch]);
+  const isFormValid = (): boolean => {
+    return Boolean(
+      formData.name?.trim() &&
+      formData.category?.trim() &&
+      formData.manufacturer?.trim() &&
+      formData.batchNumber?.trim() &&
+      formData.expiryDate &&
+      formData.quantity && formData.quantity > 0 &&
+      formData.unitPrice && formData.unitPrice > 0 &&
+      formData.supplierInfo?.name?.trim() &&
+      formData.supplierInfo?.contactNumber?.trim() &&
+      (!formData.supplierInfo?.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email))
+    );
+  };
 
-  const isFormValid = useCallback(() => {
-    const requiredFieldsValid = 
-      !!formData.name?.trim() &&
-      !!formData.category?.trim() &&
-      !!formData.manufacturer?.trim() &&
-      !!formData.supplierInfo?.name?.trim() &&
-      !!formData.supplierInfo?.contactNumber?.trim();
-
-    const emailValid = !formData.supplierInfo?.email || 
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email);
-
-    const medicationValid = formData.type !== 'medication' || 
-      (!!formData.activeIngredient?.trim() && !!formData.dosageForm);
-
-    return Boolean(requiredFieldsValid && emailValid && medicationValid);
-  }, [formData]);
+  const isMedication = formData.type === 'medication';
 
   if (isLoading) {
-    return <LoadingState />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (productNotFound) {
-    return <ProductNotFound onBackClick={() => navigate('/products/all')} />;
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Product not found or invalid ID.
+        </Alert>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/products')}
+        >
+          Back to Products
+        </Button>
+      </Box>
+    );
   }
 
   return (
-    <Box p={3}>
-      <Box display="flex" alignItems="center" mb={3}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(`/products/${id}`)}
-          sx={{ mr: 2 }}
-        >
-          Back to Product
-        </Button>
-        <Typography variant="h4" fontWeight={600}>
-          Edit Product: {formData.name}
-        </Typography>
-      </Box>
+    <Box>
+      <Box p={3}>
+        <Box display="flex" alignItems="center" mb={3} gap={2}>
+          <IconButton onClick={() => navigate('/products')}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4" fontWeight={600}>
+            Edit Medical Product
+          </Typography>
+        </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        You are editing the product definition. Stock batches are managed separately and can be viewed in the Stock Batches tab.
-      </Alert>
+        <Divider sx={{ mb: 4 }} />
 
-      <Divider sx={{ mb: 4 }} />
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-          <Tab label="Product Information" />
-          <Tab label={`Stock Batches (${productWithStock?.batchCount || 0})`} />
-        </Tabs>
-      </Box>
-
-      {/* Product Information Tab */}
-      <TabPanel value={activeTab} index={0}>
         <ProductBasicInfo
           formData={formData}
           errors={errors}
           onInputChange={handleInputChange}
         />
 
-        <Divider sx={{ my: 3 }} />
-
-        {formData.type === 'medication' && (
-          <>
-            <MedicationDetails
-              formData={{
-                dosageForm: formData.dosageForm,
-                activeIngredient: formData.activeIngredient,
-                strength: formData.strength,
-                prescriptionRequired: formData.prescriptionRequired
-              }}
-              errors={errors}
-              onInputChange={handleInputChange}
-            />
-            <Divider sx={{ my: 3 }} />
-          </>
+        {isMedication && (
+          <MedicationDetails
+            formData={formData}
+            onInputChange={handleInputChange} 
+            errors={errors}
+          />
         )}
+
+        <InventoryPricing
+          formData={formData}
+          errors={errors}
+          onInputChange={handleInputChange}
+        />
 
         <SupplierInfo
           formData={formData}
@@ -277,64 +325,50 @@ export const EditProductForm: FC = () => {
           onInputChange={handleInputChange}
         />
 
-        <Divider sx={{ my: 3 }} />
-
         <AdditionalInfo
-          formData={{
-            description: formData.description,
-            storageConditions: formData.storageConditions,
-            prescriptionRequired: formData.prescriptionRequired,
-            barcode: formData.barcode
-          }}
+          formData={formData}
           errors={errors}
           onInputChange={handleInputChange}
         />
 
-        {errors.submit && (
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <Typography color="error">
-              {errors.submit}
-            </Typography>
-          </Box>
-        )}
-
         <EditProductFormActions
           isSubmitting={isSubmitting}
-          isFormValid={isFormValid()}
+          isValid={isFormValid()}
           onCancel={handleCancel}
           onSubmit={handleSubmit}
         />
-      </TabPanel>
 
-      {/* Stock Batches Tab */}
-      <TabPanel value={activeTab} index={1}>
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Stock Batches for {formData.name}
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => setShowAddBatchForm(true)}
-          >
-            Add New Batch
-          </Button>
-        </Box>
-
-        {showAddBatchForm && (
-          <StockBatchForm
-            productId={id!}
-            onBatchAdded={() => setShowAddBatchForm(false)}
-            onCancel={() => setShowAddBatchForm(false)}
-          />
+        {originalBatches.length > 0 && (
+          <Box sx={{ mt: 4 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+              All Stock Batches for this Product
+            </Typography>
+            {originalBatches.map((batch) => (
+              <Box
+                key={batch.id}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 2,
+                  background: batch.status === 'active' ? '#e3fcec' : '#f8f9fa'
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight={500}>
+                  Batch: {batch.batchNumber} ({batch.status})
+                </Typography>
+                <Typography variant="body2">
+                  Expiry: {batch.expiryDate.split('T')[0]} | Qty: {batch.quantity} | Price: ${batch.unitPrice}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Received: {batch.receivedDate ? batch.receivedDate.split('T')[0] : 'N/A'}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         )}
-
-        {productWithStock && (
-          <StockBatchesList
-            batches={productWithStock.batches}
-            onDeleteBatch={handleDeleteBatch}
-          />
-        )}
-      </TabPanel>
+      </Box>
     </Box>
   );
 };

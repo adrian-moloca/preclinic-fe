@@ -22,6 +22,7 @@ export const ProductsContext = createContext<ProductsContextType>({
     getLowStockProducts: () => [],
     getProductsByType: () => [],
     getProductsByCategory: () => [],
+    
 });
 
 export const useProductsContext = () => {

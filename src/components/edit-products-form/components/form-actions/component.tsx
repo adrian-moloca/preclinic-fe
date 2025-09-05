@@ -8,19 +8,19 @@ import CancelIcon from '@mui/icons-material/Cancel';
 
 interface EditProductFormActionsProps {
   isSubmitting: boolean;
-  isFormValid: boolean;
+  isValid: boolean;
   onCancel: () => void;
   onSubmit: () => void;
 }
 
 export const EditProductFormActions: React.FC<EditProductFormActionsProps> = ({
   isSubmitting,
-  isFormValid,
+  isValid,
   onCancel,
   onSubmit
 }) => {
   return (
-    <Box display="flex" gap={2} justifyContent="flex-end">
+    <Box display="flex" gap={2} justifyContent="flex-end" sx={{ mt: 4 }}>
       <Button
         variant="outlined"
         onClick={onCancel}
@@ -33,11 +33,11 @@ export const EditProductFormActions: React.FC<EditProductFormActionsProps> = ({
       <Button
         variant="contained"
         onClick={onSubmit}
-        disabled={isSubmitting || !isFormValid}
+        disabled={isSubmitting || !isValid}
         startIcon={<SaveIcon />}
         sx={{ 
           minWidth: 150,
-          opacity: (!isFormValid || isSubmitting) ? 0.6 : 1
+          opacity: (!isValid || isSubmitting) ? 0.6 : 1
         }}
       >
         {isSubmitting ? 'Updating Product...' : 'Update Product'}

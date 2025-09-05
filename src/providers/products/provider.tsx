@@ -5,8 +5,6 @@ import {
   ProductWithStock, 
   ProductsContextType, 
   ProductType,
-  MeasurementUnit,
-  DosageForm
 } from './types';
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
@@ -18,13 +16,13 @@ const MOCK_PRODUCTS: Product[] = [
   {
     id: 'prod_001',
     name: 'Paracetamol',
-    type: 'medication' as ProductType,
+    type: 'medication',
     category: 'Analgesic',
     manufacturer: 'Pharma Corp',
     activeIngredient: 'Paracetamol',
-    dosageForm: 'tablet' as DosageForm,
+    dosageForm: 'tablet',
     strength: '500mg',
-    unit: 'tablets' as MeasurementUnit,
+    unit: 'tablets',
     description: 'Pain reliever and fever reducer',
     prescriptionRequired: false,
     storageConditions: 'Store in cool, dry place',
@@ -76,10 +74,10 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
     try {
       const storedProducts = localStorage.getItem(PRODUCTS_LOCAL_STORAGE_KEY);
       const storedBatches = localStorage.getItem(STOCK_BATCHES_LOCAL_STORAGE_KEY);
-      
+
       let loadedProducts = [...MOCK_PRODUCTS];
       let loadedBatches = [...MOCK_STOCK_BATCHES];
-      
+
       if (storedProducts) {
         const parsedProducts = JSON.parse(storedProducts);
         if (Array.isArray(parsedProducts)) {
@@ -87,7 +85,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
           loadedProducts = [...MOCK_PRODUCTS, ...userProducts];
         }
       }
-      
+
       if (storedBatches) {
         const parsedBatches = JSON.parse(storedBatches);
         if (Array.isArray(parsedBatches)) {
@@ -95,11 +93,10 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
           loadedBatches = [...MOCK_STOCK_BATCHES, ...userBatches];
         }
       }
-      
+
       setProducts(loadedProducts);
       setStockBatches(loadedBatches);
     } catch (error) {
-      console.error('❌ Error loading from localStorage:', error);
       setProducts(MOCK_PRODUCTS);
       setStockBatches(MOCK_STOCK_BATCHES);
     }
@@ -111,7 +108,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const userProducts = products.filter(p => !MOCK_PRODUCTS.find(mp => mp.id === p.id));
         localStorage.setItem(PRODUCTS_LOCAL_STORAGE_KEY, JSON.stringify(userProducts));
       } catch (error) {
-        console.error('❌ Error saving products:', error);
+        // Ignore localStorage errors
       }
     }
   }, [products]);
@@ -122,35 +119,27 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const userBatches = stockBatches.filter(b => !MOCK_STOCK_BATCHES.find(mb => mb.id === b.id));
         localStorage.setItem(STOCK_BATCHES_LOCAL_STORAGE_KEY, JSON.stringify(userBatches));
       } catch (error) {
-        console.error('❌ Error saving batches:', error);
+        // Ignore localStorage errors
       }
     }
   }, [stockBatches]);
 
   const addProduct = useCallback((product: Product) => {
-    setProducts(prev => {
-      const newProducts = [...prev, product];
-      return newProducts;
-    });
+    setProducts(prev => [...prev, product]);
   }, []);
 
   const updateProduct = useCallback((id: string, productUpdate: Partial<Product>) => {
-    setProducts(prev => {
-      const updated = prev.map(product => 
-        product.id === id 
+    setProducts(prev =>
+      prev.map(product =>
+        product.id === id
           ? { ...product, ...productUpdate, updatedAt: new Date().toISOString() }
           : product
-      );
-      return updated;
-    });
+      )
+    );
   }, []);
 
   const deleteProduct = useCallback((id: string) => {
-    if (MOCK_PRODUCTS.some(mp => mp.id === id)) {
-      console.warn('❌ Cannot delete mock product:', id);
-      return;
-    }
-    
+    if (MOCK_PRODUCTS.some(mp => mp.id === id)) return;
     setProducts(prev => prev.filter(product => product.id !== id));
     setStockBatches(prev => prev.filter(batch => batch.productId !== id));
   }, []);
@@ -160,57 +149,43 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [products]);
 
   const addStockBatch = useCallback((batch: StockBatch) => {
-    setStockBatches(prev => {
-      const newBatches = [...prev, batch];
-      return newBatches;
-    });
+    setStockBatches(prev => [...prev, batch]);
   }, []);
 
   const updateStockBatch = useCallback((id: string, batchUpdate: Partial<StockBatch>) => {
-    setStockBatches(prev => {
-      const updated = prev.map(batch => 
-        batch.id === id 
+    setStockBatches(prev =>
+      prev.map(batch =>
+        batch.id === id
           ? { ...batch, ...batchUpdate, updatedAt: new Date().toISOString() }
           : batch
-      );
-      return updated;
-    });
+      )
+    );
   }, []);
 
   const deleteStockBatch = useCallback((id: string) => {
-    if (MOCK_STOCK_BATCHES.some(mb => mb.id === id)) {
-      console.warn('❌ Cannot delete mock batch:', id);
-      return;
-    }
-    
-    console.log('🗑️ Deleting stock batch:', id);
+    if (MOCK_STOCK_BATCHES.some(mb => mb.id === id)) return;
     setStockBatches(prev => prev.filter(batch => batch.id !== id));
   }, []);
 
   const getBatchesForProduct = useCallback((productId: string): StockBatch[] => {
-    const batches = stockBatches.filter(batch => batch.productId === productId);
-    return batches;
+    return stockBatches.filter(batch => batch.productId === productId);
   }, [stockBatches]);
 
   const getTotalQuantityForProduct = useCallback((productId: string): number => {
-    const total = getBatchesForProduct(productId)
+    return getBatchesForProduct(productId)
       .filter(batch => batch.status === 'active')
       .reduce((total, batch) => total + batch.quantity, 0);
-    return total;
   }, [getBatchesForProduct]);
 
   const getProductWithStock = useCallback((productId: string): ProductWithStock | undefined => {
     const product = products.find(p => p.id === productId);
-    if (!product) {
-      console.log(`❌ Product not found: ${productId}`);
-      return undefined;
-    }
+    if (!product) return undefined;
 
     const batches = getBatchesForProduct(productId);
     const activeBatches = batches.filter(b => b.status === 'active');
     const totalQuantity = activeBatches.reduce((sum, b) => sum + b.quantity, 0);
-    
-    const nearestExpiry = activeBatches.length > 0 
+
+    const nearestExpiry = activeBatches.length > 0
       ? activeBatches
           .map(b => b.expiryDate)
           .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
@@ -220,7 +195,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
       ? activeBatches.reduce((sum, b) => sum + b.unitPrice * b.quantity, 0) / totalQuantity
       : 0;
 
-    const result: ProductWithStock = {
+    return {
       ...product,
       batches,
       totalQuantity,
@@ -228,24 +203,19 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
       averagePrice,
       batchCount: batches.length
     };
-
-    return result;
   }, [products, getBatchesForProduct]);
 
   const getAllProductsWithStock = useCallback((): ProductWithStock[] => {
-    
-    const result = products.map(product => {
+    return products.map(product => {
       const productWithStock = getProductWithStock(product.id);
       return productWithStock;
     }).filter(Boolean) as ProductWithStock[];
-    
-    return result;
   }, [products, getProductWithStock]);
 
   const getExpiringBatches = useCallback((days: number = 30): StockBatch[] => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() + days);
-    
+
     return stockBatches.filter(batch => {
       const expiryDate = new Date(batch.expiryDate);
       return expiryDate <= cutoffDate && batch.status === 'active';
