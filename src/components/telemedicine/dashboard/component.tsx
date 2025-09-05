@@ -1,4 +1,3 @@
-// src/components/telemedicine/dashboard/component.tsx
 import React, { FC, useState } from 'react';
 import {
   Box,

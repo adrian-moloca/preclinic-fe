@@ -1,44 +1,44 @@
 import React from 'react';
-import {
-  Box,
-  Button
-} from "@mui/material";
-import ClearIcon from '@mui/icons-material/Clear';
+import { Box, Button } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 interface ProductFormActionsProps {
+  onSave: () => void;
+  onCancel?: () => void;
   isSubmitting: boolean;
-  isFormValid: boolean;
   onClear: () => void;
-  onSubmit: () => void;
+  isFormValid: boolean;
 }
 
 export const ProductFormActions: React.FC<ProductFormActionsProps> = ({
-  isSubmitting,
-  isFormValid,
-  onClear,
-  onSubmit
+  onSave,
+  onCancel,
+  isSubmitting
 }) => {
   return (
-    <Box display="flex" gap={2} justifyContent="flex-end">
-      <Button
-        variant="outlined"
-        onClick={onClear}
-        startIcon={<ClearIcon />}
-        disabled={isSubmitting}
-        sx={{ minWidth: 120 }}
-      >
-        Clear
-      </Button>
+    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 4 }}>
+      {onCancel && (
+        <Button
+          variant="outlined"
+          size="large"
+          startIcon={<CancelIcon />}
+          onClick={onCancel}
+          disabled={isSubmitting}
+          sx={{ px: 4 }}
+        >
+          Cancel
+        </Button>
+      )}
       <Button
         variant="contained"
-        onClick={onSubmit}
-        disabled={isSubmitting || !isFormValid}
-        sx={{
-          minWidth: 150,
-          opacity: (!isFormValid || isSubmitting) ? 0.6 : 1
-        }}
+        size="large"
+        startIcon={<SaveIcon />}
+        onClick={onSave}
+        disabled={isSubmitting}
+        sx={{ px: 4 }}
       >
-        {isSubmitting ? 'Adding Product...' : 'Add Product'}
+        {isSubmitting ? 'Creating...' : 'Create Product'}
       </Button>
     </Box>
   );

@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useServicesContext } from '../../providers/services/context';
 import { IServices } from '../../providers/services/types';
 import { useDepartmentsContext } from '../../providers/departments/context';
-import { useProductsContext } from '../../providers/products/context';
+import { useProductsContext } from '../../providers/products'; // Updated import
 import ServiceBasicInfo from '../add-service-form/components/basic-information';
 import ServicePricingDuration from '../add-service-form/components/service-priceing';
 import ServiceProductsAssignment from '../add-service-form/components/products-assigment';
@@ -27,7 +27,7 @@ export const EditServiceForm: FC = () => {
   const { id } = useParams<{ id: string }>();
   const { services, updateService } = useServicesContext();
   const { departments } = useDepartmentsContext();
-  const { products } = useProductsContext();
+  const { getAllProductsWithStock } = useProductsContext(); // Updated to use new method
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState(initialFormData);
@@ -39,6 +39,9 @@ export const EditServiceForm: FC = () => {
   const serviceToEdit = useMemo(() => {
     return services.find(service => service.id === id);
   }, [services, id]);
+
+  // Get all products with stock data
+  const productsWithStock = useMemo(() => getAllProductsWithStock(), [getAllProductsWithStock]);
 
   // Pre-fill form data when component mounts or service data changes
   useEffect(() => {
@@ -180,16 +183,17 @@ export const EditServiceForm: FC = () => {
 
   const activeDepartments = departments.filter(dept => dept.status === 'active');
 
-  const productOptions = Array.isArray(products)
-    ? products
-        .filter(product => product.status === 'active')
-        .map(product => ({
-          id: product.id,
-          label: product.name,
-          price: product.unitPrice,
-          category: product.category || 'General'
-        }))
-    : [];
+  // Updated to work with ProductWithStock objects
+  const productOptions = productsWithStock
+    .filter(product => product.status === 'active' && product.totalQuantity > 0) // Only show active products with stock
+    .map(product => ({
+      id: product.id,
+      label: `${product.name} - ${product.manufacturer} (Stock: ${product.totalQuantity} ${product.unit})`, // Enhanced label with stock info
+      price: product.averagePrice, // Use averagePrice from ProductWithStock
+      category: product.category || 'General',
+      totalQuantity: product.totalQuantity,
+      unit: product.unit
+    }));
 
   const selectedProducts = productOptions.filter(product => formData.products.includes(product.id));
   const totalProductsCost = selectedProducts.reduce((total, product) => total + product.price, 0);

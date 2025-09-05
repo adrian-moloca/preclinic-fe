@@ -1,25 +1,42 @@
-export interface MedicalProduct {
+export interface Product {
   id: string;
   name: string;
   type: ProductType;
   category: string;
   manufacturer: string;
-  batchNumber: string;
-  expiryDate: string;
-  quantity: number;
-  unitPrice: number;
-  unit: MeasurementUnit;
-  description: string;
   activeIngredient?: string;
   dosageForm?: DosageForm;
   strength?: string;
+  unit: MeasurementUnit;
+  description: string;
   prescriptionRequired: boolean;
   storageConditions: string;
   barcode?: string;
   supplierInfo: SupplierInfo;
+  status: ProductStatus;
   createdAt: string;
   updatedAt: string;
-  status: ProductStatus;
+}
+
+export interface StockBatch {
+  id: string;
+  productId: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  unitPrice: number;
+  receivedDate: string;
+  status: BatchStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductWithStock extends Product {
+  batches: StockBatch[];
+  totalQuantity: number;
+  nearestExpiry?: string;
+  averagePrice: number;
+  batchCount: number;
 }
 
 export interface SupplierInfo {
@@ -38,7 +55,9 @@ export type ProductType =
   | 'first_aid'
   | 'laboratory_supplies';
 
-export type ProductStatus = 'active' | 'discontinued' | 'out_of_stock' | 'expired';
+export type ProductStatus = 'active' | 'discontinued';
+
+export type BatchStatus = 'active' | 'expired' | 'recalled' | 'depleted';
 
 export type MeasurementUnit = 
   | 'pieces'
@@ -51,6 +70,7 @@ export type MeasurementUnit =
   | 'ml'
   | 'mg'
   | 'g'
+  | 'tablets'
   | 'kg';
 
 export type DosageForm = 
@@ -66,12 +86,31 @@ export type DosageForm =
   | 'suppository';
 
 export interface ProductsContextType {
-  products: MedicalProduct[];
-  updateProduct: (id: string, product: Partial<MedicalProduct>) => void;
+  products: Product[];
+  stockBatches: StockBatch[];
+  
+  addProduct: (product: Product) => void;
+  updateProduct: (id: string, product: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
-  addProduct: (product: MedicalProduct) => void;
-  getProductsByType: (type: ProductType) => MedicalProduct[];
-  getProductsByCategory: (category: string) => MedicalProduct[];
-  getLowStockProducts: (threshold?: number) => MedicalProduct[];
-  getExpiringProducts: (days?: number) => MedicalProduct[];
+  getProduct: (id: string) => Product | undefined;
+  
+  addStockBatch: (batch: StockBatch) => void;
+  updateStockBatch: (id: string, batch: Partial<StockBatch>) => void;
+  deleteStockBatch: (id: string) => void;
+  
+  getProductWithStock: (productId: string) => ProductWithStock | undefined;
+  getAllProductsWithStock: () => ProductWithStock[];
+  getTotalQuantityForProduct: (productId: string) => number;
+  getBatchesForProduct: (productId: string) => StockBatch[];
+  getExpiringBatches: (days?: number) => StockBatch[];
+  getLowStockProducts: (threshold?: number) => ProductWithStock[];
+  getProductsByType: (type: ProductType) => ProductWithStock[];
+  getProductsByCategory: (category: string) => ProductWithStock[];
+}
+
+export interface MedicalProduct extends Product {
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  unitPrice: number;
 }

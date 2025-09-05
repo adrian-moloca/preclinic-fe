@@ -1,37 +1,68 @@
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Divider,
-} from "@mui/material";
-import { FC, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { MedicalProduct } from "../../providers/products/types";
-import { useProductsContext } from "../../providers/products";
-import ProductBasicInfo from "./components/basic-info";
-import MedicationDetails from "./components/medications-details";
-import InventoryPricing from "./components/inventory-component";
-import SupplierInfo from "./components/supplier-info";
-import AdditionalInfo from "./components/additional-info";
-import ProductFormActions from "./components/form-actions";
+  Alert
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
+import ProductBasicInfo from './components/basic-info';
+import MedicationDetails from './components/medications-details';
+import InventoryPricing from './components/inventory-component';
+import SupplierInfo from './components/supplier-info';
+import AdditionalInfo from './components/additional-info';
+import ProductFormActions from './components/form-actions';
+import { DosageForm, MeasurementUnit, Product, ProductType, StockBatch } from '../../providers/products/types';
+import { useProductsContext } from '../../providers/products/provider';
 
-export const CreateProductForm: FC = () => {
-  const [formData, setFormData] = useState<Partial<MedicalProduct>>({
+interface FormData {
+  name: string;
+  type: ProductType;
+  category: string;
+  manufacturer: string;
+  activeIngredient: string;
+  dosageForm: DosageForm;
+  strength: string;
+  unit: MeasurementUnit;
+  description: string;
+  prescriptionRequired: boolean;
+  storageConditions: string;
+  barcode: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  unitPrice: number;
+  supplierInfo: {
+    name: string;
+    contactNumber: string;
+    email: string;
+    address: string;
+  };
+  status: 'active' | 'discontinued';
+}
+
+export const CreateProductForm: React.FC = () => {
+  const navigate = useNavigate();
+  const { addProduct, addStockBatch, getAllProductsWithStock } = useProductsContext();
+
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     type: 'medication',
     category: '',
     manufacturer: '',
+    activeIngredient: '',
+    dosageForm: 'tablet',
+    strength: '',
+    unit: 'pieces',
+    description: '',
+    prescriptionRequired: false,
+    storageConditions: '',
+    barcode: '',
     batchNumber: '',
     expiryDate: '',
     quantity: 0,
     unitPrice: 0,
-    unit: 'pieces',
-    description: '',
-    activeIngredient: '',
-    dosageForm: 'tablet',
-    strength: '',
-    prescriptionRequired: false,
-    storageConditions: '',
-    barcode: '',
     supplierInfo: {
       name: '',
       contactNumber: '',
@@ -43,14 +74,13 @@ export const CreateProductForm: FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { addProduct } = useProductsContext();
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) newErrors.name = 'Product name is required';
+    if (!formData.category?.trim()) newErrors.category = 'Category is required';
     if (!formData.manufacturer?.trim()) newErrors.manufacturer = 'Manufacturer is required';
     if (!formData.batchNumber?.trim()) newErrors.batchNumber = 'Batch number is required';
     if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
@@ -70,15 +100,15 @@ export const CreateProductForm: FC = () => {
   const handleInputChange = (field: string, value: any) => {
     if (field.startsWith('supplier.')) {
       const supplierField = field.split('.')[1];
-      setFormData((prev: Partial<MedicalProduct>) => ({
+      setFormData(prev => ({
         ...prev,
         supplierInfo: {
-          ...prev.supplierInfo!,
+          ...prev.supplierInfo,
           [supplierField]: value
         }
       }));
     } else {
-      setFormData((prev: Partial<MedicalProduct>) => ({
+      setFormData(prev => ({
         ...prev,
         [field]: value
       }));
@@ -96,19 +126,60 @@ export const CreateProductForm: FC = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      const newProduct: MedicalProduct = {
-        id: crypto.randomUUID(),
-        ...formData as Omit<MedicalProduct, 'id' | 'createdAt' | 'updatedAt'>,
+      const productId = uuidv4();
+      const newProduct: Product = {
+        id: productId,
+        name: formData.name.trim(),
+        type: formData.type,
+        category: formData.category.trim(),
+        manufacturer: formData.manufacturer.trim(),
+        activeIngredient: formData.activeIngredient?.trim(),
+        dosageForm: formData.dosageForm,
+        strength: formData.strength?.trim(),
+        unit: formData.unit,
+        description: formData.description.trim(),
+        prescriptionRequired: formData.prescriptionRequired,
+        storageConditions: formData.storageConditions.trim(),
+        barcode: formData.barcode?.trim(),
+        supplierInfo: {
+          name: formData.supplierInfo.name.trim(),
+          contactNumber: formData.supplierInfo.contactNumber.trim(),
+          email: formData.supplierInfo.email.trim(),
+          address: formData.supplierInfo.address.trim()
+        },
+        status: formData.status,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
       addProduct(newProduct);
-      navigate('/products/all');
-    } catch (error) {
-      console.error('Error adding product:', error);
+
+      const batchId = uuidv4();
+      const newBatch: StockBatch = {
+        id: batchId,
+        productId,
+        batchNumber: formData.batchNumber.trim(),
+        expiryDate: formData.expiryDate,
+        quantity: formData.quantity,
+        unitPrice: formData.unitPrice,
+        receivedDate: new Date().toISOString(),
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      addStockBatch(newBatch);
+
+      setTimeout(() => {
+        getAllProductsWithStock();
+        navigate('/products/all');
+      }, 300);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create product');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,18 +191,18 @@ export const CreateProductForm: FC = () => {
       type: 'medication',
       category: '',
       manufacturer: '',
+      activeIngredient: '',
+      dosageForm: 'tablet',
+      strength: '',
+      unit: 'pieces',
+      description: '',
+      prescriptionRequired: false,
+      storageConditions: '',
+      barcode: '',
       batchNumber: '',
       expiryDate: '',
       quantity: 0,
       unitPrice: 0,
-      unit: 'pieces',
-      description: '',
-      activeIngredient: '',
-      dosageForm: 'tablet',
-      strength: '',
-      prescriptionRequired: false,
-      storageConditions: '',
-      barcode: '',
       supplierInfo: {
         name: '',
         contactNumber: '',
@@ -141,24 +212,22 @@ export const CreateProductForm: FC = () => {
       status: 'active'
     });
     setErrors({});
+    setError(null);
   };
 
   const isFormValid = (): boolean => {
-    const requiredFieldsValid = Boolean(
+    return Boolean(
       formData.name?.trim() &&
+      formData.category?.trim() &&
       formData.manufacturer?.trim() &&
       formData.batchNumber?.trim() &&
       formData.expiryDate &&
       formData.quantity && formData.quantity > 0 &&
       formData.unitPrice && formData.unitPrice > 0 &&
       formData.supplierInfo?.name?.trim() &&
-      formData.supplierInfo?.contactNumber?.trim()
+      formData.supplierInfo?.contactNumber?.trim() &&
+      (!formData.supplierInfo?.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email))
     );
-
-    const emailValid = !formData.supplierInfo?.email ||
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email);
-
-    return requiredFieldsValid && emailValid;
   };
 
   const isMedication = formData.type === 'medication';
@@ -174,6 +243,13 @@ export const CreateProductForm: FC = () => {
 
         <Divider sx={{ mb: 4 }} />
 
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
         <ProductBasicInfo
           formData={formData}
           errors={errors}
@@ -184,6 +260,7 @@ export const CreateProductForm: FC = () => {
           <MedicationDetails
             formData={formData}
             onInputChange={handleInputChange}
+            errors={errors}
           />
         )}
 
@@ -201,14 +278,15 @@ export const CreateProductForm: FC = () => {
 
         <AdditionalInfo
           formData={formData}
+          errors={errors}
           onInputChange={handleInputChange}
         />
 
         <ProductFormActions
           isSubmitting={isSubmitting}
-          isFormValid={isFormValid()}
+          onSave={handleSubmit}
           onClear={handleClear}
-          onSubmit={handleSubmit}
+          isFormValid={isFormValid()}
         />
       </Box>
     </Box>

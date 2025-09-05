@@ -1,82 +1,213 @@
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Avatar,
   IconButton,
   Menu,
   MenuItem,
   Chip,
-} from "@mui/material";
-import { FC, useState, useEffect } from "react";
-import { useProductsContext } from "../../../providers/products/context";
-import { MedicalProduct } from "../../../providers/products/types";
-import InfoIcon from '@mui/icons-material/Info';
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import InventoryIcon from "@mui/icons-material/Inventory";
-import { useNavigate } from "react-router-dom";
-import SearchBar from "../../../components/search-bar";
-import DeleteModal from "../../../components/delete-modal";
-import { Column, ReusableTable } from "../../../components/table/component";
-import { useRecentItems } from "../../../hooks/recent-items";
-import FavoriteButton from "../../../components/favorite-buttons";
+  Button,
+  Alert,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon
+} from '@mui/icons-material';
+import { useProductsContext } from '../../../providers/products/provider';
+import { ProductWithStock, ProductType } from '../../../providers/products/types';
+import { useNavigate } from 'react-router-dom';
+import SearchBar from '../../../components/search-bar';
+import DeleteModal from '../../../components/delete-modal';
+import { Column, ReusableTable } from '../../../components/table/component';
 
-export const AllProducts: FC = () => {
-  const { products, deleteProduct } = useProductsContext();
-  const [filteredProducts, setFilteredProducts] = useState<MedicalProduct[]>(products || []);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedProduct, setSelectedProduct] = useState<MedicalProduct | null>(null);
+export const AllProducts: React.FC = () => {
   const navigate = useNavigate();
+  const { getAllProductsWithStock, deleteProduct } = useProductsContext();
+  
+  // Local state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithStock | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filteredServices, setFilteredServices] = useState<ProductWithStock[]>([]);
 
-  const { addRecentItem } = useRecentItems();
+  const productList = useMemo(() => {
+    const products = getAllProductsWithStock();
+    return products;
+  }, [getAllProductsWithStock]);
 
-  useEffect(() => {
-    setFilteredProducts(products || []);
-  }, [products]);
-
-  const handleSearch = (query: string) => {
+   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query) {
-      setFilteredProducts(products || []);
+      setFilteredServices(productList);
       return;
     }
 
     const lowerQuery = query.toLowerCase();
-    const filtered = (products || []).filter((product) =>
+    const filtered = productList.filter((product) =>
       product.name?.toLowerCase().includes(lowerQuery) ||
-      product.category?.toLowerCase().includes(lowerQuery) ||
-      product.manufacturer?.toLowerCase().includes(lowerQuery) ||
-      product.description?.toLowerCase().includes(lowerQuery)
+      product.description?.toLowerCase().includes(lowerQuery) ||
+      product.category?.toLowerCase().includes(lowerQuery)
     );
 
-    setFilteredProducts(filtered);
+    setFilteredServices(filtered);
   };
 
-  const handleRowClick = (product: MedicalProduct) => {
-    addRecentItem({
-      id: product.id,
-      type: 'product',
-      title: product.name,
-      subtitle: `${product.category} - $${product.unitPrice}`,
-      url: `/products/${product.id}`,
-      metadata: {
-        category: product.category,
-        price: product.unitPrice,
-        manufacturer: product.manufacturer,
-      },
-    });
-    
-    navigate(`/products/${product.id}`);
-  };
+  const columns: Column[] = [
+    {
+      id: 'name',
+      label: 'Product Name',
+      minWidth: 200,
+      sortable: true,
+      render: (value: string, row: ProductWithStock) => (
+        <Box>
+          <Typography variant="subtitle2" fontWeight="bold">
+            {value}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {row.manufacturer}
+          </Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'type',
+      label: 'Type',
+      minWidth: 150,
+      sortable: true,
+      render: (value: ProductType) => (
+        <Chip
+          label={value.replace('_', ' ')}
+          size="small"
+          variant="outlined"
+        />
+      )
+    },
+    {
+      id: 'category',
+      label: 'Category',
+      minWidth: 150,
+      sortable: true,
+      render: (value: string) => (
+        <Chip
+          label={value}
+          size="small"
+          variant="outlined"
+        />
+      )
+    },
+    {
+      id: 'totalQuantity',
+      label: 'Stock',
+      minWidth: 120,
+      align: 'center',
+      sortable: true,
+      render: (value: number, row: ProductWithStock) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">
+            {value} {row.unit}
+          </Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'averagePrice',
+      label: 'Avg Price',
+      minWidth: 100,
+      align: 'right',
+      sortable: true,
+      render: (value: number) => (
+        <Typography variant="body2">
+          ${value.toFixed(2)}
+        </Typography>
+      )
+    },
+    {
+      id: 'nearestExpiry',
+      label: 'Next Expiry',
+      minWidth: 120,
+      sortable: true,
+      render: (value: string) => (
+        <Typography variant="body2">
+          {value ? new Date(value).toLocaleDateString() : 'N/A'}
+        </Typography>
+      )
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      minWidth: 150,
+      render: (_: any, row: ProductWithStock) => {
+        const getStockStatusColor = () => {
+          if (row.totalQuantity === 0) return 'error';
+          if (row.totalQuantity <= 10) return 'warning';
+          return 'success';
+        };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, product: MedicalProduct) => {
+        const getStockStatusText = () => {
+          if (row.totalQuantity === 0) return 'Out of Stock';
+          if (row.totalQuantity <= 10) return 'Low Stock';
+          return 'In Stock';
+        };
+
+        const isExpiring = () => {
+          if (!row.nearestExpiry) return false;
+          const expiryDate = new Date(row.nearestExpiry);
+          const thirtyDaysFromNow = new Date();
+          thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+          return expiryDate <= thirtyDaysFromNow;
+        };
+
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <Chip
+              icon={
+                row.totalQuantity === 0 ? <WarningIcon /> :
+                row.totalQuantity <= 10 ? <WarningIcon /> :
+                <CheckCircleIcon />
+              }
+              label={getStockStatusText()}
+              color={getStockStatusColor()}
+              size="small"
+            />
+            {isExpiring() && (
+              <Chip
+                icon={<WarningIcon />}
+                label="Expiring Soon"
+                color="warning"
+                size="small"
+              />
+            )}
+          </Box>
+        );
+      }
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      minWidth: 80,
+      align: 'center',
+      render: (_: any, row: ProductWithStock) => (
+        <IconButton
+          size="small"
+          onClick={(e) => handleMenuClick(e, row)}
+        >
+          <MoreVertIcon />
+        </IconButton>
+      )
+    }
+  ];
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, product: ProductWithStock) => {
     event.stopPropagation();
-    setAnchorEl(event.currentTarget);
     setSelectedProduct(product);
+    setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
@@ -84,11 +215,22 @@ export const AllProducts: FC = () => {
     setSelectedProduct(null);
   };
 
-  const handleEdit = () => {
+  const handleRowClick = (row: ProductWithStock) => {
+    navigate(`/products/${row.id}`);
+  };
+
+  const handleEditProduct = () => {
     if (selectedProduct) {
       navigate(`/products/edit/${selectedProduct.id}`);
-      handleMenuClose();
     }
+    handleMenuClose();
+  };
+
+  const handleViewDetails = () => {
+    if (selectedProduct) {
+      navigate(`/products/${selectedProduct.id}`);
+    }
+    handleMenuClose();
   };
 
   const handleDeleteClick = () => {
@@ -103,7 +245,7 @@ export const AllProducts: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deleteProduct(selectedProduct.id);
+      deleteProduct(selectedProduct.id);
       setDeleteModalOpen(false);
       setSelectedProduct(null);
     } catch (error) {
@@ -114,158 +256,69 @@ export const AllProducts: FC = () => {
   };
 
   const handleDeleteCancel = () => {
-    if (!isDeleting) {
-      setDeleteModalOpen(false);
-    }
+    setDeleteModalOpen(false);
+    setSelectedProduct(null);
   };
-
-  const getStockStatusColor = (stock: number) => {
-    if (stock <= 10) return 'error';
-    if (stock <= 50) return 'warning';
-    return 'success';
-  };
-
-  const getStockStatusLabel = (stock: number) => {
-    if (stock <= 0) return 'Out of Stock';
-    if (stock <= 10) return 'Low Stock';
-    if (stock <= 50) return 'Limited Stock';
-    return 'In Stock';
-  };
-
-  const columns: Column[] = [
-    {
-      id: 'product',
-      label: 'Product',
-      minWidth: 200,
-      render: (value, row: MedicalProduct) => (
-        <Box display="flex" alignItems="center" gap={2}>
-          <Avatar>
-            <InventoryIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-              {row.name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ID: {row.id}
-            </Typography>
-          </Box>
-        </Box>
-      ),
-    },
-    {
-      id: 'category',
-      label: 'Category',
-      minWidth: 120,
-      render: (value: string) => (
-        <Chip label={value} size="small" variant="outlined" />
-      ),
-    },
-    {
-      id: 'price',
-      label: 'Price',
-      minWidth: 100,
-      render: (value: number) => (
-        <Typography variant="body2" fontWeight={500}>
-          ${value?.toFixed(2)}
-        </Typography>
-      ),
-    },
-    {
-      id: 'stock',
-      label: 'Stock',
-      minWidth: 120,
-      render: (value: number) => (
-        <Chip 
-          label={`${value} - ${getStockStatusLabel(value)}`}
-          size="small" 
-          color={getStockStatusColor(value) as any}
-        />
-      ),
-    },
-    {
-      id: 'manufacturer',
-      label: 'Manufacturer',
-      minWidth: 150,
-    },
-    {
-      id: 'actions',
-      label: 'Actions',
-      minWidth: 140,
-      align: 'right',
-      sortable: false,
-      render: (_: unknown, row: MedicalProduct) => {
-        const favoriteItem = {
-          id: row.id,
-          type: 'product' as const,
-          title: row.name,
-          subtitle: `${row.category} - $${row.unitPrice}`,
-          url: `/products/${row.id}`,
-          metadata: {
-            category: row.category,
-            price: row.unitPrice,
-            manufacturer: row.manufacturer,
-          },
-        };
-
-        return (
-          <Box display="flex" alignItems="center">
-            <FavoriteButton item={favoriteItem} size="small" />
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                addRecentItem({
-                  id: row.id,
-                  type: 'product',
-                  title: row.name,
-                  subtitle: `${row.category} - $${row.unitPrice}`,
-                  url: `/products/${row.id}`,
-                  metadata: {
-                    category: row.category,
-                    price: row.unitPrice,
-                    manufacturer: row.manufacturer,
-                  },
-                });
-                navigate(`/products/${row.id}`);
-              }}
-              color="primary"
-              size="small"
-            >
-              <InfoIcon />
-            </IconButton>
-            <IconButton onClick={(e) => handleMenuOpen(e, row)} size="small">
-              <MoreVertIcon />
-            </IconButton>
-          </Box>
-        );
-      },
-    },
-  ];
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" mb={2}>
-        All Products ({filteredProducts.length})
-      </Typography>
-      <Box sx={{ mb: 2 }}>
-        <SearchBar onSearch={handleSearch} placeholder="Search products..." />
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            All Products
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+            Manage your clinic's product inventory
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/products/create')}
+          sx={{ borderRadius: 2 }}
+        >
+          Add Product
+        </Button>
       </Box>
 
-      <ReusableTable
-        columns={columns}
-        data={filteredProducts}
-        onRowClick={handleRowClick}
-        searchQuery={searchQuery}
-        emptyMessage="No Products Found"
-        emptyDescription="There are currently no products in inventory."
-      />
+      <Box sx={{ mb: 3 }}>
+        <SearchBar 
+          onSearch={handleSearch}
+          placeholder="Search products..."
+        />
+      </Box>
+
+      {productList.length === 0 ? (
+        <Alert severity="info" sx={{ mt: 3 }}>
+          No products found. Start by adding your first product.
+        </Alert>
+      ) : (
+        <ReusableTable
+          columns={columns}
+          data={filteredServices}
+          onRowClick={handleRowClick}
+          searchQuery={searchQuery}
+          emptyMessage="No products found"
+          emptyDescription="No products match your search criteria."
+          enablePagination={true}
+          enableSorting={true}
+          enableColumnCustomization={true}
+          enableExport={true}
+          defaultRowsPerPage={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
+      )}
 
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleEdit}>
+        <MenuItem onClick={handleViewDetails}>
+          <InfoIcon fontSize="small" sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        <MenuItem onClick={handleEditProduct}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Edit Product
         </MenuItem>
@@ -280,7 +333,6 @@ export const AllProducts: FC = () => {
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         title="Delete Product"
-        itemName={selectedProduct ? selectedProduct.name : undefined}
         isDeleting={isDeleting}
       />
     </Box>

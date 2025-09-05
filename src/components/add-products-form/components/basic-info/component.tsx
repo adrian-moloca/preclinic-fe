@@ -83,7 +83,10 @@ export const ProductBasicInfo: React.FC<ProductBasicInfoProps> = ({
               fullWidth
               value={formData.category}
               onChange={(e) => onInputChange('category', e.target.value)}
+              error={!!errors.category}
+              helperText={errors.category}
               placeholder="e.g., Antibiotics, Pain Relief, etc."
+              required
               sx={{ width: 250 }}
             />
           </Grid>

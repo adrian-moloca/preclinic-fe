@@ -1,4 +1,3 @@
-// src/components/telemedicine/waiting-room/component.tsx
 import React, { FC, useState, useEffect } from 'react';
 import {
   Box,

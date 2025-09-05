@@ -11,7 +11,7 @@ import { useServicesContext } from "../../providers/services";
 import { IInvoice } from "../../providers/invoices/types";
 import { PatientsEntry } from "../../providers/patients/types";
 import { AppointmentsEntry } from "../../providers/appointments/types";
-import { MedicalProduct } from "../../providers/products/types";
+import { ProductWithStock } from "../../providers/products/types"; // Updated import
 import { Service } from "../../providers/cases/types";
 import ProductsSection from "./components/products-section";
 import DepartmentPaymentInfo from "./components/department-payment";
@@ -74,7 +74,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
     const navigate = useNavigate();
     const { patients } = usePatientsContext();
     const { appointments } = useAppointmentsContext();
-    const { products } = useProductsContext();
+    const { getAllProductsWithStock } = useProductsContext(); // Updated to use new method
     const { departments } = useDepartmentsContext();
     const { services } = useServicesContext(); 
     const { addInvoice } = useInvoicesContext();
@@ -117,12 +117,10 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         return Object.values(appointments).flat() as AppointmentsEntry[];
     }, [appointments]);
 
-    const productsArray: MedicalProduct[] = useMemo(() => {
-        if (Array.isArray(products)) {
-            return products as MedicalProduct[];
-        }
-        return Object.values(products).flat() as MedicalProduct[];
-    }, [products]);
+    // Updated to use ProductWithStock and filter for products with stock
+    const productsArray: ProductWithStock[] = useMemo(() => {
+        return getAllProductsWithStock().filter(product => product.totalQuantity > 0);
+    }, [getAllProductsWithStock]);
 
     const departmentsArray: DepartmentEntry[] = useMemo(() => {
         if (Array.isArray(departments)) {
@@ -288,21 +286,40 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         const selectedProductData = productsArray.find(p => p.id === currentProduct.productId);
         if (!selectedProductData) return;
 
+        // Check if requested quantity is available
+        if (currentProduct.quantity > selectedProductData.totalQuantity) {
+            setErrors(prev => ({
+                ...prev,
+                products: `Insufficient stock. Available: ${selectedProductData.totalQuantity} ${selectedProductData.unit}`
+            }));
+            return;
+        }
+
         const existingProductIndex = selectedProducts.findIndex(p => p.productId === currentProduct.productId);
 
         if (existingProductIndex !== -1) {
             const updatedProducts = [...selectedProducts];
-            updatedProducts[existingProductIndex].quantity += currentProduct.quantity;
-            updatedProducts[existingProductIndex].amount =
-                updatedProducts[existingProductIndex].quantity * updatedProducts[existingProductIndex].unitCost;
+            const newQuantity = updatedProducts[existingProductIndex].quantity + currentProduct.quantity;
+            
+            // Check total quantity after adding
+            if (newQuantity > selectedProductData.totalQuantity) {
+                setErrors(prev => ({
+                    ...prev,
+                    products: `Insufficient stock. Available: ${selectedProductData.totalQuantity} ${selectedProductData.unit}, already selected: ${updatedProducts[existingProductIndex].quantity}`
+                }));
+                return;
+            }
+
+            updatedProducts[existingProductIndex].quantity = newQuantity;
+            updatedProducts[existingProductIndex].amount = newQuantity * updatedProducts[existingProductIndex].unitCost;
             setSelectedProducts(updatedProducts);
         } else {
             const newProduct: InvoiceProduct = {
                 productId: selectedProductData.id,
-                productName: selectedProductData.name,
-                unitCost: selectedProductData.unitPrice,
+                productName: `${selectedProductData.name} - ${selectedProductData.manufacturer}`, // Enhanced product name
+                unitCost: selectedProductData.averagePrice, // Use averagePrice instead of unitPrice
                 quantity: currentProduct.quantity,
-                amount: selectedProductData.unitPrice * currentProduct.quantity
+                amount: selectedProductData.averagePrice * currentProduct.quantity
             };
             setSelectedProducts(prev => [...prev, newProduct]);
         }
@@ -335,6 +352,15 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
         if (!formData.paymentMethod) newErrors.paymentMethod = "Payment method is required";
         if (selectedProducts.length === 0 && selectedServices.length === 0) {
             newErrors.items = "At least one product or service is required";
+        }
+
+        // Validate product stock availability
+        for (const selectedProduct of selectedProducts) {
+            const product = productsArray.find(p => p.id === selectedProduct.productId);
+            if (product && selectedProduct.quantity > product.totalQuantity) {
+                newErrors.products = `Insufficient stock for ${product.name}. Available: ${product.totalQuantity} ${product.unit}`;
+                break;
+            }
         }
 
         setErrors(newErrors);
@@ -473,27 +499,44 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
                     border: `1px solid ${theme.palette.divider}`,
                     transition: "background 0.3s, border 0.3s",
                 }}>
-                    <Box>
+                    <Box sx={{ mb: { xs: 2, md: 0 } }}>
                         {servicesTotal > 0 && (
                             <Typography variant="body1" sx={{ mb: 1 }}>
-                                Services Total: ${servicesTotal.toFixed(2)}
+                                Services Total: <strong>${servicesTotal.toFixed(2)}</strong>
                             </Typography>
                         )}
                         {productsTotal > 0 && (
                             <Typography variant="body1" sx={{ mb: 1 }}>
-                                Products Total: ${productsTotal.toFixed(2)}
+                                Products Total: <strong>${productsTotal.toFixed(2)}</strong>
+                            </Typography>
+                        )}
+                        {selectedProducts.length > 0 && (
+                            <Typography variant="caption" color="text.secondary">
+                                {selectedProducts.reduce((sum, p) => sum + p.quantity, 0)} product units selected
                             </Typography>
                         )}
                     </Box>
                     <Box sx={{ textAlign: { xs: "left", md: "right" } }}>
-                        <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.primary.main, mb: 2 }}>
                             Grand Total: ${totalAmount.toFixed(2)}
                         </Typography>
                         <Button
                             variant="contained"
                             size="large"
                             onClick={handleSubmit}
-                            sx={{ px: 4, mt: 2 }}
+                            disabled={selectedProducts.length === 0 && selectedServices.length === 0}
+                            sx={{ 
+                                px: 4,
+                                fontWeight: 600,
+                                boxShadow: "none",
+                                "&:hover": {
+                                    boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)"
+                                },
+                                "&:disabled": {
+                                    bgcolor: "#e0e0e0",
+                                    color: "#9e9e9e"
+                                }
+                            }}
                         >
                             {onInvoiceCreated ? "Generate Invoice" : "Create Invoice"}
                         </Button>

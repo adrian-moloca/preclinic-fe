@@ -73,6 +73,7 @@ const WorkflowDashboard = lazy(() => import("../components/workflow-automation/w
 const TelemedicineDashboard = lazy(() => import("../components/telemedicine/dashboard/index"));
 const VideoCallView = lazy(() => import("../views/video-call/index"));
 const WaitingRoomView = lazy(() => import("../views/waiting-room/index"));
+const StockOverview = lazy(() => import("../views/products/stock-overview/index"));
 
 export const Routing: FC = () => {
   return (
@@ -81,6 +82,12 @@ export const Routing: FC = () => {
         <Route index element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/stock-overview" element={
+          <ProtectedRoute requiredResource="products">
+            <StockOverview />
           </ProtectedRoute>
         } />
 

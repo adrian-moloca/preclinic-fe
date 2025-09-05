@@ -4,13 +4,12 @@ import {
   CardContent,
   Typography,
   Grid,
+  TextField,
   FormControl,
   Select,
   MenuItem,
-  TextField,
   FormControlLabel,
-  Switch,
-  Box
+  Switch
 } from "@mui/material";
 import { DosageForm } from '../../../../providers/products/types';
 
@@ -25,29 +24,61 @@ interface MedicationDetailsProps {
     strength?: string;
     prescriptionRequired?: boolean;
   };
+  errors: Record<string, string>; 
   onInputChange: (field: string, value: any) => void;
 }
 
 export const MedicationDetails: React.FC<MedicationDetailsProps> = ({
   formData,
+  errors, 
   onInputChange
 }) => {
   return (
     <Card sx={{ mb: 3, boxShadow: 2 }}>
       <CardContent>
-        <Box display="flex" alignItems="center" mb={2}>
-          <Typography variant="h6" fontWeight={600}>
-            Medication Details
-          </Typography>
-        </Box>
+        <Typography variant="h6" gutterBottom fontWeight={600}>
+          Medication Details
+        </Typography>
 
-        <Grid container spacing={3} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Grid container spacing={3}>
           <Grid>
-            <FormControl fullWidth sx={{ width: 250 }}>
-              <Typography>Dosage Form</Typography>
+            <Typography variant="subtitle2" gutterBottom>
+              Active Ingredient *
+            </Typography>
+            <TextField
+              fullWidth
+              value={formData.activeIngredient || ''}
+              onChange={(e) => onInputChange('activeIngredient', e.target.value)}
+              error={!!errors.activeIngredient}
+              helperText={errors.activeIngredient || 'Main therapeutic ingredient'}
+              required
+              placeholder="e.g., Paracetamol"
+            />
+          </Grid>
+
+          <Grid>
+            <Typography variant="subtitle2" gutterBottom>
+              Strength
+            </Typography>
+            <TextField
+              fullWidth
+              value={formData.strength || ''}
+              onChange={(e) => onInputChange('strength', e.target.value)}
+              error={!!errors.strength}
+              helperText={errors.strength || 'Concentration or strength'}
+              placeholder="e.g., 500mg, 10ml"
+            />
+          </Grid>
+
+          <Grid>
+            <Typography variant="subtitle2" gutterBottom>
+              Dosage Form *
+            </Typography>
+            <FormControl fullWidth error={!!errors.dosageForm}>
               <Select
-                value={formData.dosageForm}
+                value={formData.dosageForm || 'tablet'}
                 onChange={(e) => onInputChange('dosageForm', e.target.value)}
+                displayEmpty
               >
                 {dosageForms.map((form) => (
                   <MenuItem key={form} value={form}>
@@ -55,35 +86,19 @@ export const MedicationDetails: React.FC<MedicationDetailsProps> = ({
                   </MenuItem>
                 ))}
               </Select>
+              {errors.dosageForm && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
+                  {errors.dosageForm}
+                </Typography>
+              )}
             </FormControl>
           </Grid>
 
           <Grid>
-            <Typography>Active Ingredient</Typography>
-            <TextField
-              fullWidth
-              value={formData.activeIngredient}
-              onChange={(e) => onInputChange('activeIngredient', e.target.value)}
-              sx={{ width: 250 }}
-            />
-          </Grid>
-
-          <Grid>
-            <Typography>Strength</Typography>
-            <TextField
-              fullWidth
-              value={formData.strength}
-              onChange={(e) => onInputChange('strength', e.target.value)}
-              placeholder="e.g., 500mg, 10ml"
-              sx={{ width: 250 }}
-            />
-          </Grid>
-
-          <Grid sx={{ width: 250 }}>
             <FormControlLabel
               control={
                 <Switch
-                  checked={formData.prescriptionRequired}
+                  checked={formData.prescriptionRequired || false}
                   onChange={(e) => onInputChange('prescriptionRequired', e.target.checked)}
                 />
               }

@@ -1,4 +1,3 @@
-// src/components/telemedicine/video-call/component.tsx
 import React, { FC, useRef, useEffect, useState, useCallback } from 'react';
 import {
   Box,
@@ -67,17 +66,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
   const cameraFailedRef = useRef(false);
   const videoSetupRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    console.log('🎥 VideoCall component state:', {
-      hasCurrentCall: !!currentCall,
-      hasLocalStream: !!localStream,
-      streamActive: localStream?.active,
-      videoTracks: localStream?.getVideoTracks().length || 0,
-      audioTracks: localStream?.getAudioTracks().length || 0,
-      streamId: localStream?.id,
-    });
-  }, [currentCall, localStream]);
-
   const checkCameraStatus = useCallback(async (): Promise<{
     available: boolean;
     working: boolean;
@@ -145,7 +133,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
           
           const timeSinceLastAttempt = Date.now() - (window as any).lastRestartTime || 0;
           if (timeSinceLastAttempt > 10000) {
-            console.log('🔄 Camera detected as not working, attempting restart...');
             (window as any).lastRestartTime = Date.now();
             restartCamera();
           }
@@ -176,7 +163,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
 
   const restartCamera = useCallback(async (): Promise<boolean> => {
     if (isRestartingRef.current || cameraFailedRef.current) {
-      console.log('🔄 Skipping restart - already restarting or camera failed');
       return false;
     }
 
@@ -184,8 +170,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
     restartAttempts.current += 1;
     
     try {
-      console.log(`🔄 Attempting camera restart (${restartAttempts.current}/${maxRestartAttempts})...`);
-      
       const status = await checkCameraStatus();
       if (!status.available) {
         throw new Error('No camera devices available');
@@ -230,7 +214,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
         
         try {
           await localVideoRef.current.play();
-          console.log('✅ Camera restart successful');
           return true;
         } catch (playError) {
           console.warn('Video play warning after restart:', playError);
@@ -243,7 +226,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
       console.error(`❌ Camera restart failed (${restartAttempts.current}/${maxRestartAttempts}):`, error);
       
       if (restartAttempts.current >= maxRestartAttempts) {
-        console.error('🚫 Maximum restart attempts reached. Marking camera as failed.');
         cameraFailedRef.current = true;
       }
       
@@ -254,7 +236,6 @@ export const VideoCall: FC<VideoCallProps> = ({ appointmentId, onEndCall }) => {
   }, [localStream, checkCameraStatus]);
 
   const handleManualRestart = useCallback(async () => {
-    console.log('🔄 Manual camera restart requested');
     cameraFailedRef.current = false;
     restartAttempts.current = 0;
     const success = await restartCamera();

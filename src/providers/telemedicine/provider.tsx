@@ -45,7 +45,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
 
   useEffect(() => {
     return () => {
-      console.log('🚨 TelemedicineProvider is being unmounted!');
       isMountedRef.current = false;
       
       setTimeout(() => {
@@ -80,8 +79,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
   }, [currentCall, localStream, isInitializingCall]);
 
   const getAppointmentDirectly = useCallback((appointmentId: string) => {
-    console.log('🔍 Searching for appointment directly:', appointmentId);
-    
     try {
       const storedAppointments = localStorage.getItem('appointments');
       if (storedAppointments) {
@@ -196,13 +193,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
         };
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        console.log('✅ Media stream obtained:', {
-          streamId: stream.id,
-          videoTracks: stream.getVideoTracks().length,
-          audioTracks: stream.getAudioTracks().length,
-          active: stream.active
-        });
 
       } catch (mediaError) {
         console.error('❌ Failed to get user media:', mediaError);

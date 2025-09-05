@@ -9,7 +9,7 @@ import { useDepartmentsContext } from "../../providers/departments";
 import { IInvoice } from "../../providers/invoices/types";
 import { PatientsEntry } from "../../providers/patients/types";
 import { AppointmentsEntry } from "../../providers/appointments/types";
-import { MedicalProduct } from "../../providers/products/types";
+import { ProductWithStock } from "../../providers/products/types"; // Updated import
 import InvoiceHeader from "../add-invoice-form/components/invoice-header";
 import InvoiceBasicInfo from "../add-invoice-form/components/basic-info";
 import PatientInformation from "../add-invoice-form/components/patient-information";
@@ -35,7 +35,7 @@ export const EditInvoiceForm: FC = () => {
     const { id } = useParams<{ id: string }>();
     const { patients } = usePatientsContext();
     const { appointments } = useAppointmentsContext();
-    const { products } = useProductsContext();
+    const { getAllProductsWithStock } = useProductsContext(); // Updated to use new method
     const { departments } = useDepartmentsContext();
     const { invoices, updateInvoice } = useInvoicesContext();
 
@@ -57,12 +57,10 @@ export const EditInvoiceForm: FC = () => {
         return Object.values(appointments).flat() as AppointmentsEntry[];
     }, [appointments]);
 
-    const productsArray: MedicalProduct[] = useMemo(() => {
-        if (Array.isArray(products)) {
-            return products as MedicalProduct[];
-        }
-        return Object.values(products).flat() as MedicalProduct[];
-    }, [products]);
+    // Updated to use ProductWithStock
+    const productsArray: ProductWithStock[] = useMemo(() => {
+        return getAllProductsWithStock().filter(product => product.totalQuantity > 0); // Only products with stock
+    }, [getAllProductsWithStock]);
 
     const departmentsArray: DepartmentEntry[] = useMemo(() => {
         if (Array.isArray(departments)) {
@@ -230,18 +228,30 @@ export const EditInvoiceForm: FC = () => {
         const product = productsArray.find(p => p.id === currentProduct.productId);
         if (!product) return;
 
-        const amount = product.unitPrice * currentProduct.quantity;
+        // Check if requested quantity is available
+        if (currentProduct.quantity > product.totalQuantity) {
+            setErrors(prev => ({
+                ...prev,
+                products: `Insufficient stock. Available: ${product.totalQuantity} ${product.unit}`
+            }));
+            return;
+        }
+
+        const amount = product.averagePrice * currentProduct.quantity; // Use averagePrice instead of unitPrice
         
         const invoiceProduct: InvoiceProduct = {
             productId: product.id,
-            productName: product.name,
-            unitCost: product.unitPrice,
+            productName: `${product.name} - ${product.manufacturer}`, // Enhanced product name
+            unitCost: product.averagePrice, // Use averagePrice
             quantity: currentProduct.quantity,
             amount: amount
         };
 
         setSelectedProducts(prev => [...prev, invoiceProduct]);
         setCurrentProduct({ productId: "", quantity: 1 });
+        
+        // Clear any product-related errors
+        setErrors(prev => ({ ...prev, products: "" }));
     };
 
     const handleRemoveProduct = (index: number) => {
@@ -257,6 +267,15 @@ export const EditInvoiceForm: FC = () => {
         if (!formData.department) newErrors.department = "Department is required";
         if (!formData.paymentMethod) newErrors.paymentMethod = "Payment method is required";
         if (selectedProducts.length === 0) newErrors.products = "At least one product is required";
+
+        // Validate product stock availability
+        for (const selectedProduct of selectedProducts) {
+            const product = productsArray.find(p => p.id === selectedProduct.productId);
+            if (product && selectedProduct.quantity > product.totalQuantity) {
+                newErrors.products = `Insufficient stock for ${product.name}. Available: ${product.totalQuantity} ${product.unit}`;
+                break;
+            }
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -369,6 +388,35 @@ export const EditInvoiceForm: FC = () => {
                     onAddProduct={handleAddProduct}
                     onRemoveProduct={handleRemoveProduct}
                 />
+
+                <Box 
+                    sx={{ 
+                        mt: 4, 
+                        p: 3, 
+                        backgroundColor: "#f8f9fa", 
+                        borderRadius: 2, 
+                        border: "1px solid #e9ecef" 
+                    }}
+                >
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                        Invoice Summary
+                    </Typography>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography>Subtotal:</Typography>
+                        <Typography fontWeight={500}>${subtotal.toFixed(2)}</Typography>
+                    </Box>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Typography>Tax ({formData.tax}%):</Typography>
+                        <Typography fontWeight={500}>${taxAmount.toFixed(2)}</Typography>
+                    </Box>
+                    <Divider sx={{ my: 1 }} />
+                    <Box display="flex" justifyContent="space-between">
+                        <Typography variant="h6" fontWeight={600}>Total:</Typography>
+                        <Typography variant="h6" fontWeight={600} color="primary.main">
+                            ${totalAmount.toFixed(2)}
+                        </Typography>
+                    </Box>
+                </Box>
 
                 <Box display="flex" justifyContent="space-between" gap={3} sx={{ mt: 4 }}>
                     <Button

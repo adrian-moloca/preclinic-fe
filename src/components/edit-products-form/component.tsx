@@ -2,34 +2,57 @@ import {
   Box,
   Typography,
   Divider,
+  Alert,
+  Button,
+  Tabs,
+  Tab
 } from "@mui/material";
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MedicalProduct } from "../../providers/products/types";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Product } from "../../providers/products/types";
 import { useProductsContext } from "../../providers/products";
 import ProductBasicInfo from "../add-products-form/components/basic-info";
 import MedicationDetails from "../add-products-form/components/medications-details";
-import InventoryPricing from "../add-products-form/components/inventory-component";
 import SupplierInfo from "../add-products-form/components/supplier-info";
 import AdditionalInfo from "../add-products-form/components/additional-info";
 import EditProductFormActions from "./components/form-actions";
 import ProductNotFound from "./components/not-found";
 import LoadingState from "./components/loading-state";
+import { StockBatchesList } from "../stock-batches-list/component";
+import { StockBatchForm } from "../stock-batch-form/component";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 export const EditProductForm: FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { products, updateProduct } = useProductsContext();
+  const { getProduct, getProductWithStock, updateProduct, deleteStockBatch } = useProductsContext();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<Partial<MedicalProduct>>({
+  const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     type: 'medication',
     category: '',
     manufacturer: '',
-    batchNumber: '',
-    expiryDate: '',
-    quantity: 0,
-    unitPrice: 0,
     unit: 'pieces',
     description: '',
     activeIngredient: '',
@@ -51,10 +74,14 @@ export const EditProductForm: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [productNotFound, setProductNotFound] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [showAddBatchForm, setShowAddBatchForm] = useState(false);
+
+  const productWithStock = getProductWithStock(id || '');
 
   useEffect(() => {
     if (id) {
-      const product = products.find(p => p.id === id);
+      const product = getProduct(id);
       if (product) {
         setFormData({
           ...product,
@@ -66,37 +93,39 @@ export const EditProductForm: FC = () => {
           }
         });
         setIsLoading(false);
-      } else if (products.length > 0) {
+      } else {
         setProductNotFound(true);
         setIsLoading(false);
       }
     }
-  }, [id, products]);
+  }, [id, getProduct]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name?.trim()) newErrors.name = 'Product name is required';
+    if (!formData.category?.trim()) newErrors.category = 'Category is required';
     if (!formData.manufacturer?.trim()) newErrors.manufacturer = 'Manufacturer is required';
-    if (!formData.batchNumber?.trim()) newErrors.batchNumber = 'Batch number is required';
-    if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
-    if (!formData.quantity || formData.quantity <= 0) newErrors.quantity = 'Quantity must be greater than 0';
-    if (!formData.unitPrice || formData.unitPrice <= 0) newErrors.unitPrice = 'Unit price must be greater than 0';
-    if (!formData.supplierInfo?.name?.trim()) newErrors.supplierName = 'Supplier name is required';
-    if (!formData.supplierInfo?.contactNumber?.trim()) newErrors.supplierContact = 'Supplier contact is required';
+    if (!formData.supplierInfo?.name?.trim()) newErrors['supplier.name'] = 'Supplier name is required';
+    if (!formData.supplierInfo?.contactNumber?.trim()) newErrors['supplier.contactNumber'] = 'Supplier contact is required';
 
     if (formData.supplierInfo?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email)) {
-      newErrors.supplierEmail = 'Invalid email format';
+      newErrors['supplier.email'] = 'Invalid email format';
+    }
+
+    if (formData.type === 'medication') {
+      if (!formData.activeIngredient?.trim()) newErrors.activeIngredient = 'Active ingredient is required for medications';
+      if (!formData.dosageForm) newErrors.dosageForm = 'Dosage form is required for medications';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = useCallback((field: string, value: any) => {
     if (field.startsWith('supplier.')) {
       const supplierField = field.split('.')[1];
-      setFormData((prev: Partial<MedicalProduct>) => ({
+      setFormData(prev => ({
         ...prev,
         supplierInfo: {
           ...prev.supplierInfo!,
@@ -104,63 +133,80 @@ export const EditProductForm: FC = () => {
         }
       }));
     } else {
-      setFormData((prev: Partial<MedicalProduct>) => ({
-        ...prev,
-        [field]: value
-      }));
+      setFormData(prev => ({ ...prev, [field]: value }));
     }
 
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: ''
-      }));
-    }
-  };
+    // Clear error for this field
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      if (field.startsWith('supplier.')) {
+        const supplierField = field.split('.')[1];
+        delete newErrors[`supplier.${supplierField}`];
+      }
+      return newErrors;
+    });
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm() || !id) return;
 
     setIsSubmitting(true);
     
     try {
-      const updatedProduct: MedicalProduct = {
-        ...formData as MedicalProduct,
-        id,
+      const updatedProduct: Partial<Product> = {
+        ...formData,
+        name: formData.name?.trim(),
+        category: formData.category?.trim(),
+        manufacturer: formData.manufacturer?.trim(),
+        description: formData.description?.trim(),
+        storageConditions: formData.storageConditions?.trim(),
+        activeIngredient: formData.activeIngredient?.trim() || undefined,
+        strength: formData.strength?.trim() || undefined,
+        barcode: formData.barcode?.trim() || undefined,
+        supplierInfo: {
+          name: formData.supplierInfo?.name?.trim() || '',
+          contactNumber: formData.supplierInfo?.contactNumber?.trim() || '',
+          email: formData.supplierInfo?.email?.trim() || '',
+          address: formData.supplierInfo?.address?.trim() || ''
+        },
         updatedAt: new Date().toISOString()
       };
 
       updateProduct(id, updatedProduct);
-      navigate('/products/all');
+      navigate(`/products/${id}`);
     } catch (error) {
       console.error('Error updating product:', error);
+      setErrors(prev => ({ ...prev, submit: 'Failed to update product. Please try again.' }));
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [formData, id, updateProduct, navigate, validateForm]);
 
-  const handleCancel = () => {
-    navigate('/products/all');
-  };
+  const handleCancel = useCallback(() => {
+    navigate(`/products/${id}`);
+  }, [navigate, id]);
 
-  const isFormValid = () => {
+  const handleDeleteBatch = useCallback((batchId: string) => {
+    deleteStockBatch(batchId);
+  }, [deleteStockBatch]);
+
+  const isFormValid = useCallback(() => {
     const requiredFieldsValid = 
       !!formData.name?.trim() &&
+      !!formData.category?.trim() &&
       !!formData.manufacturer?.trim() &&
-      !!formData.batchNumber?.trim() &&
-      !!formData.expiryDate &&
-      !!formData.quantity && formData.quantity > 0 &&
-      !!formData.unitPrice && formData.unitPrice > 0 &&
       !!formData.supplierInfo?.name?.trim() &&
       !!formData.supplierInfo?.contactNumber?.trim();
 
     const emailValid = !formData.supplierInfo?.email || 
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supplierInfo.email);
 
-    return Boolean(requiredFieldsValid && emailValid);
-  };
+    const medicationValid = formData.type !== 'medication' || 
+      (!!formData.activeIngredient?.trim() && !!formData.dosageForm);
 
-  const isMedication = formData.type === 'medication';
+    return Boolean(requiredFieldsValid && emailValid && medicationValid);
+  }, [formData]);
 
   if (isLoading) {
     return <LoadingState />;
@@ -171,34 +217,59 @@ export const EditProductForm: FC = () => {
   }
 
   return (
-    <Box>
-      <Box p={3}>
-        <Box display="flex" alignItems="center" mb={3}>
-          <Typography variant="h4" fontWeight={600}>
-            Edit Medical Product
-          </Typography>
-        </Box>
+    <Box p={3}>
+      <Box display="flex" alignItems="center" mb={3}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/products/${id}`)}
+          sx={{ mr: 2 }}
+        >
+          Back to Product
+        </Button>
+        <Typography variant="h4" fontWeight={600}>
+          Edit Product: {formData.name}
+        </Typography>
+      </Box>
 
-        <Divider sx={{ mb: 4 }} />
+      <Alert severity="info" sx={{ mb: 3 }}>
+        You are editing the product definition. Stock batches are managed separately and can be viewed in the Stock Batches tab.
+      </Alert>
 
+      <Divider sx={{ mb: 4 }} />
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab label="Product Information" />
+          <Tab label={`Stock Batches (${productWithStock?.batchCount || 0})`} />
+        </Tabs>
+      </Box>
+
+      {/* Product Information Tab */}
+      <TabPanel value={activeTab} index={0}>
         <ProductBasicInfo
           formData={formData}
           errors={errors}
           onInputChange={handleInputChange}
         />
 
-        {isMedication && (
-          <MedicationDetails
-            formData={formData}
-            onInputChange={handleInputChange}
-          />
-        )}
+        <Divider sx={{ my: 3 }} />
 
-        <InventoryPricing
-          formData={formData}
-          errors={errors}
-          onInputChange={handleInputChange}
-        />
+        {formData.type === 'medication' && (
+          <>
+            <MedicationDetails
+              formData={{
+                dosageForm: formData.dosageForm,
+                activeIngredient: formData.activeIngredient,
+                strength: formData.strength,
+                prescriptionRequired: formData.prescriptionRequired
+              }}
+              errors={errors}
+              onInputChange={handleInputChange}
+            />
+            <Divider sx={{ my: 3 }} />
+          </>
+        )}
 
         <SupplierInfo
           formData={formData}
@@ -206,10 +277,26 @@ export const EditProductForm: FC = () => {
           onInputChange={handleInputChange}
         />
 
+        <Divider sx={{ my: 3 }} />
+
         <AdditionalInfo
-          formData={formData}
+          formData={{
+            description: formData.description,
+            storageConditions: formData.storageConditions,
+            prescriptionRequired: formData.prescriptionRequired,
+            barcode: formData.barcode
+          }}
+          errors={errors}
           onInputChange={handleInputChange}
         />
+
+        {errors.submit && (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography color="error">
+              {errors.submit}
+            </Typography>
+          </Box>
+        )}
 
         <EditProductFormActions
           isSubmitting={isSubmitting}
@@ -217,7 +304,37 @@ export const EditProductForm: FC = () => {
           onCancel={handleCancel}
           onSubmit={handleSubmit}
         />
-      </Box>
+      </TabPanel>
+
+      {/* Stock Batches Tab */}
+      <TabPanel value={activeTab} index={1}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            Stock Batches for {formData.name}
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => setShowAddBatchForm(true)}
+          >
+            Add New Batch
+          </Button>
+        </Box>
+
+        {showAddBatchForm && (
+          <StockBatchForm
+            productId={id!}
+            onBatchAdded={() => setShowAddBatchForm(false)}
+            onCancel={() => setShowAddBatchForm(false)}
+          />
+        )}
+
+        {productWithStock && (
+          <StockBatchesList
+            batches={productWithStock.batches}
+            onDeleteBatch={handleDeleteBatch}
+          />
+        )}
+      </TabPanel>
     </Box>
   );
 };

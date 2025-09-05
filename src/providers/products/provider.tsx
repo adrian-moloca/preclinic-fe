@@ -1,169 +1,302 @@
-import React, { useState, ReactNode, useEffect } from 'react';
-import { MedicalProduct, ProductType } from './types';
-import { ProductsContext } from './context';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { 
+  Product, 
+  StockBatch, 
+  ProductWithStock, 
+  ProductsContextType, 
+  ProductType,
+  MeasurementUnit,
+  DosageForm
+} from './types';
 
-const LOCAL_STORAGE_KEY = 'products';
+const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
-export const MOCK_PRODUCTS: MedicalProduct[] = [
+const PRODUCTS_LOCAL_STORAGE_KEY = 'preclinic_products';
+const STOCK_BATCHES_LOCAL_STORAGE_KEY = 'preclinic_stock_batches';
+
+const MOCK_PRODUCTS: Product[] = [
   {
-    id: 'p1',
-    name: 'Paracetamol 500mg',
-    type: 'medication',
-    category: 'Analgesics',
-    manufacturer: 'Terapia',
-    batchNumber: 'BATCH123',
-    expiryDate: '2026-05-01',
-    quantity: 120,
-    unitPrice: 0.25,
-    unit: 'mg',
-    description: 'Pain reliever and fever reducer.',
+    id: 'prod_001',
+    name: 'Paracetamol',
+    type: 'medication' as ProductType,
+    category: 'Analgesic',
+    manufacturer: 'Pharma Corp',
     activeIngredient: 'Paracetamol',
-    dosageForm: 'tablet',
+    dosageForm: 'tablet' as DosageForm,
     strength: '500mg',
+    unit: 'tablets' as MeasurementUnit,
+    description: 'Pain reliever and fever reducer',
     prescriptionRequired: false,
-    storageConditions: 'Store below 25°C',
-    barcode: '5941234567890',
+    storageConditions: 'Store in cool, dry place',
+    barcode: '123456789012',
     supplierInfo: {
-      name: 'Farmex',
-      contactNumber: '0722123456',
-      email: 'contact@farmex.ro',
-      address: 'Str. Farmaciei 10, Bucuresti'
+      name: 'Medical Supply Co',
+      contactNumber: '0123456789',
+      email: 'orders@medsupply.com',
+      address: '123 Medical St, City'
     },
-    createdAt: '2025-08-01T09:00:00.000Z',
-    updatedAt: '2025-08-01T09:00:00.000Z',
-    status: 'active'
+    status: 'active',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z'
+  }
+];
+
+const MOCK_STOCK_BATCHES: StockBatch[] = [
+  {
+    id: 'batch_001',
+    productId: 'prod_001',
+    batchNumber: 'PAR2024001',
+    expiryDate: '2025-12-31',
+    quantity: 100,
+    unitPrice: 0.25,
+    receivedDate: '2024-01-15T00:00:00.000Z',
+    status: 'active',
+    createdAt: '2024-01-15T00:00:00.000Z',
+    updatedAt: '2024-01-15T00:00:00.000Z'
   },
   {
-    id: 'p2',
-    name: 'Disposable Syringe 5ml',
-    type: 'consumables',
-    category: 'Injection Supplies',
-    manufacturer: 'B Braun',
-    batchNumber: 'SYR2025',
-    expiryDate: '2027-01-15',
-    quantity: 500,
-    unitPrice: 0.15,
-    unit: 'pieces',
-    description: 'Sterile disposable syringe for single use.',
-    prescriptionRequired: false,
-    storageConditions: 'Store in a dry place',
-    supplierInfo: {
-      name: 'MedSupply',
-      contactNumber: '0733123456',
-      email: 'info@medsupply.ro',
-      address: 'Str. Medicala 5, Cluj-Napoca'
-    },
-    createdAt: '2025-08-01T09:00:00.000Z',
-    updatedAt: '2025-08-01T09:00:00.000Z',
-    status: 'active'
-  },
-  {
-    id: 'p3',
-    name: 'Blood Pressure Monitor',
-    type: 'medical_equipment',
-    category: 'Diagnostic Tools',
-    manufacturer: 'Omron',
-    batchNumber: 'BP2025',
-    expiryDate: '2030-12-31',
-    quantity: 10,
-    unitPrice: 120,
-    unit: 'pieces',
-    description: 'Automatic digital blood pressure monitor.',
-    prescriptionRequired: false,
-    storageConditions: 'Store at room temperature',
-    supplierInfo: {
-      name: 'Medical Devices SRL',
-      contactNumber: '0744123456',
-      email: 'sales@medicaldevices.ro',
-      address: 'Str. Aparaturii 8, Timisoara'
-    },
-    createdAt: '2025-08-01T09:00:00.000Z',
-    updatedAt: '2025-08-01T09:00:00.000Z',
-    status: 'active'
+    id: 'batch_002',
+    productId: 'prod_001',
+    batchNumber: 'PAR2024002',
+    expiryDate: '2024-06-30',
+    quantity: 50,
+    unitPrice: 0.23,
+    receivedDate: '2024-02-01T00:00:00.000Z',
+    status: 'active',
+    createdAt: '2024-02-01T00:00:00.000Z',
+    updatedAt: '2024-02-01T00:00:00.000Z'
   }
 ];
 
 export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<MedicalProduct[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [stockBatches, setStockBatches] = useState<StockBatch[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Always include mock products
-        const merged = [
-          ...MOCK_PRODUCTS,
-          ...parsed.filter((p: MedicalProduct) => !MOCK_PRODUCTS.some(mp => mp.id === p.id))
-        ];
-        setProducts(merged);
-      } catch {
-        console.warn('Failed to parse products from localStorage');
+    try {
+      const storedProducts = localStorage.getItem(PRODUCTS_LOCAL_STORAGE_KEY);
+      const storedBatches = localStorage.getItem(STOCK_BATCHES_LOCAL_STORAGE_KEY);
+      
+      let loadedProducts = [...MOCK_PRODUCTS];
+      let loadedBatches = [...MOCK_STOCK_BATCHES];
+      
+      if (storedProducts) {
+        const parsedProducts = JSON.parse(storedProducts);
+        if (Array.isArray(parsedProducts)) {
+          const userProducts = parsedProducts.filter(p => !MOCK_PRODUCTS.find(mp => mp.id === p.id));
+          loadedProducts = [...MOCK_PRODUCTS, ...userProducts];
+        }
       }
+      
+      if (storedBatches) {
+        const parsedBatches = JSON.parse(storedBatches);
+        if (Array.isArray(parsedBatches)) {
+          const userBatches = parsedBatches.filter(b => !MOCK_STOCK_BATCHES.find(mb => mb.id === b.id));
+          loadedBatches = [...MOCK_STOCK_BATCHES, ...userBatches];
+        }
+      }
+      
+      setProducts(loadedProducts);
+      setStockBatches(loadedBatches);
+    } catch (error) {
+      console.error('❌ Error loading from localStorage:', error);
+      setProducts(MOCK_PRODUCTS);
+      setStockBatches(MOCK_STOCK_BATCHES);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(products));
+    if (products.length > 0) {
+      try {
+        const userProducts = products.filter(p => !MOCK_PRODUCTS.find(mp => mp.id === p.id));
+        localStorage.setItem(PRODUCTS_LOCAL_STORAGE_KEY, JSON.stringify(userProducts));
+      } catch (error) {
+        console.error('❌ Error saving products:', error);
+      }
+    }
   }, [products]);
 
-  const addProduct = (product: MedicalProduct) => {
-    setProducts(prev => [...prev, product]);
-  };
+  useEffect(() => {
+    if (stockBatches.length > 0) {
+      try {
+        const userBatches = stockBatches.filter(b => !MOCK_STOCK_BATCHES.find(mb => mb.id === b.id));
+        localStorage.setItem(STOCK_BATCHES_LOCAL_STORAGE_KEY, JSON.stringify(userBatches));
+      } catch (error) {
+        console.error('❌ Error saving batches:', error);
+      }
+    }
+  }, [stockBatches]);
 
-  const updateProduct = (id: string, productUpdate: Partial<MedicalProduct>) => {
-    setProducts(prev => 
-      prev.map(product => 
+  const addProduct = useCallback((product: Product) => {
+    setProducts(prev => {
+      const newProducts = [...prev, product];
+      return newProducts;
+    });
+  }, []);
+
+  const updateProduct = useCallback((id: string, productUpdate: Partial<Product>) => {
+    setProducts(prev => {
+      const updated = prev.map(product => 
         product.id === id 
           ? { ...product, ...productUpdate, updatedAt: new Date().toISOString() }
           : product
-      )
-    );
-  };
+      );
+      return updated;
+    });
+  }, []);
 
-  const deleteProduct = (id: string) => {
-    // Prevent deleting mock products
+  const deleteProduct = useCallback((id: string) => {
     if (MOCK_PRODUCTS.some(mp => mp.id === id)) {
-      console.warn("❌ Cannot delete mock product:", id);
+      console.warn('❌ Cannot delete mock product:', id);
       return;
     }
+    
     setProducts(prev => prev.filter(product => product.id !== id));
-  };
+    setStockBatches(prev => prev.filter(batch => batch.productId !== id));
+  }, []);
 
-  const getProductsByType = (type: ProductType) => {
-    return products.filter(product => product.type === type);
-  };
+  const getProduct = useCallback((id: string): Product | undefined => {
+    return products.find(product => product.id === id);
+  }, [products]);
 
-  const getProductsByCategory = (category: string) => {
-    return products.filter(product => product.category === category);
-  };
+  const addStockBatch = useCallback((batch: StockBatch) => {
+    setStockBatches(prev => {
+      const newBatches = [...prev, batch];
+      return newBatches;
+    });
+  }, []);
 
-  const getLowStockProducts = (threshold: number = 10) => {
-    return products.filter(product => product.quantity <= threshold);
-  };
+  const updateStockBatch = useCallback((id: string, batchUpdate: Partial<StockBatch>) => {
+    setStockBatches(prev => {
+      const updated = prev.map(batch => 
+        batch.id === id 
+          ? { ...batch, ...batchUpdate, updatedAt: new Date().toISOString() }
+          : batch
+      );
+      return updated;
+    });
+  }, []);
 
-  const getExpiringProducts = (days: number = 30) => {
+  const deleteStockBatch = useCallback((id: string) => {
+    if (MOCK_STOCK_BATCHES.some(mb => mb.id === id)) {
+      console.warn('❌ Cannot delete mock batch:', id);
+      return;
+    }
+    
+    console.log('🗑️ Deleting stock batch:', id);
+    setStockBatches(prev => prev.filter(batch => batch.id !== id));
+  }, []);
+
+  const getBatchesForProduct = useCallback((productId: string): StockBatch[] => {
+    const batches = stockBatches.filter(batch => batch.productId === productId);
+    return batches;
+  }, [stockBatches]);
+
+  const getTotalQuantityForProduct = useCallback((productId: string): number => {
+    const total = getBatchesForProduct(productId)
+      .filter(batch => batch.status === 'active')
+      .reduce((total, batch) => total + batch.quantity, 0);
+    return total;
+  }, [getBatchesForProduct]);
+
+  const getProductWithStock = useCallback((productId: string): ProductWithStock | undefined => {
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+      console.log(`❌ Product not found: ${productId}`);
+      return undefined;
+    }
+
+    const batches = getBatchesForProduct(productId);
+    const activeBatches = batches.filter(b => b.status === 'active');
+    const totalQuantity = activeBatches.reduce((sum, b) => sum + b.quantity, 0);
+    
+    const nearestExpiry = activeBatches.length > 0 
+      ? activeBatches
+          .map(b => b.expiryDate)
+          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
+      : undefined;
+
+    const averagePrice = activeBatches.length > 0 && totalQuantity > 0
+      ? activeBatches.reduce((sum, b) => sum + b.unitPrice * b.quantity, 0) / totalQuantity
+      : 0;
+
+    const result: ProductWithStock = {
+      ...product,
+      batches,
+      totalQuantity,
+      nearestExpiry,
+      averagePrice,
+      batchCount: batches.length
+    };
+
+    return result;
+  }, [products, getBatchesForProduct]);
+
+  const getAllProductsWithStock = useCallback((): ProductWithStock[] => {
+    
+    const result = products.map(product => {
+      const productWithStock = getProductWithStock(product.id);
+      return productWithStock;
+    }).filter(Boolean) as ProductWithStock[];
+    
+    return result;
+  }, [products, getProductWithStock]);
+
+  const getExpiringBatches = useCallback((days: number = 30): StockBatch[] => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() + days);
     
-    return products.filter(product => {
-      const expiryDate = new Date(product.expiryDate);
-      return expiryDate <= cutoffDate;
+    return stockBatches.filter(batch => {
+      const expiryDate = new Date(batch.expiryDate);
+      return expiryDate <= cutoffDate && batch.status === 'active';
     });
+  }, [stockBatches]);
+
+  const getLowStockProducts = useCallback((threshold: number = 10): ProductWithStock[] => {
+    return getAllProductsWithStock().filter(product => product.totalQuantity <= threshold);
+  }, [getAllProductsWithStock]);
+
+  const getProductsByType = useCallback((type: ProductType): ProductWithStock[] => {
+    return getAllProductsWithStock().filter(product => product.type === type);
+  }, [getAllProductsWithStock]);
+
+  const getProductsByCategory = useCallback((category: string): ProductWithStock[] => {
+    return getAllProductsWithStock().filter(product => product.category === category);
+  }, [getAllProductsWithStock]);
+
+  const contextValue: ProductsContextType = {
+    products,
+    stockBatches,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    getProduct,
+    addStockBatch,
+    updateStockBatch,
+    deleteStockBatch,
+    getProductWithStock,
+    getAllProductsWithStock,
+    getTotalQuantityForProduct,
+    getBatchesForProduct,
+    getExpiringBatches,
+    getLowStockProducts,
+    getProductsByType,
+    getProductsByCategory
   };
 
   return (
-    <ProductsContext.Provider value={{
-      products,
-      addProduct,
-      updateProduct,
-      deleteProduct,
-      getProductsByType,
-      getProductsByCategory,
-      getLowStockProducts,
-      getExpiringProducts
-    }}>
+    <ProductsContext.Provider value={contextValue}>
       {children}
     </ProductsContext.Provider>
   );
 };
+
+export const useProductsContext = () => {
+  const context = useContext(ProductsContext);
+  if (context === undefined) {
+    throw new Error('useProductsContext must be used within a ProductsProvider');
+  }
+  return context;
+};
+
+export { ProductsContext };

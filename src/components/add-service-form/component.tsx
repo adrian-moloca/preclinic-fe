@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useServicesContext } from '../../providers/services/context';
 import { IServices } from '../../providers/services/types';
 import { useDepartmentsContext } from '../../providers/departments/context';
-import { useProductsContext } from '../../providers/products/context';
+import { useProductsContext } from '../../providers/products'; // Updated import
 import ServiceBasicInfo from './components/basic-information';
 import ServicePricingDuration from './components/service-priceing';
 import ServiceProductsAssignment from './components/products-assigment';
@@ -24,11 +24,14 @@ const initialFormData = {
 export const AddServiceForm: FC = () => {
   const { addService } = useServicesContext();
   const { departments } = useDepartmentsContext();
-  const { products } = useProductsContext();
+  const { getAllProductsWithStock } = useProductsContext(); // Updated to use new method
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Get all products with stock data
+  const productsWithStock = useMemo(() => getAllProductsWithStock(), [getAllProductsWithStock]);
 
   const isFormValid = useMemo(() => {
     const requiredFields = [
@@ -120,16 +123,18 @@ export const AddServiceForm: FC = () => {
 
   const activeDepartments = departments.filter(dept => dept.status === 'active');
 
-  const productOptions = Array.isArray(products)
-    ? products
-        .filter(product => product.status === 'active')
-        .map(product => ({
-          id: product.id,
-          label: product.name,
-          price: product.unitPrice,
-          category: product.category || 'General'
-        }))
-    : [];
+  // Updated to work with ProductWithStock objects
+  const productOptions = productsWithStock
+    .filter(product => product.status === 'active' && product.totalQuantity > 0) // Only show active products with stock
+    .map(product => ({
+      id: product.id,
+      label: `${product.name} - ${product.manufacturer} (Stock: ${product.totalQuantity} ${product.unit})`, // Enhanced label with stock info
+      price: product.averagePrice, // Use averagePrice from ProductWithStock
+      category: product.category || 'General',
+      totalQuantity: product.totalQuantity,
+      unit: product.unit,
+      manufacturer: product.manufacturer
+    }));
 
   const selectedProducts = productOptions.filter(product => formData.products.includes(product.id));
   const totalProductsCost = selectedProducts.reduce((total, product) => total + product.price, 0);
@@ -167,6 +172,31 @@ export const AddServiceForm: FC = () => {
             onCancel={handleCancel}
           />
         </form>
+
+        {/* Additional info section */}
+        {selectedProducts.length > 0 && (
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+              Selected Products Summary:
+            </Typography>
+            {selectedProducts.map((product, index) => (
+              <Box key={product.id} sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {index + 1}. {product.label} - ${product.price.toFixed(2)}
+                </Typography>
+              </Box>
+            ))}
+            <Typography variant="body1" fontWeight={600} sx={{ mt: 1 }}>
+              Total Products Cost: ${totalProductsCost.toFixed(2)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Service Base Price: ${formData.price.toFixed(2)}
+            </Typography>
+            <Typography variant="h6" color="primary.main" fontWeight={600}>
+              Total Service Value: ${(formData.price + totalProductsCost).toFixed(2)}
+            </Typography>
+          </Box>
+        )}
       </Paper>
     </Box>
   );
