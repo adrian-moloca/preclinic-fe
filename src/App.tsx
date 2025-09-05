@@ -27,6 +27,7 @@ import WorkflowAutomationProvider from './providers/workflow-automation/provider
 import { TelemedicineProvider } from './providers/telemedicine';
 import { RegisterProvider } from './providers/register';
 import { SignInProvider } from './providers/sign-in';
+import { ClinicProvider } from './providers/clinic';
 
 function App() {
   return (
@@ -38,40 +39,42 @@ function App() {
               <SignInProvider>
                 <WorkflowAutomationProvider>
                   <MedicalDecisionSupportProvider>
-                    <ScheduleProvider>
-                      <PatientsProvider>
-                        <AppointmentsProvider>
-                          <ProfileProvider>
-                            <PrescriptionProvider>
-                              <LeavesProvider>
-                                <ProductsProvider>
-                                  <UsersProvider>
-                                    <DoctorsProvider>
-                                      <AssistentsProvider>
-                                        <ServicesProvider>
-                                          <DepartmentsProvider>
-                                            <PayrollProvider>
-                                              <InvoicesProvider>
-                                                <TelemedicineProvider>
-                                                  <CasesProvider>
-                                                    <Routing />
-                                                    <ToastContainer />
-                                                  </CasesProvider>
-                                                </TelemedicineProvider>
-                                              </InvoicesProvider>
-                                            </PayrollProvider>
-                                          </DepartmentsProvider>
-                                        </ServicesProvider>
-                                      </AssistentsProvider>
-                                    </DoctorsProvider>
-                                  </UsersProvider>
-                                </ProductsProvider>
-                              </LeavesProvider>
-                            </PrescriptionProvider>
-                          </ProfileProvider>
-                        </AppointmentsProvider>
-                      </PatientsProvider>
-                    </ScheduleProvider>
+                    <ClinicProvider>
+                      <ScheduleProvider>
+                        <PatientsProvider>
+                          <AppointmentsProvider>
+                            <ProfileProvider>
+                              <PrescriptionProvider>
+                                <LeavesProvider>
+                                  <ProductsProvider>
+                                    <UsersProvider>
+                                      <DoctorsProvider>
+                                        <AssistentsProvider>
+                                          <ServicesProvider>
+                                            <DepartmentsProvider>
+                                              <PayrollProvider>
+                                                <InvoicesProvider>
+                                                  <TelemedicineProvider>
+                                                    <CasesProvider>
+                                                      <Routing />
+                                                      <ToastContainer />
+                                                    </CasesProvider>
+                                                  </TelemedicineProvider>
+                                                </InvoicesProvider>
+                                              </PayrollProvider>
+                                            </DepartmentsProvider>
+                                          </ServicesProvider>
+                                        </AssistentsProvider>
+                                      </DoctorsProvider>
+                                    </UsersProvider>
+                                  </ProductsProvider>
+                                </LeavesProvider>
+                              </PrescriptionProvider>
+                            </ProfileProvider>
+                          </AppointmentsProvider>
+                        </PatientsProvider>
+                      </ScheduleProvider>
+                    </ClinicProvider>
                   </MedicalDecisionSupportProvider>
                 </WorkflowAutomationProvider>
               </SignInProvider>

@@ -24,7 +24,8 @@ import { ThemeColor, ThemeMode, useThemeContext } from '../../../../../../provid
 import { CustomPaper } from '../clinic-information/style';
 
 interface ThemeSettingsProps {
-  onChange?: () => void;
+  settings: any;
+  onChange?: (field: string, value: any) => void
 }
 
 export const ThemeSettings: FC<ThemeSettingsProps> = ({ onChange }) => {
@@ -33,17 +34,17 @@ export const ThemeSettings: FC<ThemeSettingsProps> = ({ onChange }) => {
 
   const handleModeChange = (mode: ThemeMode) => {
     setThemeMode(mode);
-    onChange?.();
+    onChange?.('mode', mode);
   };
 
   const handleColorChange = (color: ThemeColor) => {
     setThemeColor(color);
-    onChange?.();
+    onChange?.('colorScheme', color);
   };
 
   const handleReset = () => {
     resetTheme();
-    onChange?.();
+    onChange?.('reset', null);
   };
 
   const modeOptions = [

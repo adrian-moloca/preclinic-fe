@@ -11,6 +11,8 @@ import {
     TextField,
     Typography,
     Alert,
+    Select,
+    MenuItem,
 } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -19,28 +21,30 @@ import Logo from "../../../assets/preclinic-logo.svg";
 import { Link, useNavigate } from "react-router-dom";
 import SocialButtons from "../../../components/social-buttons";
 import { RegisterWrapper, SignInSectionWrapper, TitleWrapper } from "./style";
-import { useRegisterContext } from "../../../providers/register";
+import { useAuthContext } from "../../../providers/auth/context";
+import { UserRole } from "../../../providers/auth/types";
 
 export const Register: FC = () => {
     const navigate = useNavigate();
-    const { addRegister, isEmailTaken, validateRegistration } = useRegisterContext();
-
-    const [fullName, setFullName] = useState("");
+    const { register, loading } = useAuthContext();
+    
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [role, setRole] = useState<UserRole>('owner-doctor');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const [termsChecked, setTermsChecked] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const [fullNameError, setFullNameError] = useState("");
+    const [firstNameError, setFirstNameError] = useState("");
+    const [lastNameError, setLastNameError] = useState("");
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
-    const [registerError, setRegisterError] = useState("");
-    const [registerSuccess, setRegisterSuccess] = useState("");
 
     const handleClickShowPassword = () => setShowPassword((prev) => !prev);
     const handleClickShowConfirmPassword = () => setShowConfirmPassword((prev) => !prev);
@@ -53,98 +57,56 @@ export const Register: FC = () => {
     const validatePassword = (pwd: string) => {
         const hasUpperCase = /[A-Z]/.test(pwd);
         const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
-        return {
-            isValid: pwd.length >= 6 && hasUpperCase && hasSpecialChar,
-            hasUpperCase,
-            hasSpecialChar
-        };
+        return hasUpperCase && hasSpecialChar && pwd.length >= 8;
     };
 
     useEffect(() => {
-        const { isValid } = validatePassword(password);
-        const valid =
-            fullName.trim().length > 0 &&
-            validateEmail(email) &&
-            isValid &&
-            confirmPassword === password &&
-            termsChecked;  
-
-        setIsButtonDisabled(!valid);
-    }, [fullName, email, password, confirmPassword, termsChecked]);
-
-    useEffect(() => {
-        if (!confirmPassword) {
-            setConfirmPasswordError("");
-        } else if (password !== confirmPassword) {
-            setConfirmPasswordError("Passwords do not match");
-        } else {
-            setConfirmPasswordError("");
-        }
-    }, [password, confirmPassword]);
-
-    useEffect(() => {
-        if (email && validateEmail(email) && isEmailTaken(email)) {
-            setEmailError("This email is already registered");
-        } else if (email && !validateEmail(email)) {
-            setEmailError("Enter a valid email");
-        } else {
-            setEmailError("");
-        }
-    }, [email, isEmailTaken]);
+        const isFormValid = firstName && lastName && email && password && confirmPassword && 
+                           validateEmail(email) && validatePassword(password) && 
+                           password === confirmPassword && termsChecked;
+        setIsButtonDisabled(!isFormValid);
+    }, [firstName, lastName, email, password, confirmPassword, termsChecked]);
 
     const handleSubmit = async () => {
-        setIsLoading(true);
-        setRegisterError("");
-        setRegisterSuccess("");
-
         let hasError = false;
+        setError("");
 
-        if (!fullName.trim()) {
-            setFullNameError("Full name is required");
+        if (!firstName) {
+            setFirstNameError("First name is required");
             hasError = true;
         } else {
-            setFullNameError("");
+            setFirstNameError("");
         }
 
-        if (!email.trim()) {
+        if (!lastName) {
+            setLastNameError("Last name is required");
+            hasError = true;
+        } else {
+            setLastNameError("");
+        }
+
+        if (!email) {
             setEmailError("Email is required");
             hasError = true;
         } else if (!validateEmail(email)) {
             setEmailError("Enter a valid email");
             hasError = true;
-        } else if (isEmailTaken(email)) {
-            setEmailError("This email is already registered");
-            hasError = true;
         } else {
             setEmailError("");
         }
 
-        if (!termsChecked) {
-            setRegisterError("You must agree to the Terms of Service and Privacy Policy");
-            hasError = true;
-        }
-
-        const { hasUpperCase, hasSpecialChar } = validatePassword(password);
-
         if (!password) {
             setPasswordError("Password is required");
             hasError = true;
-        } else if (password.length < 6) {
-            setPasswordError("Password must be at least 6 characters");
-            hasError = true;
-        } else if (!hasUpperCase || !hasSpecialChar) {
-            let msg = "Password must contain ";
-            if (!hasUpperCase) msg += "an uppercase letter";
-            if (!hasUpperCase && !hasSpecialChar) msg += " and ";
-            if (!hasSpecialChar) msg += "a special character";
-            setPasswordError(msg);
+        } else if (!validatePassword(password)) {
+            setPasswordError("Password must contain uppercase, special character and be 8+ chars");
             hasError = true;
         } else {
             setPasswordError("");
         }
 
         if (!confirmPassword) {
-            setConfirmPasswordError("Confirm your password");
+            setConfirmPasswordError("Confirm password is required");
             hasError = true;
         } else if (password !== confirmPassword) {
             setConfirmPasswordError("Passwords do not match");
@@ -153,52 +115,35 @@ export const Register: FC = () => {
             setConfirmPasswordError("");
         }
 
-        if (hasError) {
-            setIsLoading(false);
-            return;
-        }
+        if (!hasError) {
+            try {
+                const success = await register({
+                    firstName,
+                    lastName,
+                    email,
+                    password,
+                    role,
+                });
 
-        try {
-            const validation = validateRegistration({
-                fullName,
-                email,
-                password,
-                confirmPassword
-            });
-
-            if (!validation.isValid) {
-                setRegisterError(validation.errors.join(", "));
-                setIsLoading(false);
-                return;
+                if (success) {
+                    // Store registration data for profile prefill
+                    const registrationData = {
+                        firstName,
+                        lastName,
+                        email,
+                        role,
+                        isNewRegistration: true,
+                    };
+                    localStorage.setItem('registrationData', JSON.stringify(registrationData));
+                    
+                    // Always redirect to profile settings first
+                    navigate('/profile/settings');
+                } else {
+                    setError("Registration failed. Email may already be in use.");
+                }
+            } catch (err) {
+                setError("Registration failed. Please try again.");
             }
-
-            const success = await addRegister({
-                fullName,
-                email,
-                password,
-                confirmPassword
-            });
-
-            if (success) {
-                setRegisterSuccess("Registration successful! Please check your email for verification.");
-                
-                setFullName("");
-                setEmail("");
-                setPassword("");
-                setConfirmPassword("");
-                setTermsChecked(false);
-                
-                setTimeout(() => {
-                    navigate("/sign-in");
-                }, 2000);
-            } else {
-                setRegisterError("Registration failed. Please try again.");
-            }
-        } catch (error) {
-            console.error("Registration error:", error);
-            setRegisterError("An unexpected error occurred. Please try again.");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -211,35 +156,39 @@ export const Register: FC = () => {
             <CardWrapper>
                 <TitleWrapper>
                     <Typography variant="h5" fontWeight={600}>
-                        Register
+                        Create Account
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Please enter your details to create account
+                        Join Preclinic and start managing your healthcare practice
                     </Typography>
                 </TitleWrapper>
 
-                {registerError && (
+                {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
-                        {registerError}
-                    </Alert>
-                )}
-
-                {registerSuccess && (
-                    <Alert severity="success" sx={{ mb: 2 }}>
-                        {registerSuccess}
+                        {error}
                     </Alert>
                 )}
 
                 <TextField
                     fullWidth
-                    label="Full Name"
-                    placeholder="Enter Your Full Name"
+                    label="First Name"
+                    placeholder="Enter Your First Name"
                     margin="normal"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    error={!!fullNameError}
-                    helperText={fullNameError}
-                    disabled={isLoading}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    error={!!firstNameError}
+                    helperText={firstNameError}
+                />
+
+                <TextField
+                    fullWidth
+                    label="Last Name"
+                    placeholder="Enter Your Last Name"
+                    margin="normal"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    error={!!lastNameError}
+                    helperText={lastNameError}
                 />
 
                 <TextField
@@ -251,8 +200,20 @@ export const Register: FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     error={!!emailError}
                     helperText={emailError}
-                    disabled={isLoading}
                 />
+
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Account Type</InputLabel>
+                    <Select
+                        value={role}
+                        label="Account Type"
+                        onChange={(e) => setRole(e.target.value as UserRole)}
+                    >
+                        <MenuItem value="owner-doctor">Owner-Doctor (Create New Clinic)</MenuItem>
+                        <MenuItem value="doctor">Doctor</MenuItem>
+                        <MenuItem value="assistant">Assistant</MenuItem>
+                    </Select>
+                </FormControl>
 
                 <FormControl fullWidth variant="outlined" margin="normal" error={!!passwordError}>
                     <InputLabel htmlFor="password">Password</InputLabel>
@@ -261,14 +222,9 @@ export const Register: FC = () => {
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton 
-                                    onClick={handleClickShowPassword} 
-                                    edge="end"
-                                    disabled={isLoading}
-                                >
+                                <IconButton onClick={handleClickShowPassword} edge="end">
                                     {showPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>
@@ -290,6 +246,10 @@ export const Register: FC = () => {
                         <Typography variant="caption" color={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "success.main" : "error"}>
                             • Contains special character
                         </Typography>
+                        <br />
+                        <Typography variant="caption" color={password.length >= 8 ? "success.main" : "error"}>
+                            • At least 8 characters
+                        </Typography>
                     </Box>
                 )}
 
@@ -300,14 +260,9 @@ export const Register: FC = () => {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={isLoading}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton 
-                                    onClick={handleClickShowConfirmPassword} 
-                                    edge="end"
-                                    disabled={isLoading}
-                                >
+                                <IconButton onClick={handleClickShowConfirmPassword} edge="end">
                                     {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
                             </InputAdornment>
@@ -321,27 +276,33 @@ export const Register: FC = () => {
                     </Typography>
                 )}
 
-                <Button
-                    fullWidth
-                    variant="contained"
-                    sx={{ mt: 3, bgcolor: "#2C2C9E", textTransform: "none" }}
-                    disabled={isButtonDisabled || isLoading}
-                    onClick={handleSubmit}
-                >
-                    {isLoading ? "Creating Account..." : "Register"}
-                </Button>
-
                 <RemindMeWrapper>
                     <Checkbox
                         size="small"
                         checked={termsChecked}
                         onChange={(e) => setTermsChecked(e.target.checked)}
-                        disabled={isLoading}
                     />
                     <Typography variant="body2">
-                        I agree to the <Link to="#" style={{ color: "#2C2C9E" }}>Terms of Service</Link> & <Link to="#" style={{ color: "#2C2C9E" }}>Privacy Policy</Link>
+                        I agree to the{" "}
+                        <Link to="/terms-and-conditions" style={{ color: "#2C2C9E" }}>
+                            Terms of Service
+                        </Link>{" "}
+                        &{" "}
+                        <Link to="/privacy-policy" style={{ color: "#2C2C9E" }}>
+                            Privacy Policy
+                        </Link>
                     </Typography>
                 </RemindMeWrapper>
+
+                <Button
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, bgcolor: "#2C2C9E", textTransform: "none" }}
+                    disabled={isButtonDisabled || loading}
+                    onClick={handleSubmit}
+                >
+                    {loading ? "Creating Account..." : "Create Account"}
+                </Button>
 
                 <Divider sx={{ my: 2 }}>OR</Divider>
 
@@ -349,16 +310,16 @@ export const Register: FC = () => {
 
                 <SignInSectionWrapper>
                     <Typography>
-                        Already have an account yet? <Link to="/sign-in" style={{ color: "#2C2C9E" }}>Login</Link>
+                        Already have an account?{" "}
+                        <Link to="/sign-in" style={{ color: "#2C2C9E" }}>
+                            Login
+                        </Link>
                     </Typography>
                 </SignInSectionWrapper>
             </CardWrapper>
+            
             <Box>
-                <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    mt={4}
-                >
+                <Typography variant="caption" color="text.secondary" mt={4}>
                     Copyright © 2025 – Preclinic.
                 </Typography>
             </Box>

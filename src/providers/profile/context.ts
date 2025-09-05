@@ -1,5 +1,5 @@
-import { createContext, useContext } from "react";
-import { ProfileContextType } from "./types";
+import { createContext, useContext } from 'react';
+import { ProfileContextType } from './types';
 
 export const ProfileContext = createContext<ProfileContextType>({
   profiles: {},
@@ -10,4 +10,10 @@ export const ProfileContext = createContext<ProfileContextType>({
   setProfiles: () => {},
 });
 
-export const useProfileContext = () => useContext(ProfileContext);
+export const useProfileContext = () => {
+  const context = useContext(ProfileContext);
+  if (!context) {
+    throw new Error('useProfileContext must be used within a ProfileProvider');
+  }
+  return context;
+};

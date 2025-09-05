@@ -1,141 +1,130 @@
 import {
   Box,
   Typography,
-  Grid,
   Button,
   Alert,
   Fade,
   useTheme,
 } from "@mui/material";
 import { Save as SaveIcon } from "@mui/icons-material";
-import { FC, useState } from "react";
-import { ClinicInformation } from "./components/clinic-information/component";
+import { FC, useState, useEffect } from "react";
 import { BusinessHours } from "./components/business-hours/component";
 import { Preferences } from "./components/preferences/component";
 import NotificationGeneralSettings from "./components/notifications-settings";
 import ThemeSettings from "./components/theme-settings";
-
-interface ClinicSettings {
-  clinicName: string;
-  clinicDescription: string;
-  clinicLogo: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  phone: string;
-  email: string;
-  website: string;
-  mondayOpen: string;
-  mondayClose: string;
-  tuesdayOpen: string;
-  tuesdayClose: string;
-  wednesdayOpen: string;
-  wednesdayClose: string;
-  thursdayOpen: string;
-  thursdayClose: string;
-  fridayOpen: string;
-  fridayClose: string;
-  saturdayOpen: string;
-  saturdayClose: string;
-  sundayOpen: string;
-  sundayClose: string;
-  timeZone: string;
-  dateFormat: string;
-  timeFormat: string;
-  currency: string;
-  language: string;
-  theme: string;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  appointmentReminders: boolean;
-  marketingEmails: boolean;
-  systemAlerts: boolean;
-}
+import { useClinicContext } from "../../../../providers/clinic/context";
 
 export const GeneralSettings: FC = () => {
   const theme = useTheme();
-  const [settings, setSettings] = useState<ClinicSettings>({
-    clinicName: "Downtown Medical Clinic",
-    clinicDescription: "Providing quality healthcare services to our community",
-    clinicLogo: "",
-    address: "123 Main Street",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    phone: "+1 (555) 123-4567",
-    email: "info@downtownmedical.com",
-    website: "www.downtownmedical.com",
-    mondayOpen: "09:00",
-    mondayClose: "17:00",
-    tuesdayOpen: "09:00",
-    tuesdayClose: "17:00",
-    wednesdayOpen: "09:00",
-    wednesdayClose: "17:00",
-    thursdayOpen: "09:00",
-    thursdayClose: "17:00",
-    fridayOpen: "09:00",
-    fridayClose: "17:00",
-    saturdayOpen: "10:00",
-    saturdayClose: "14:00",
-    sundayOpen: "",
-    sundayClose: "",
-    timeZone: "America/New_York",
-    dateFormat: "MM/DD/YYYY",
-    timeFormat: "12-hour",
-    currency: "USD",
-    language: "en",
-    theme: "light",
-    emailNotifications: true,
-    smsNotifications: true,
-    appointmentReminders: true,
-    marketingEmails: false,
-    systemAlerts: true,
-  });
-
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { selectedClinic, updateClinic, loading } = useClinicContext();
+  
+  const [settings, setSettings] = useState<any>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const handleInputChange = (field: keyof ClinicSettings, value: string | number | boolean) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+  // Initialize settings from selected clinic (only business hours and preferences, not clinic info)
+  useEffect(() => {
+    if (selectedClinic) {
+      setSettings({
+        // Business Hours
+        ...Object.entries(selectedClinic.businessHours || {}).reduce((acc, [day, hours]) => {
+          acc[`${day}Open`] = hours.open;
+          acc[`${day}Close`] = hours.close;
+          return acc;
+        }, {} as any),
+        
+        // Settings
+        timeZone: selectedClinic.settings?.timeZone || "Europe/Bucharest",
+        dateFormat: selectedClinic.settings?.dateFormat || "DD/MM/YYYY",
+        timeFormat: selectedClinic.settings?.timeFormat || "24h",
+        currency: selectedClinic.settings?.currency || "RON",
+        language: selectedClinic.settings?.language || "Romanian",
+        theme: selectedClinic.settings?.theme || "light",
+        emailNotifications: selectedClinic.settings?.emailNotifications ?? true,
+        smsNotifications: selectedClinic.settings?.smsNotifications ?? true,
+        appointmentReminders: selectedClinic.settings?.appointmentReminders ?? true,
+        marketingEmails: selectedClinic.settings?.marketingEmails ?? false,
+        systemAlerts: selectedClinic.settings?.systemAlerts ?? true,
+      });
+    }
+  }, [selectedClinic]);
+
+  const handleChange = (field: string, value: any) => {
+    setSettings((prev: any) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
-  const handleThemeChange = () => {
-    setHasChanges(true);
+  const handleSave = async () => {
+    if (!selectedClinic) return;
+
+    try {
+      // Convert settings back to clinic format
+      const businessHours = {
+        monday: { open: settings.mondayOpen, close: settings.mondayClose, isClosed: false },
+        tuesday: { open: settings.tuesdayOpen, close: settings.tuesdayClose, isClosed: false },
+        wednesday: { open: settings.wednesdayOpen, close: settings.wednesdayClose, isClosed: false },
+        thursday: { open: settings.thursdayOpen, close: settings.thursdayClose, isClosed: false },
+        friday: { open: settings.fridayOpen, close: settings.fridayClose, isClosed: false },
+        saturday: { open: settings.saturdayOpen, close: settings.saturdayClose, isClosed: false },
+        sunday: { open: settings.sundayOpen, close: settings.sundayClose, isClosed: true },
+      };
+
+      const clinicSettings = {
+        timeZone: settings.timeZone,
+        dateFormat: settings.dateFormat,
+        timeFormat: settings.timeFormat,
+        currency: settings.currency,
+        language: settings.language,
+        theme: settings.theme,
+        emailNotifications: settings.emailNotifications,
+        smsNotifications: settings.smsNotifications,
+        appointmentReminders: settings.appointmentReminders,
+        marketingEmails: settings.marketingEmails,
+        systemAlerts: settings.systemAlerts,
+      };
+
+      // Only update business hours and settings, not clinic info
+      const updatedClinicData = {
+        businessHours,
+        settings: clinicSettings,
+      };
+
+      await updateClinic(selectedClinic.id, updatedClinicData);
+      
+      setHasChanges(false);
+      setSaveMessage("Settings saved successfully!");
+      
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage("Failed to save settings. Please try again.");
+      setTimeout(() => setSaveMessage(""), 3000);
+    }
   };
 
-  const handleSave = () => {
-    setAlert({ type: 'success', message: 'Settings saved successfully! 🎉' });
-    setHasChanges(false);
-    setTimeout(() => setAlert(null), 5000);
-  };
+  if (!selectedClinic) {
+    return (
+      <Box p={3}>
+        <Alert severity="warning">
+          No clinic selected. Please create or select a clinic first.
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 4 },
-        minHeight: '100vh',
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        bgcolor: theme.palette.background.default,
-        transition: "background-color 0.3s",
-      }}
-    >
+    <Box>
+      {/* Header */}
       <Box
         display="flex"
-        flexDirection={{ xs: "column", md: "row" }}
         justifyContent="space-between"
-        alignItems={{ xs: "flex-start", md: "center" }}
-        width={{ xs: "100%", md: "1170px" }}
-        mb={2}
+        alignItems="center"
+        mb={4}
+        p={3}
         sx={{
           background: theme.palette.mode === "dark"
             ? "rgba(30, 32, 36, 0.98)"
             : "rgba(255, 255, 255, 0.9)",
           backdropFilter: 'blur(10px)',
-          p: { xs: 2, md: 3 },
           borderRadius: 3,
           boxShadow: theme.palette.mode === "dark"
             ? "0 8px 32px rgba(0,0,0,0.5)"
@@ -158,7 +147,7 @@ export const GeneralSettings: FC = () => {
             General Settings
           </Typography>
           <Typography variant="body1" color="text.secondary" mt={0.5}>
-            Configure your clinic's basic settings and preferences
+            Configure {selectedClinic.name}'s operational settings and preferences
           </Typography>
         </Box>
         <Button
@@ -185,71 +174,43 @@ export const GeneralSettings: FC = () => {
             },
             transition: 'all 0.3s ease',
           }}
-          disabled={!hasChanges}
+          disabled={!hasChanges || loading}
         >
-          Save Changes
+          {loading ? 'Saving...' : 'Save Changes'}
         </Button>
       </Box>
 
-      <Fade in={!!alert} timeout={500}>
-        <Box mb={3} width={{ xs: "100%", md: "1170px" }}>
-          {alert && (
-            <Alert
-              severity={alert.type}
-              sx={{
-                borderRadius: 3,
-                fontWeight: 600,
-                '& .MuiAlert-icon': {
-                  fontSize: '1.5rem',
-                },
-              }}
-            >
-              {alert.message}
-            </Alert>
-          )}
+      {/* Success/Error Message */}
+      <Fade in={!!saveMessage}>
+        <Box mb={3}>
+          <Alert severity={saveMessage.includes('success') ? 'success' : 'error'}>
+            {saveMessage}
+          </Alert>
         </Box>
       </Fade>
 
-      <Grid
-        container
-        spacing={4}
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          width: { xs: "100%", md: "1170px" },
-        }}
-      >
-        <Grid>
-          <ClinicInformation
-            settings={settings}
-            onChange={handleInputChange}
-          />
-        </Grid>
+      {/* Settings Sections */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <BusinessHours
+          settings={settings}
+          onChange={handleChange}
+        />
 
-        <Grid>
-          <BusinessHours
-            settings={settings}
-            onChange={handleInputChange}
-          />
-        </Grid>
+        <Preferences
+          settings={settings}
+          onChange={handleChange}
+        />
 
-        <Grid>
-          <Preferences
-            settings={settings}
-            onChange={handleInputChange}
-          />
-        </Grid>
+        <NotificationGeneralSettings
+          settings={settings}
+          onChange={handleChange}
+        />
 
-        <Grid>
-          <NotificationGeneralSettings
-            settings={settings}
-            onChange={handleInputChange}
-          />
-        </Grid>
-        <Grid>
-          <ThemeSettings onChange={handleThemeChange} />
-        </Grid>
-      </Grid>
+        <ThemeSettings
+          settings={settings}
+          onChange={handleChange}
+        />
+      </Box>
     </Box>
   );
 };

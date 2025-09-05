@@ -8,11 +8,12 @@ export interface Profile {
   country: string;
   state: string;
   city: string;
+  address: string;
 }
 
 export interface ProfileContextType {
   profiles: Record<string, Profile>;
-  addProfile: (patient: Profile) => void;
+  addProfile: (profile: Profile) => void;
   updateProfile: (id: string, updatedData: Partial<Profile>) => void;
   deleteProfile: (id: string) => void;
   resetProfiles: () => void;

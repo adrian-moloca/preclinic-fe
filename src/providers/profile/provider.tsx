@@ -1,81 +1,81 @@
-import React, {
-  FC,
-  ReactNode,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
-import {  ProfileContext } from "./context";
-import { Profile } from "./types";
+import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
+import { Profile } from './types';
+import { ProfileContext } from './context';
 
-const LOCAL_STORAGE_KEY = "profiles";
+const LOCAL_STORAGE_KEY = 'profiles';
 
-export const ProfileProvider: FC<{ children: ReactNode }> = ({ children }) => {
+interface ProfileProviderProps {
+  children: ReactNode;
+}
+
+export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
 
+  // Load profiles from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
-        setProfiles(JSON.parse(stored));
-      } catch {
-        console.warn("Failed to parse profiles from localStorage");
+        const parsed = JSON.parse(stored);
+        setProfiles(parsed);
+        console.log('Loaded profiles from localStorage:', parsed);
+      } catch (error) {
+        console.warn('Failed to parse profiles from localStorage:', error);
+        setProfiles({});
       }
     }
   }, []);
 
+  // Save profiles to localStorage whenever profiles change
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profiles));
+    console.log('Saved profiles to localStorage:', profiles);
   }, [profiles]);
 
   const addProfile = useCallback((profile: Profile) => {
-    setProfiles((prev) => ({
+    console.log('Adding profile:', profile);
+    setProfiles(prev => ({
       ...prev,
-      [profile.id]: profile,
+      [profile.id]: profile
     }));
   }, []);
 
   const updateProfile = useCallback((id: string, updatedData: Partial<Profile>) => {
-    setProfiles((prev) => {
-      const existing = prev[id];
-      if (!existing) {
-        console.warn("❌ Profile not found:", id);
-        return prev;
+    console.log('Updating profile:', id, updatedData);
+    setProfiles(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        ...updatedData,
+        id // Ensure ID is preserved
       }
-
-      return {
-        ...prev,
-        [id]: {
-          ...existing,
-          ...updatedData,
-        },
-      };
-    });
+    }));
   }, []);
 
   const deleteProfile = useCallback((id: string) => {
-    setProfiles((prev) => {
-      const { [id]: _, ...rest } = prev;
-      return rest;
+    console.log('Deleting profile:', id);
+    setProfiles(prev => {
+      const newProfiles = { ...prev };
+      delete newProfiles[id];
+      return newProfiles;
     });
   }, []);
 
   const resetProfiles = useCallback(() => {
+    console.log('Resetting all profiles');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     setProfiles({});
   }, []);
 
   return (
-    <ProfileContext.Provider
-      value={{
-        profiles,
-        addProfile,
-        updateProfile,
-        deleteProfile,
-        resetProfiles,
-        setProfiles,
-      }}
-    >
+    <ProfileContext.Provider value={{
+      profiles,
+      setProfiles,
+      addProfile,
+      updateProfile,
+      deleteProfile,
+      resetProfiles,
+    }}>
       {children}
     </ProfileContext.Provider>
   );

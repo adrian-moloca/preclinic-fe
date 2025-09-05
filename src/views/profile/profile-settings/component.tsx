@@ -8,6 +8,8 @@ import {
   TextField,
   Typography,
   CircularProgress,
+  Alert,
+  Fade,
 } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import ProfileImageUploader from "../../../components/profile-image";
@@ -16,6 +18,7 @@ import { DividerFormWrapper } from "../../../components/create-leaves-form/style
 import { useNavigate } from "react-router-dom";
 import { Profile } from "../../../providers/profile/types";
 import { useProfileContext } from "../../../providers/profile";
+import { useAuthContext } from "../../../providers/auth/context";
 import { SectionsWrapper, StyledPaper } from "./style";
 import { FormFieldWrapper } from "../../../components/create-patient-form/style";
 
@@ -33,9 +36,13 @@ export const ProfileSettings: FC = () => {
   const [phoneError, setPhoneError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isOnboarding, setIsOnboarding] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const { profiles, addProfile, updateProfile } = useProfileContext();
   
   const currentProfile = Object.values(profiles)[0];
@@ -53,7 +60,23 @@ export const ProfileSettings: FC = () => {
       : [];
 
   useEffect(() => {
-    if (currentProfile) {
+    console.log('ProfileSettings mounting...');
+    console.log('Current profiles:', profiles);
+    console.log('Current user:', user);
+    
+    const registrationData = localStorage.getItem('registrationData');
+    console.log('Registration data:', registrationData);
+    
+    if (registrationData) {
+      const data = JSON.parse(registrationData);
+      console.log('Setting onboarding mode with data:', data);
+      setIsOnboarding(true);
+      setFirstName(data.firstName || '');
+      setLastName(data.lastName || '');
+      setEmail(data.email || '');
+      setIsEditing(false);
+    } else if (currentProfile) {
+      console.log('Loading existing profile:', currentProfile);
       setImage(currentProfile.image || null);
       setFirstName(currentProfile.firstName || "");
       setLastName(currentProfile.lastName || "");
@@ -62,12 +85,20 @@ export const ProfileSettings: FC = () => {
       setCountry(currentProfile.country || "");
       setState(currentProfile.state || "");
       setCity(currentProfile.city || "");
+      setAddress(currentProfile.address || "");
       setIsEditing(true);
-    } else {
+      setIsOnboarding(false);
+    } else if (user) {
+      console.log('No profile found, using user data:', user);
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+      setEmail(user.email || "");
       setIsEditing(false);
+      setIsOnboarding(false);
     }
+    
     setIsLoading(false);
-  }, [currentProfile]);
+  }, [currentProfile, user, profiles]);
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,37 +119,73 @@ export const ProfileSettings: FC = () => {
     validateEmail(email) &&
     country &&
     state &&
-    city;
+    city &&
+    address.trim();
 
-  const handleSubmit = () => {
-    const profileData: Omit<Profile, 'id'> = {
-      image: image ?? "",
-      firstName,
-      lastName,
-      phoneNumber,
-      email,
-      country,
-      state,
-      city,
-    };
-
-    if (isEditing && currentProfileId) {
-      const updatedProfile: Profile = {
-        ...profileData,
-        id: currentProfileId,
-      };
-      updateProfile(currentProfileId, updatedProfile);
-      console.log("Profile updated:", updatedProfile);
-    } else {
-      const newProfile: Profile = {
-        ...profileData,
-        id: crypto.randomUUID(),
-      };
-      addProfile(newProfile);
-      console.log("Profile created:", newProfile);
+  const handleSubmit = async () => {
+    if (!isFormValid) {
+      setSaveMessage("Please fill in all required fields correctly.");
+      setTimeout(() => setSaveMessage(""), 3000);
+      return;
     }
 
-    navigate("/");
+    setIsSaving(true);
+    setSaveMessage("");
+
+    try {
+      const profileData: Profile = {
+        id: currentProfileId || crypto.randomUUID(),
+        image: image ?? "",
+        firstName,
+        lastName,
+        phoneNumber,
+        email,
+        country,
+        state,
+        city,
+        address,
+      };
+
+      console.log('Saving profile data:', profileData);
+
+      if (isEditing && currentProfileId) {
+        console.log('Updating existing profile...');
+        await updateProfile(currentProfileId, profileData);
+        setSaveMessage("Profile updated successfully!");
+      } else {
+        console.log('Creating new profile...');
+        await addProfile(profileData);
+        setSaveMessage("Profile created successfully!");
+      }
+
+      setTimeout(() => setSaveMessage(""), 3000);
+
+      setTimeout(() => {
+        if (isOnboarding) {
+          const registrationData = localStorage.getItem('registrationData');
+          const userData = registrationData ? JSON.parse(registrationData) : user;
+          localStorage.removeItem('registrationData');
+          
+          if (userData?.role === 'owner-doctor') {
+            console.log('Navigating to clinic creation...');
+            navigate('/create-clinic');
+          } else {
+            console.log('Navigating to dashboard...');
+            navigate('/');
+          }
+        } else {
+          console.log('Navigating to dashboard...');
+          navigate("/");
+        }
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setSaveMessage("Failed to save profile. Please try again.");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -147,8 +214,23 @@ export const ProfileSettings: FC = () => {
     <Box width={"100%"} display={"flex"} justifyContent={"center"}>
       <StyledPaper>
         <Typography variant="h4">
-          {isEditing ? "Edit Profile" : "Create Profile"}
+          {isOnboarding ? "Complete Your Profile" : (isEditing ? "Edit Profile" : "Create Profile")}
         </Typography>
+        {isOnboarding && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Please complete your profile information to continue setting up your account
+          </Typography>
+        )}
+
+        {/* Success/Error Message */}
+        <Fade in={!!saveMessage}>
+          <Box>
+            <Alert severity={saveMessage.includes('success') ? 'success' : 'error'}>
+              {saveMessage}
+            </Alert>
+          </Box>
+        </Fade>
+
         <DividerFormWrapper />
         <ProfileImageUploader image={image} setImage={setImage} />
 
@@ -157,20 +239,20 @@ export const ProfileSettings: FC = () => {
             <TextField
               label="First Name"
               value={firstName}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-              }}
+              onChange={(e) => setFirstName(e.target.value)}
               sx={{ flex: 1, marginY: 1 }}
               required
+              disabled={isOnboarding}
+              helperText={isOnboarding ? "From registration" : ""}
             />
             <TextField
               label="Last Name"
               value={lastName}
-              onChange={(e) => {
-                setLastName(e.target.value);
-              }}
+              onChange={(e) => setLastName(e.target.value)}
               sx={{ flex: 1, marginY: 1 }}
               required
+              disabled={isOnboarding}
+              helperText={isOnboarding ? "From registration" : ""}
             />
           </SectionsWrapper>
 
@@ -178,24 +260,22 @@ export const ProfileSettings: FC = () => {
             <TextField
               label="Phone Number"
               value={phoneNumber}
-              onChange={(e) => {
-                setPhoneNumber(e.target.value);
-              }}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               sx={{ flex: 1, marginY: 1 }}
               error={!!phoneError}
               helperText={phoneError}
               required
+              placeholder="+40 123 456 789"
             />
             <TextField
               label="Email Address"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               sx={{ flex: 1, marginY: 1 }}
               error={!!emailError}
-              helperText={emailError}
+              helperText={emailError || (isOnboarding ? "From registration" : "")}
               required
+              disabled={isOnboarding}
             />
           </SectionsWrapper>
 
@@ -247,9 +327,7 @@ export const ProfileSettings: FC = () => {
                 labelId="city-label"
                 value={city}
                 label="City"
-                onChange={(e) => {
-                  setCity(e.target.value);
-                }}
+                onChange={(e) => setCity(e.target.value)}
               >
                 {cities.map((c) => (
                   <MenuItem key={c.name} value={c.name}>
@@ -261,11 +339,10 @@ export const ProfileSettings: FC = () => {
             <TextField
               label="Address"
               value={address}
-              onChange={(e) => {
-                setAddress(e.target.value);
-              }}
+              onChange={(e) => setAddress(e.target.value)}
               sx={{ flex: 1, marginY: 1 }}
               required
+              placeholder="Street address"
             />
           </SectionsWrapper>
         </FormFieldWrapper>
@@ -274,10 +351,15 @@ export const ProfileSettings: FC = () => {
           variant="contained"
           color="primary"
           onClick={handleSubmit}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSaving}
           sx={{ marginTop: 2 }}
         >
-          {isEditing ? "Update Profile" : "Create Profile"}
+          {isSaving 
+            ? "Saving..." 
+            : isOnboarding 
+              ? "Continue to Next Step" 
+              : (isEditing ? "Update Profile" : "Create Profile")
+          }
         </Button>
       </StyledPaper>
     </Box>

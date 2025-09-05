@@ -34,8 +34,6 @@ export const SignIn: FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthContext();
   const { 
-    addSignIn, 
-    validateSignInData, 
     availableCabinets, 
     availableRoles,
     getLastSignInForEmail,
@@ -53,7 +51,7 @@ export const SignIn: FC = () => {
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [cabinetError, setCabinetError] = useState("");
+  const [cabinetError] = useState("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -83,74 +81,43 @@ export const SignIn: FC = () => {
   }, [email, getLastSignInForEmail]);
 
   const handleSubmit = async () => {
-    let hasError = false;
-    setError("");
+  let hasError = false;
+  setError("");
 
-    const validation = validateSignInData({
-      email,
-      password,
-      cabinet,
-      role: selectedRole,
-      rememberMe
-    });
+  if (!email) {
+    setEmailError("Email is required");
+    hasError = true;
+  } else if (!validateEmail(email)) {
+    setEmailError("Enter a valid email");
+    hasError = true;
+  } else {
+    setEmailError("");
+  }
 
-    if (!validation.isValid) {
-      setError(validation.errors.join(", "));
-      return;
-    }
+  if (!password) {
+    setPasswordError("Password is required");
+    hasError = true;
+  } else {
+    setPasswordError("");
+  }
 
-    if (!email) {
-      setEmailError("Email is required");
-      hasError = true;
-    } else if (!validateEmail(email)) {
-      setEmailError("Enter a valid email");
-      hasError = true;
-    } else {
-      setEmailError("");
-    }
-
-    if (!password) {
-      setPasswordError("Password is required");
-      hasError = true;
-    } else {
-      setPasswordError("");
-    }
-
-    if (!cabinet) {
-      setCabinetError("Please select a cabinet");
-      hasError = true;
-    } else {
-      setCabinetError("");
-    }
-
-    if (!hasError) {
-      setIsLoading(true);
-      try {
-        const signInSuccess = await addSignIn({
-          email,
-          password,
-          cabinet,
-          role: selectedRole,
-          rememberMe
-        });
-
-        if (signInSuccess) {
-          const success = await login(email, password, cabinet, selectedRole);
-          if (success) {
-            navigate("/");
-          } else {
-            setError("Invalid credentials. Try: owner@preclinic.com, doctor@preclinic.com, or assistant@preclinic.com with password: password123");
-          }
-        } else {
-          setError("Failed to save sign-in data");
-        }
-      } catch (err) {
-        setError("Login failed. Please try again.");
-      } finally {
-        setIsLoading(false);
+  // Remove cabinet requirement and logic
+  if (!hasError) {
+    setIsLoading(true);
+    try {
+      const success = await login(email, password, undefined, selectedRole);
+      if (success) {
+        navigate("/");
+      } else {
+        setError("Invalid credentials. Use password123 for demo accounts.");
       }
+    } catch (err) {
+      setError("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
+};
 
   const handleQuickLogin = (role: UserRole) => {
     const emails = {

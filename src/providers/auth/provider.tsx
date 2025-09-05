@@ -1,6 +1,6 @@
 import { FC, ReactNode, useState, useCallback, useEffect } from 'react';
 import { AuthContext } from './context';
-import { User, UserRole, PermissionConfig } from './types';
+import { User, UserRole, PermissionConfig, RegisterData } from './types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../mock/default-role-permissions';
 import { MOCK_USERS } from '../../mock/users';
 
@@ -8,11 +8,15 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const USERS_STORAGE_KEY = 'registeredUsers';
+
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     const storedUser = localStorage.getItem('currentUser');
     return storedUser ? JSON.parse(storedUser) : null;
   });
+
+  const [loading, setLoading] = useState(false);
 
   const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>(() => {
     const stored = localStorage.getItem('permissionConfig');
@@ -22,30 +26,90 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     };
   });
 
+  // Get all users (mock + registered)
+  const getAllUsersIncludingRegistered = useCallback((): User[] => {
+    const registeredUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const registered = registeredUsers ? JSON.parse(registeredUsers) : [];
+    return [...MOCK_USERS, ...registered];
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('permissionConfig', JSON.stringify(permissionConfig));
   }, [permissionConfig]);
 
-  const login = useCallback(async (email: string, password: string, cabinet: string, role?: UserRole): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const mockUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const register = useCallback(async (userData: RegisterData): Promise<boolean> => {
+    setLoading(true);
     
-    if (mockUser && password === 'password123') {
-      const userWithRole = role ? { ...mockUser, role } : mockUser;
-      setUser(userWithRole);
-      localStorage.setItem('currentUser', JSON.stringify(userWithRole));
-      localStorage.setItem('selectedCabinet', cabinet);
-      return true;
-    }
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check if email already exists
+      const allUsers = getAllUsersIncludingRegistered();
+      if (allUsers.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+        throw new Error('Email already exists');
+      }
 
-    return false;
-  }, []);
+      const newUser: User = {
+        id: crypto.randomUUID(),
+        ...userData,
+        profileImg: '',
+      };
+
+      // Save to registered users
+      const registeredUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      const registered = registeredUsers ? JSON.parse(registeredUsers) : [];
+      registered.push(newUser);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(registered));
+
+      // Auto-login the new user
+      setUser(newUser);
+      localStorage.setItem('currentUser', JSON.stringify(newUser));
+
+      return true;
+    } catch (err) {
+      console.error('Registration error:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [getAllUsersIncludingRegistered]);
+
+  const login = useCallback(async (email: string, password: string, clinicId?: string, role?: UserRole): Promise<boolean> => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const allUsers = getAllUsersIncludingRegistered();
+      const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      if (foundUser && password === 'password123') {
+        const userWithRole = role ? { ...foundUser, role } : foundUser;
+        const userWithClinic = clinicId ? { ...userWithRole, clinicId } : userWithRole;
+        
+        setUser(userWithClinic);
+        localStorage.setItem('currentUser', JSON.stringify(userWithClinic));
+        
+        if (clinicId) {
+          localStorage.setItem('selectedClinicId', clinicId);
+        }
+        
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Login error:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [getAllUsersIncludingRegistered]);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('currentUser');
-    localStorage.removeItem('selectedCabinet');
+    localStorage.removeItem('selectedClinicId');
   }, []);
 
   const hasPermission = useCallback((permission: string): boolean => {
@@ -112,14 +176,15 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   }, [permissionConfig]);
 
   const getAllUsers = useCallback((): User[] => {
-    return MOCK_USERS;
-  }, []);
+    return getAllUsersIncludingRegistered();
+  }, [getAllUsersIncludingRegistered]);
 
   return (
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
       login,
+      register,
       logout,
       hasPermission,
       canAccess,
@@ -129,6 +194,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       getUserPermissions,
       getAllUsers,
       permissionConfig,
+      loading,
     }}>
       {children}
     </AuthContext.Provider>

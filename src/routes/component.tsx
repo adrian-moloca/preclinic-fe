@@ -74,6 +74,8 @@ const TelemedicineDashboard = lazy(() => import("../components/telemedicine/dash
 const VideoCallView = lazy(() => import("../views/video-call/index"));
 const WaitingRoomView = lazy(() => import("../views/waiting-room/index"));
 const StockOverview = lazy(() => import("../views/products/stock-overview/index"));
+const CreateClinic = lazy(() => import("../views/clinic/create-clinic/index"));
+const ClinicInformationSettings = lazy(() => import("../views/settings/components/clinic-information/index"));
 
 export const Routing: FC = () => {
   return (
@@ -84,6 +86,20 @@ export const Routing: FC = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
+
+         <Route path="/settings/clinic-information" element={
+          <ProtectedRoute requiredPermission="view_settings">
+            <ClinicInformationSettings />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/create-clinic" element={
+          <ProtectedRoute>
+            <CreateClinic />
+          </ProtectedRoute>
+        } />
+
+         {/* Product routes */}
 
         <Route path="/stock-overview" element={
           <ProtectedRoute requiredResource="products">

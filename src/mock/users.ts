@@ -1,32 +1,28 @@
-import { User } from "../providers/auth/types";
+import { User } from '../providers/auth/types';
 
 export const MOCK_USERS: User[] = [
   {
-    id: '1',
+    id: 'user-1',
     email: 'owner@preclinic.com',
     firstName: 'Dr. John',
     lastName: 'Smith',
     role: 'owner-doctor',
+    profileImg: '',
   },
   {
-    id: '2',
+    id: 'user-2',
     email: 'doctor@preclinic.com',
     firstName: 'Dr. Sarah',
     lastName: 'Johnson',
     role: 'doctor',
+    profileImg: '',
   },
   {
-    id: '3',
+    id: 'user-3',
     email: 'assistant@preclinic.com',
-    firstName: 'Mary',
-    lastName: 'Williams',
+    firstName: 'Emma',
+    lastName: 'Wilson',
     role: 'assistant',
-  },
-  {
-    id: '4',
-    email: 'assistant2@preclinic.com',
-    firstName: 'Jane',
-    lastName: 'Davis',
-    role: 'assistant',
+    profileImg: '',
   },
 ];

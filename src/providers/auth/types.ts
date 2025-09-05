@@ -9,6 +9,7 @@ export interface User {
   profileImg?: string;
   customPermissions?: string[]; 
   disabledPermissions?: string[]; 
+  clinicId?: string; // Add clinic association
 }
 
 export interface RolePermissions {
@@ -27,10 +28,19 @@ export interface PermissionConfig {
   userPermissions: UserPermissions;
 }
 
+export interface RegisterData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}
+
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, cabinet: string, role: UserRole) => Promise<boolean>;
+  login: (email: string, password: string, clinicId?: string, role?: UserRole) => Promise<boolean>;
+  register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   canAccess: (resource: string) => boolean;
@@ -40,4 +50,5 @@ export interface AuthContextType {
   getUserPermissions: (userId: string) => { granted: string[]; denied: string[] };
   getAllUsers: () => User[];
   permissionConfig: PermissionConfig;
+  loading: boolean;
 }

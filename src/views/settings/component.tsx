@@ -1,6 +1,11 @@
 import { FC } from "react";
 import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Paper } from "@mui/material";
-import { Settings as SettingsIcon, Security, People } from "@mui/icons-material";
+import { 
+  Settings as SettingsIcon, 
+  Security, 
+  People,
+  Business as BusinessIcon,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../providers/auth/context";
 
@@ -15,6 +20,12 @@ export const Settings: FC = () => {
       icon: <SettingsIcon />,
       path: "/settings/general",
     },
+    {
+      title: "Clinic Information",
+      description: "Update clinic details and contact information",
+      icon: <BusinessIcon />,
+      path: "/settings/clinic-information",
+    },
     ...(user?.role === 'owner-doctor' ? [{
       title: "Permission Management",
       description: "Manage role permissions and individual user access",
@@ -27,29 +38,6 @@ export const Settings: FC = () => {
       icon: <People />,
       path: "/settings/users",
     },
-    // Keep all your existing settings options here
-    // Just add them to this array and they'll appear for all users
-    // Example of how to add more existing options:
-    /*
-    {
-      title: "Clinic Information",
-      description: "Update clinic details and contact information",
-      icon: <BusinessIcon />,
-      path: "/settings/clinic",
-    },
-    {
-      title: "Notifications",
-      description: "Configure email and push notification preferences",
-      icon: <NotificationsIcon />,
-      path: "/settings/notifications",
-    },
-    {
-      title: "Backup & Security",
-      description: "Data backup settings and security configurations",
-      icon: <BackupIcon />,
-      path: "/settings/backup",
-    },
-    */
   ];
 
   return (
@@ -68,13 +56,25 @@ export const Settings: FC = () => {
               mb: 2,
               cursor: "pointer",
               "&:hover": { elevation: 3 },
+              borderRadius: 2,
+              transition: 'all 0.2s ease',
             }}
             onClick={() => navigate(option.path)}
           >
-            <ListItemIcon>{option.icon}</ListItemIcon>
+            <ListItemIcon sx={{ color: 'primary.main' }}>
+              {option.icon}
+            </ListItemIcon>
             <ListItemText
-              primary={option.title}
-              secondary={option.description}
+              primary={
+                <Typography variant="h6" fontWeight={600}>
+                  {option.title}
+                </Typography>
+              }
+              secondary={
+                <Typography variant="body2" color="text.secondary">
+                  {option.description}
+                </Typography>
+              }
             />
           </ListItem>
         ))}

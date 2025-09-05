@@ -5,6 +5,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   login: async () => false,
+  register: async () => false,
   logout: () => {},
   hasPermission: () => false,
   canAccess: () => false,
@@ -14,6 +15,13 @@ export const AuthContext = createContext<AuthContextType>({
   getUserPermissions: () => ({ granted: [], denied: [] }),
   getAllUsers: () => [],
   permissionConfig: { rolePermissions: {}, userPermissions: {} },
+  loading: false,
 });
 
-export const useAuthContext = () => useContext(AuthContext);
+export const useAuthContext = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuthContext must be used within an AuthProvider');
+  }
+  return context;
+};
