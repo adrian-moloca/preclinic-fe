@@ -57,7 +57,7 @@ export const PermissionManagement: FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [selectedUser, setSelectedUser] = useState<string>('');
 
-  const users = getAllUsers().filter(u => u.role !== 'owner-doctor');
+  const users = getAllUsers().filter(u => u.role !== 'doctor_owner');
 
   const [, setRealTimePermissions] = useState(permissionConfig);
 
@@ -153,11 +153,11 @@ export const PermissionManagement: FC = () => {
     }, 100);
   }, []);
 
-  if (currentUser?.role !== 'owner-doctor') {
+  if (currentUser?.role !== 'doctor_owner') {
     return (
       <Box p={3}>
         <Alert severity="error">
-          Access denied. Only Owner-Doctor can manage permissions.
+          Access denied. Only Doctor-Owner can manage permissions.
         </Alert>
       </Box>
     );
@@ -200,7 +200,7 @@ export const PermissionManagement: FC = () => {
           </Typography>
           
           <Grid container spacing={3}>
-            {(['doctor', 'assistant'] as UserRole[]).map((role) => (
+            {(['doctor', 'assistant', 'doctor_owner'] as UserRole[]).map((role) => (
               <Grid key={role}>
                 <Card variant="outlined">
                   <CardContent>

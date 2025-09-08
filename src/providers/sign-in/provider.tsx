@@ -20,7 +20,7 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [signInHistory, setSignInHistory] = useState<Record<string, ISignIn>>({});
 
   const availableCabinets = React.useMemo(() => ["Cabinet A", "Cabinet B", "Cabinet C"], []);
-  const availableRoles = React.useMemo(() => ["owner-doctor", "doctor", "assistant"], []);
+  const availableRoles = React.useMemo(() => ["doctor_owner", "doctor", "assistant"], []);
 
   useEffect(() => {
     // Load current sign-in data

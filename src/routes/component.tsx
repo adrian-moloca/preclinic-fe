@@ -345,12 +345,12 @@ export const Routing: FC = () => {
           </ProtectedRoute>
         } />
         <Route path="settings/permissions" element={
-          <ProtectedRoute role="owner-doctor">
+          <ProtectedRoute role="doctor_owner">
             <PermissionManagement />
           </ProtectedRoute>
         } />
         <Route path="settings/users" element={
-          <ProtectedRoute role="owner-doctor">
+          <ProtectedRoute role="doctor_owner">
             <UsersManagement />
           </ProtectedRoute>
         } />

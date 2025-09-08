@@ -1,12 +1,12 @@
 import { createContext, useContext } from 'react';
-import { IPatientsContext } from './types';
+import { IPatientsContext, PatientsEntry } from './types';
 
 export const PatientsContext = createContext<IPatientsContext>({
   patients: [],
   setPatients: () => {},
-  addPatient: () => {},
-  updatePatient: () => {},
-  deletePatient: () => {},
+  addPatient: (entry: PatientsEntry) => {},
+  updatePatient: (entry: PatientsEntry) => {},
+  deletePatient: (id: string) => {},
   resetPatients: () => {},
 });
 

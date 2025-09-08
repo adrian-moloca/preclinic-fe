@@ -166,7 +166,7 @@ export const ProfileSettings: FC = () => {
           const userData = registrationData ? JSON.parse(registrationData) : user;
           localStorage.removeItem('registrationData');
           
-          if (userData?.role === 'owner-doctor') {
+          if (userData?.role === 'doctor_owner') {
             console.log('Navigating to clinic creation...');
             navigate('/create-clinic');
           } else {

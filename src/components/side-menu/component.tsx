@@ -74,6 +74,24 @@ export const SideDrawer: FC = () => {
       ]
     },
     {
+      label: "Services",
+      icon: <MedicalServicesIcon />,
+      resource: "services",
+      subItems: [
+        { label: "All Services", icon: <MedicalServicesIcon />, route: "/services/all", permission: "view_services" },
+        { label: "Add Service", icon: <PersonAddIcon />, route: "/services/create", permission: "manage_services" },
+      ]
+    },
+    {
+      label: "Doctors",
+      icon: <PersonIcon />,
+      resource: "doctors",
+      subItems: [
+        { label: "All Doctors", icon: <PersonIcon />, route: "/doctors/all-doctors", permission: "view_doctors" },
+        { label: "Add Doctor", icon: <PersonAddIcon />, route: "/doctors/create", permission: "manage_doctors" },
+      ]
+    },
+    {
       label: "Appointments",
       icon: <CalendarMonthIcon />,
       resource: "appointments",

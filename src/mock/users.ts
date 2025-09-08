@@ -6,7 +6,7 @@ export const MOCK_USERS: User[] = [
     email: 'owner@preclinic.com',
     firstName: 'Dr. John',
     lastName: 'Smith',
-    role: 'owner-doctor',
+    role: 'doctor_owner',
     profileImg: '',
   },
   {

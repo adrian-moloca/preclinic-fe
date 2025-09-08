@@ -2,13 +2,13 @@ import React, {
   FC,
   ReactNode,
   useState,
-  useEffect,
   useCallback,
 } from "react";
 import { IRegister } from "./types";
 import { RegisterContext } from "./context";
+import axios from "axios";
 
-const LOCAL_STORAGE_KEY = "registrations";
+// const LOCAL_STORAGE_KEY = "registrations";
 
 const generateId = () => {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -17,20 +17,20 @@ const generateId = () => {
 export const RegisterProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [registrations, setRegistrations] = useState<Record<string, IRegister>>({});
 
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        setRegistrations(JSON.parse(stored));
-      } catch {
-        console.warn("Failed to parse registrations from localStorage");
-      }
-    }
-  }, []);
+  // useEffect(() => {
+  //   const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+  //   if (stored) {
+  //     try {
+  //       setRegistrations(JSON.parse(stored));
+  //     } catch {
+  //       console.warn("Failed to parse registrations from localStorage");
+  //     }
+  //   }
+  // }, []);
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(registrations));
-  }, [registrations]);
+  // useEffect(() => {
+  //   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(registrations));
+  // }, [registrations]);
 
   const validateRegistration = useCallback((data: Partial<IRegister>) => {
     const errors: string[] = [];
@@ -67,50 +67,32 @@ export const RegisterProvider: FC<{ children: ReactNode }> = ({ children }) => {
     );
   }, [registrations]);
 
-  const addRegister = useCallback(async (registrationData: Omit<IRegister, 'id'>): Promise<boolean> => {
-    try {
-      // Check if email is already taken
-      if (isEmailTaken(registrationData.email)) {
-        console.warn("❌ Email already exists:", registrationData.email);
-        return false;
-      }
+const addRegister = async (registration: Omit<IRegister, "id">): Promise<boolean> => {
+  try {
+    const newRegistration: IRegister = {
+      id: generateId(),
+      ...registration
+    };
+    
+    const response = await axios.post<IRegister>('/signup', newRegistration);
+    setRegistrations(prev => ({
+      ...prev,
+      [response.data.id || newRegistration.id]: response.data,
+    }));
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Registration failed:", error);
+    return false;
+  }
+};
 
-      // Validate the registration data
-      const validation = validateRegistration(registrationData);
-      if (!validation.isValid) {
-        console.warn("❌ Registration validation failed:", validation.errors);
-        return false;
-      }
-
-      // Create the complete registration object
-      const newRegistration: IRegister = {
-        id: generateId(),
-        ...registrationData,
-      };
-
-      // Add to registrations
-      setRegistrations((prev) => ({
-        ...prev,
-        [newRegistration.id]: newRegistration,
-      }));
-
-      console.log("✅ Registration successful:", newRegistration.email);
-      return true;
-
-    } catch (error) {
-      console.error("❌ Registration failed:", error);
-      return false;
-    }
-  }, [isEmailTaken, validateRegistration]);
-
+  // Add getRegistrationByEmail and resetRegistrations to match IRegisterContext
   const getRegistrationByEmail = useCallback((email: string): IRegister | undefined => {
-    return Object.values(registrations).find(reg => 
-      reg.email.toLowerCase() === email.toLowerCase()
-    );
+    return Object.values(registrations).find(reg => reg.email.toLowerCase() === email.toLowerCase());
   }, [registrations]);
 
   const resetRegistrations = useCallback(() => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
     setRegistrations({});
   }, []);
 
@@ -119,11 +101,11 @@ export const RegisterProvider: FC<{ children: ReactNode }> = ({ children }) => {
       value={{
         registrations,
         addRegister,
-        getRegistrationByEmail,
         validateRegistration,
         isEmailTaken,
-        resetRegistrations,
         setRegistrations,
+        getRegistrationByEmail,
+        resetRegistrations,
       }}
     >
       {children}

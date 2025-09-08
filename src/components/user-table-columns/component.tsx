@@ -5,7 +5,7 @@ import { Column } from "../table/component";
 
 const getRoleColor = (role: string) => {
   switch (role) {
-    case 'owner-doctor': return 'error';
+    case 'doctor_owner': return 'error';
     case 'doctor': return 'primary';
     case 'assistant': return 'secondary';
     case 'nurse': return 'info';

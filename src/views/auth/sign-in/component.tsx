@@ -10,8 +10,6 @@ import {
   TextField,
   Typography,
   Divider,
-  Select,
-  MenuItem,
   Alert,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
@@ -19,7 +17,6 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../../assets/preclinic-logo.svg";
 import {
-  CardWrapper,
   LogoWrapper,
   RemindMeWrapper,
   SectionWrapper,
@@ -28,30 +25,24 @@ import {
 import SocialButtons from "../../../components/social-buttons";
 import { useAuthContext } from "../../../providers/auth/context";
 import { useSignInContext } from "../../../providers/sign-in";
-import { UserRole } from "../../../providers/auth/types";
+import { CustomPaper } from "../../settings/components/general-settings/components/clinic-information/style";
 
 export const SignIn: FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthContext();
   const { 
-    availableCabinets, 
-    availableRoles,
     getLastSignInForEmail,
-    clearSignInData
   } = useSignInContext();
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [cabinet, setCabinet] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRole>('doctor');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [cabinetError] = useState("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -62,19 +53,17 @@ export const SignIn: FC = () => {
   };
 
   useEffect(() => {
-    if (email && password && cabinet && validateEmail(email)) {
+    if (email && password && validateEmail(email)) {
       setIsButtonDisabled(false);
     } else {
       setIsButtonDisabled(true);
     }
-  }, [email, password, cabinet]);
+  }, [email, password]);
 
   useEffect(() => {
     if (email && validateEmail(email)) {
       const lastSignIn = getLastSignInForEmail(email);
       if (lastSignIn && lastSignIn.rememberMe) {
-        setCabinet(lastSignIn.cabinet);
-        setSelectedRole(lastSignIn.role as UserRole);
         setRememberMe(true);
       }
     }
@@ -84,6 +73,7 @@ export const SignIn: FC = () => {
   let hasError = false;
   setError("");
 
+  // validate email
   if (!email) {
     setEmailError("Email is required");
     hasError = true;
@@ -94,6 +84,7 @@ export const SignIn: FC = () => {
     setEmailError("");
   }
 
+  // validate password
   if (!password) {
     setPasswordError("Password is required");
     hasError = true;
@@ -101,46 +92,25 @@ export const SignIn: FC = () => {
     setPasswordError("");
   }
 
-  // Remove cabinet requirement and logic
   if (!hasError) {
     setIsLoading(true);
     try {
-      const success = await login(email, password, undefined, selectedRole);
+      const success = await login(email, password);
+
       if (success) {
         navigate("/");
       } else {
-        setError("Invalid credentials. Use password123 for demo accounts.");
+        setError("Invalid credentials. Please check your email and password.");
       }
-    } catch (err) {
-      setError("Login failed. Please try again.");
+    } catch (err: any) {
+      setError(err?.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   }
 };
 
-  const handleQuickLogin = (role: UserRole) => {
-    const emails = {
-      'owner-doctor': 'owner@preclinic.com',
-      'doctor': 'doctor@preclinic.com', 
-      'assistant': 'assistant@preclinic.com'
-    };
-    
-    setEmail(emails[role]);
-    setPassword('password123');
-    setCabinet(availableCabinets[0] || 'Cabinet A');
-    setSelectedRole(role);
-    setRememberMe(false);
-  };
-
-  const handleClearRememberedData = () => {
-    clearSignInData();
-    setEmail("");
-    setPassword("");
-    setCabinet("");
-    setSelectedRole('doctor');
-    setRememberMe(false);
-  };
+;
 
   return (
     <SignInWrapper>
@@ -148,7 +118,7 @@ export const SignIn: FC = () => {
         <img src={Logo} alt="Preclinic Logo" style={{ width: 120 }} />
       </LogoWrapper>
 
-      <CardWrapper>
+      <CustomPaper>
         <Typography variant="h5" fontWeight={600} textAlign="center" gutterBottom>
           Sign In
         </Typography>
@@ -162,53 +132,6 @@ export const SignIn: FC = () => {
           </Alert>
         )}
 
-        <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-            Quick Demo Login:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => handleQuickLogin('owner-doctor')}
-              sx={{ textTransform: 'none' }}
-              disabled={isLoading}
-            >
-              Owner-Doctor
-            </Button>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => handleQuickLogin('doctor')}
-              sx={{ textTransform: 'none' }}
-              disabled={isLoading}
-            >
-              Doctor
-            </Button>
-            <Button 
-              size="small" 
-              variant="outlined" 
-              onClick={() => handleQuickLogin('assistant')}
-              sx={{ textTransform: 'none' }}
-              disabled={isLoading}
-            >
-              Assistant
-            </Button>
-          </Box>
-          
-          <Box sx={{ mt: 1 }}>
-            <Button 
-              size="small" 
-              variant="text" 
-              onClick={handleClearRememberedData}
-              sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-              disabled={isLoading}
-            >
-              Clear Remembered Data
-            </Button>
-          </Box>
-        </Box>
-
         <TextField
           fullWidth
           label="Email Address"
@@ -220,49 +143,6 @@ export const SignIn: FC = () => {
           helperText={emailError}
           disabled={isLoading}
         />
-
-        {validateEmail(email) && (
-          <>
-            <FormControl fullWidth margin="normal" error={!!cabinetError}>
-              <InputLabel>Select Cabinet</InputLabel>
-              <Select
-                value={cabinet}
-                label="Select Cabinet"
-                onChange={(e) => setCabinet(e.target.value)}
-                disabled={isLoading}
-              >
-                {availableCabinets.map((cabin) => (
-                  <MenuItem key={cabin} value={cabin}>
-                    {cabin}
-                  </MenuItem>
-                ))}
-              </Select>
-              {cabinetError && (
-                <Typography variant="caption" color="error" mt={0.5}>
-                  {cabinetError}
-                </Typography>
-              )}
-            </FormControl>
-
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Login as</InputLabel>
-              <Select
-                value={selectedRole}
-                label="Login as"
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                disabled={isLoading}
-              >
-                {availableRoles.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role === 'owner-doctor' ? 'Owner-Doctor' : 
-                     role === 'doctor' ? 'Doctor' : 
-                     role === 'assistant' ? 'Assistant' : role}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </>
-        )}
 
         <FormControl fullWidth variant="outlined" margin="normal" error={!!passwordError}>
           <InputLabel htmlFor="password">Password</InputLabel>
@@ -329,7 +209,7 @@ export const SignIn: FC = () => {
             Register
           </Link>
         </Typography>
-      </CardWrapper>
+      </CustomPaper>
 
       <Box>
         <Typography

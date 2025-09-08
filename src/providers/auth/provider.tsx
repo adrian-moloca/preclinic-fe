@@ -3,134 +3,97 @@ import { AuthContext } from './context';
 import { User, UserRole, PermissionConfig, RegisterData } from './types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../mock/default-role-permissions';
 import { MOCK_USERS } from '../../mock/users';
+import axios from 'axios';
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-const USERS_STORAGE_KEY = 'registeredUsers';
-
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading,] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-
-  const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>(() => {
-    const stored = localStorage.getItem('permissionConfig');
-    return stored ? JSON.parse(stored) : {
-      rolePermissions: DEFAULT_ROLE_PERMISSIONS,
-      userPermissions: {}
-    };
+  const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>({
+    rolePermissions: DEFAULT_ROLE_PERMISSIONS,
+    userPermissions: {}
   });
 
   // Get all users (mock + registered)
   const getAllUsersIncludingRegistered = useCallback((): User[] => {
-    const registeredUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const registered = registeredUsers ? JSON.parse(registeredUsers) : [];
-    return [...MOCK_USERS, ...registered];
+    return [...MOCK_USERS];
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('permissionConfig', JSON.stringify(permissionConfig));
+    // No localStorage usage
   }, [permissionConfig]);
 
-  const register = useCallback(async (userData: RegisterData): Promise<boolean> => {
-    setLoading(true);
-    
+  const register = async (data: RegisterData): Promise<boolean> => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await axios.post<User>('http://localhost:3001/api/auth/signup', data);
+      const newUser = response.data;
       
-      // Check if email already exists
-      const allUsers = getAllUsersIncludingRegistered();
-      if (allUsers.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-        throw new Error('Email already exists');
-      }
-
-      const newUser: User = {
-        id: crypto.randomUUID(),
-        ...userData,
-        profileImg: '',
+      // IMPORTANT: Ensure the role is set correctly
+      const userWithCorrectRole = {
+        ...newUser,
+        role: 'doctor_owner' as UserRole // Force the role to be doctor_owner
       };
-
-      // Save to registered users
-      const registeredUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const registered = registeredUsers ? JSON.parse(registeredUsers) : [];
-      registered.push(newUser);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(registered));
-
-      // Auto-login the new user
-      setUser(newUser);
-      localStorage.setItem('currentUser', JSON.stringify(newUser));
-
-      return true;
-    } catch (err) {
-      console.error('Registration error:', err);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [getAllUsersIncludingRegistered]);
-
-  const login = useCallback(async (email: string, password: string, clinicId?: string, role?: UserRole): Promise<boolean> => {
-    setLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const allUsers = getAllUsersIncludingRegistered();
-      const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
       
-      if (foundUser && password === 'password123') {
-        const userWithRole = role ? { ...foundUser, role } : foundUser;
-        const userWithClinic = clinicId ? { ...userWithRole, clinicId } : userWithRole;
-        
-        setUser(userWithClinic);
-        localStorage.setItem('currentUser', JSON.stringify(userWithClinic));
-        
-        if (clinicId) {
-          localStorage.setItem('selectedClinicId', clinicId);
-        }
-        
-        return true;
-      }
-
+      setUser(userWithCorrectRole);
+      console.log('✅ User registered with role:', userWithCorrectRole.role);
+      return true;
+    } catch (error) {
+      console.error("❌ Registration failed:", error);
       return false;
-    } catch (err) {
-      console.error('Login error:', err);
-      return false;
-    } finally {
-      setLoading(false);
     }
-  }, [getAllUsersIncludingRegistered]);
+  };
 
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('selectedClinicId');
-  }, []);
+  const login = async (email: string, password: string, clinicId?: string, role?: UserRole): Promise<boolean> => {
+    try {
+      const response = await axios.post<User>('http://localhost:3001/api/auth/login', { email, password, clinicId });
+      const loggedInUser = response.data;
 
+      setUser(loggedInUser);
+      console.log('✅ User logged in with role:', loggedInUser.role);
+      return true;
+    } catch (error) {
+      console.error("❌ Login failed:", error);
+      return false;
+    }
+  };
+
+  // Helper to check if user has a specific permission
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user) return false;
-    
-    if (user.role === 'owner-doctor') return true;
 
-    const userPerms = permissionConfig.userPermissions[user.id];
-    if (userPerms?.denied.includes(permission)) return false;
+    // doctor_owner has all permissions
+    if (user.role === 'doctor_owner') return true;
 
-    if (userPerms?.granted.includes(permission)) return true;
-
+    // Check role permissions
     const rolePerms = permissionConfig.rolePermissions[user.role] || [];
-    return rolePerms.includes(permission);
+    if (rolePerms.includes(permission)) return true;
+
+    // Check user-specific permissions
+    const userPerms = permissionConfig.userPermissions[user.id] || { granted: [], denied: [] };
+    if (userPerms.denied.includes(permission)) return false;
+    if (userPerms.granted.includes(permission)) return true;
+
+    return false;
   }, [user, permissionConfig]);
 
   const canAccess = useCallback((resource: string): boolean => {
-    if (!user) return false;
+    if (!user) {
+      console.log('❌ No user found for resource access check');
+      return false;
+    }
     
-    if (user.role === 'owner-doctor') return true;
-
+    console.log('🔍 Checking access to resource:', resource, 'for user role:', user.role);
+    
+    // IMPORTANT: doctor_owner should have access to everything
+    if (user.role === 'doctor_owner') {
+      console.log('✅ doctor_owner has access to all resources');
+      return true;
+    }
+    
     const resourcePermissionMap: { [key: string]: string[] } = {
       'patients': ['view_patients', 'manage_patients'],
       'appointments': ['view_appointments', 'manage_appointments'],
@@ -142,9 +105,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       'ai-assistant': ['access_ai_assistant'],
       'schedule': ['access_schedule'],
     };
-
+    
     const requiredPermissions = resourcePermissionMap[resource] || [];
-    return requiredPermissions.some(permission => hasPermission(permission));
+    const hasAccess = requiredPermissions.some(permission => hasPermission(permission));
+    
+    console.log('🎯 Can access resource:', hasAccess);
+    return hasAccess;
   }, [user, hasPermission]);
 
   const updateRolePermissions = useCallback((role: UserRole, permissions: string[]) => {
@@ -178,6 +144,11 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const getAllUsers = useCallback((): User[] => {
     return getAllUsersIncludingRegistered();
   }, [getAllUsersIncludingRegistered]);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    console.log('✅ User logged out');
+  }, []);
 
   return (
     <AuthContext.Provider value={{

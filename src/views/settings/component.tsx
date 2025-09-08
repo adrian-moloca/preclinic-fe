@@ -26,7 +26,7 @@ export const Settings: FC = () => {
       icon: <BusinessIcon />,
       path: "/settings/clinic-information",
     },
-    ...(user?.role === 'owner-doctor' ? [{
+    ...(user?.role === 'doctor_owner' ? [{
       title: "Permission Management",
       description: "Manage role permissions and individual user access",
       icon: <Security />,

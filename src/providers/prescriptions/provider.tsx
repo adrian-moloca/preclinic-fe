@@ -2,67 +2,78 @@ import React, {
   FC,
   ReactNode,
   useState,
-  useEffect,
   useCallback,
 } from "react";
 import { Prescription } from "./types";
 import { PrescriptionContext } from "./context";
+import axios from "axios";
 
-const LOCAL_STORAGE_KEY = "prescription";
+// const LOCAL_STORAGE_KEY = "prescription";
 
 export const PrescriptionProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [prescription, setPrescription] = useState<{ [key: string]: Prescription }>({});
 
- useEffect(() => {
-  const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (stored) {
-    try {
-      setPrescription(JSON.parse(stored));
-    } catch {
-      console.warn("Failed to parse prescriptions from localStorage");
-    }
+//  useEffect(() => {
+//   const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+//   if (stored) {
+//     try {
+//       setPrescription(JSON.parse(stored));
+//     } catch {
+//       console.warn("Failed to parse prescriptions from localStorage");
+//     }
+//   }
+// }, []);
+
+// useEffect(() => {
+//   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(prescription));
+// }, [prescription]);
+
+const addPrescription = async (newEntry: Prescription) => {
+  try {
+    const response = await axios.post<Prescription>('/prescription', newEntry);
+    setPrescription((prev) => ({
+      ...prev,
+      [response.data.id]: response.data,
+    }));
+  } catch (error) {
+    console.error("Failed to add prescription:", error);
   }
-}, []);
+};
 
-useEffect(() => {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(prescription));
-}, [prescription]);
+const updatePrescription = async (id: string, updatedData: Partial<Prescription>) => {
+  try {
+    const existingPrescription = prescription[id];
+    if (!existingPrescription) {
+      console.error("Prescription not found:", id);
+      return;
+    }
+    
+    const updatedPrescription = { ...existingPrescription, ...updatedData };
+    
+    const response = await axios.put<Prescription>(`/prescription/${id}`, updatedPrescription);
+    setPrescription((prev) => ({
+      ...prev,
+      [id]: response.data,
+    }));
+  } catch (error) {
+    console.error("Failed to update prescription:", error);
+  }
+};
 
-const addPrescription = useCallback((prescription: Prescription) => {
-  setPrescription((prev) => ({
-    ...prev,
-    [prescription.id]: prescription,
-  }));
-}, []);
-
-
-  const updatePrescription = useCallback((id: string, updatedData: Partial<Prescription>) => {
-    setPrescription((prev) => {
-      const existing = prev[id];
-      if (!existing) {
-        console.warn("❌ Prescription not found:", id);
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [id]: {
-          ...existing,
-          ...updatedData,
-        },
-      };
-    });
-  }, []);
-
-  const deletePrescription = useCallback((id: string) => {
-    setPrescription((prev) => {
-      const { [id]: _, ...rest } = prev;
-      return rest;
-    });
-  }, []);
+const deletePrescription = async (id: string) => {
+    try {
+      await axios.delete(`/prescription/${id}`);
+      setPrescription((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+    } catch (error) {
+      console.error("Failed to delete prescription:", error);
+    } 
+  };
 
   const resetPrescription = useCallback(() => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
     setPrescription({});
   }, []);
 

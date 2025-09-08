@@ -16,7 +16,7 @@ export const LogoWrapper = styled(Box)<BoxProps>({
 });
 
 export const CardWrapper = styled(Box)<BoxProps>(({ theme }) => ({
-    width: "400px",
+    width: "100%",
     backgroundColor: theme.palette.background.paper, 
     color: theme.palette.text.primary, 
     borderRadius: 3,

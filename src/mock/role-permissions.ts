@@ -1,5 +1,5 @@
 export const ROLE_PERMISSIONS = {
-  'owner-doctor': [
+  'doctor_owner': [
     'view_dashboard',
     'manage_patients',
     'manage_appointments',

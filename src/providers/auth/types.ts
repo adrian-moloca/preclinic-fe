@@ -1,4 +1,4 @@
-export type UserRole = 'owner-doctor' | 'doctor' | 'assistant';
+export type UserRole = 'doctor_owner' | 'doctor' | 'assistant';
 
 export interface User {
   id: string;
@@ -29,11 +29,22 @@ export interface PermissionConfig {
 }
 
 export interface RegisterData {
+  profileImg?: string;
   firstName: string;
   lastName: string;
+  phoneNumber: string;
   email: string;
-  password: string;
+  birthDate: string;
+  gender: string;
+  bloodGroup: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  zipCode: string;
   role: UserRole;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface AuthContextType {

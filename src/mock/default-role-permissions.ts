@@ -1,19 +1,41 @@
-import { RolePermissions } from "../providers/auth/types";
-import { ALL_PERMISSIONS } from "./all-permissions";
 
-export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
-  'owner-doctor': ALL_PERMISSIONS,
-  'doctor': [
-    'view_dashboard', 'view_patients', 'manage_patients',
-    'view_appointments', 'manage_appointments',
-    'view_prescriptions', 'manage_prescriptions',
-    'view_products', 'request_leaves', 'view_leaves',
-    'view_reviews', 'access_schedule', 'access_ai_assistant'
+export const DEFAULT_ROLE_PERMISSIONS = {
+  doctor_owner: [
+    'view_patients',
+    'manage_patients',
+    'view_appointments', 
+    'manage_appointments',
+    'view_prescriptions',
+    'manage_prescriptions',
+    'view_products',
+    'manage_products',
+    'view_leaves',
+    'request_leaves',
+    'manage_leaves',
+    'view_reviews',
+    'manage_reviews',
+    'view_settings',
+    'manage_settings',
+    'access_ai_assistant',
+    'access_schedule',
   ],
-  'assistant': [
-    'view_dashboard', 'view_patients',
-    'view_appointments', 'manage_appointments',
-    'view_prescriptions', 'view_products',
-    'request_leaves', 'view_leaves', 'view_reviews', 'access_schedule'
+  doctor: [
+    'view_patients',
+    'manage_patients',
+    'view_appointments',
+    'manage_appointments',
+    'view_prescriptions',
+    'manage_prescriptions',
+    'access_ai_assistant',
+    'access_schedule',
+  ],
+  assistant: [
+    'view_patients',
+    'view_appointments',
+    'manage_appointments',
+    'access_schedule',
+  ],
+  patient: [
+    'view_appointments',
   ],
 };
