@@ -9,49 +9,129 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const USER_STORAGE_KEY = 'preclinic_user';
+
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading,] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>({
     rolePermissions: DEFAULT_ROLE_PERMISSIONS,
     userPermissions: {}
   });
 
+  const saveUserToStorage = useCallback((userData: User) => {
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      console.log('✅ User saved to localStorage:', userData);
+    } catch (error) {
+      console.error('❌ Failed to save user to localStorage:', error);
+    }
+  }, []);
+
+  const loadUserFromStorage = useCallback((): User | null => {
+    try {
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        
+        if (!userData.role) {
+          console.log('⚠️ User loaded from storage without role, setting to doctor_owner');
+          userData.role = 'doctor_owner';
+        }
+        
+        console.log('✅ User loaded from localStorage:', userData);
+        return userData;
+      }
+    } catch (error) {
+      console.error('❌ Failed to load user from localStorage:', error);
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+    return null;
+  }, []);
+
+  const clearUserFromStorage = useCallback(() => {
+    try {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    } catch (error) {
+      console.error('❌ Failed to clear user from localStorage:', error);
+    }
+  }, []);
+
   const getAllUsersIncludingRegistered = useCallback((): User[] => {
     return [...MOCK_USERS];
   }, []);
 
   useEffect(() => {
-  }, [permissionConfig]);
+    const initializeAuth = async () => {
+      const storedUser = loadUserFromStorage();
+      if (storedUser) {
+        setUser(storedUser);
+      }
+
+      // Then try to get fresh user data from server
+      try {
+        const response = await axios.get<User>('http://localhost:3001/api/auth/me', { withCredentials: true });
+        let freshUserData = response.data;
+        
+        // IMPORTANT: Ensure server response has a role
+        if (!freshUserData.role) {
+          console.log('⚠️ Server user data missing role, setting to doctor_owner');
+          freshUserData = { ...freshUserData, role: 'doctor_owner' as UserRole };
+        }
+        
+        console.log('✅ Fresh user data from server with role:', freshUserData.role);
+        
+        setUser(freshUserData);
+        saveUserToStorage(freshUserData);
+      } catch (error: any) {
+        console.log('⚠️ Could not fetch fresh user data:', error.response?.data || error.message);
+        if (!storedUser) {
+          setUser(null);
+        }
+      }
+
+      setLoading(false);
+      setIsInitialized(true);
+    };
+
+    initializeAuth();
+  }, [loadUserFromStorage, saveUserToStorage]);
 
   const getMe = useCallback(async (): Promise<User | null> => {
     try {
       const response = await axios.get<User>('http://localhost:3001/api/auth/me', { withCredentials: true });
-      setUser(response.data);
-      return response.data;
+      let userData = response.data;
+      
+      if (!userData.role) {
+        console.log('⚠️ getMe response missing role, setting to doctor_owner');
+        userData = { ...userData, role: 'doctor_owner' as UserRole };
+      }
+      
+      setUser(userData);
+      saveUserToStorage(userData);
+      return userData;
     } catch (error: any) {
       console.log('❌ No authenticated user found:', error.response?.data || error.message);
-      setUser(null);
-      return null;
+      return user;
     }
-  }, []);
-
-  useEffect(() => {
-    getMe();
-  }, [getMe]);
+  }, [user, saveUserToStorage]);
 
   const register = async (data: RegisterData): Promise<boolean> => {
     try {
       const response = await axios.post<User>('http://localhost:3001/api/auth/signup', data, { withCredentials: true });
-      const newUser = response.data;
+      let newUser = response.data;
 
-      const userWithCorrectRole = {
-        ...newUser,
-        role: 'doctor_owner' as UserRole
-      };
+      // IMPORTANT: Ensure registered user has a role
+      if (!newUser.role) {
+        console.log('⚠️ Registration response missing role, setting to doctor_owner');
+        newUser = { ...newUser, role: 'doctor_owner' as UserRole };
+      }
 
-      setUser(userWithCorrectRole);
+      setUser(newUser);
+      saveUserToStorage(newUser);
+      
       return true;
     } catch (error: any) {
       console.error("❌ Registration failed:", error.response?.data || error.message);
@@ -59,46 +139,82 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-const login = async (email: string, password: string): Promise<boolean> => {
-  try {
-    const response = await axios.post<User>(
-      'http://localhost:3001/api/auth/login',
-      { email, password },
-      { withCredentials: true }
-    );
-    const loggedInUser = response.data;
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      console.log('🚀 Making login request for:', email);
+      const response = await axios.post<User>(
+        'http://localhost:3001/api/auth/login',
+        { email, password },
+        { withCredentials: true }
+      );
+      let loggedInUser = response.data;
 
-    setUser(loggedInUser);
-    return true;
-  } catch (error: any) {
-    if (error.response) {
-      // Log everything returned by backend
-      console.error("❌ Login failed:", {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
-      });
-    } else if (error.request) {
-      console.error("❌ No response received:", error.request);
-    } else {
-      console.error("❌ Error setting up login request:", error.message);
+      // IMPORTANT: Ensure logged in user has a role
+      if (!loggedInUser.role) {
+        loggedInUser = { ...loggedInUser, role: 'doctor_owner' as UserRole };
+      }
+
+      console.log('✅ Login successful with role:', loggedInUser.role);
+
+      setUser(loggedInUser);
+      saveUserToStorage(loggedInUser);
+      
+      return true;
+    } catch (error: any) {
+      if (error.response) {
+        console.error("❌ Login failed:", {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers,
+        });
+      } else if (error.request) {
+        console.error("❌ No response received:", error.request);
+      } else {
+        console.error("❌ Error setting up login request:", error.message);
+      }
+      return false;
     }
-    return false;
-  }
-};
+  };
 
+  const logout = useCallback(async () => {
+    try {
+      // Try to logout from server
+      await axios.post('http://localhost:3001/api/auth/logout', {}, { withCredentials: true });
+    } catch (error) {
+      console.log('⚠️ Server logout failed, continuing with local logout');
+    }
+    
+    setUser(null);
+    clearUserFromStorage();
+  }, [clearUserFromStorage]);
 
   const hasPermission = useCallback((permission: string): boolean => {
-    if (!user) return false;
+    if (!user) {
+      console.log('❌ No user found for permission check:', permission);
+      return false;
+    }
 
-    if (user.role === 'doctor_owner') return true;
+    if (!user.role) {
+      console.log('❌ User has no role defined for permission check:', permission);
+      return false;
+    }
+
+    if (user.role === 'doctor_owner') {
+      return true;
+    }
 
     const rolePerms = permissionConfig.rolePermissions[user.role] || [];
-    if (rolePerms.includes(permission)) return true;
+    if (rolePerms.includes(permission)) {
+      return true;
+    }
 
     const userPerms = permissionConfig.userPermissions[user.id] || { granted: [], denied: [] };
-    if (userPerms.denied.includes(permission)) return false;
-    if (userPerms.granted.includes(permission)) return true;
+    if (userPerms.denied.includes(permission)) {
+      return false;
+    }
+    if (userPerms.granted.includes(permission)) {
+      return true;
+    }
 
     return false;
   }, [user, permissionConfig]);
@@ -109,8 +225,13 @@ const login = async (email: string, password: string): Promise<boolean> => {
       return false;
     }
 
-    console.log('🔍 Checking access to resource:', resource, 'for user role:', user.role);
+    if (!user.role) {
+      console.log('❌ User has no role defined for resource access check');
+      return false;
+    }
 
+
+    // doctor_owner has access to everything
     if (user.role === 'doctor_owner') {
       return true;
     }
@@ -125,6 +246,14 @@ const login = async (email: string, password: string): Promise<boolean> => {
       'settings': ['view_settings', 'manage_settings'],
       'ai-assistant': ['access_ai_assistant'],
       'schedule': ['access_schedule'],
+      'dashboard': ['view_dashboard'],
+      'doctors': ['view_doctors', 'manage_doctors'],
+      'assistents': ['view_assistents', 'manage_assistents'],
+      'services': ['view_services', 'manage_services'],
+      'departments': ['view_departments', 'manage_departments'],
+      'payroll': ['view_payroll', 'manage_payroll'],
+      'invoices': ['view_invoices', 'manage_invoices'],
+      'chat': ['view_chat'],
     };
 
     const requiredPermissions = resourcePermissionMap[resource] || [];
@@ -165,10 +294,20 @@ const login = async (email: string, password: string): Promise<boolean> => {
     return getAllUsersIncludingRegistered();
   }, [getAllUsersIncludingRegistered]);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    console.log('✅ User logged out');
-  }, []);
+  if (!isInitialized) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{
