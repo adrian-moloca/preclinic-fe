@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useProfileContext } from "../../providers/profile";
+import { useAuthContext } from "../../providers/auth";
 
 export const AvatarMenu: FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -24,7 +25,9 @@ export const AvatarMenu: FC = () => {
   const navigate = useNavigate();
   
   const { profiles } = useProfileContext();
-  const currentProfile = Object.values(profiles)[0];
+  const { user, logout } = useAuthContext();
+  
+  const currentProfile = user || Object.values(profiles)[0];
 
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -44,10 +47,35 @@ export const AvatarMenu: FC = () => {
     handleClose();
   };
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  const handleLogout = async () => {
+    try {
+       logout();
+      navigate("/sign-in");
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      navigate("/sign-in");
+    }
     handleClose();
   };
+
+  const displayName = currentProfile 
+    ? `${currentProfile.firstName || ''} ${currentProfile.lastName || ''}`.trim() || 'User'
+    : 'User';
+  const displayEmail = currentProfile?.email || '';
+
+  const getProfileImage = () => {
+    if (!currentProfile) return undefined;
+    
+    const imageFields = ['profileImg', 'profileImage', 'image', 'avatar'];
+    for (const field of imageFields) {
+      if (field in currentProfile && typeof (currentProfile as any)[field] === 'string') {
+        return (currentProfile as any)[field];
+      }
+    }
+    return undefined;
+  };
+
+  const profileImage = getProfileImage();
 
   return (
     <Box>
@@ -60,10 +88,12 @@ export const AvatarMenu: FC = () => {
         aria-expanded={open ? "true" : undefined}
       >
         <Avatar
-          src={typeof currentProfile?.image === "string" ? currentProfile.image : undefined}
-          alt={currentProfile ? `${currentProfile.firstName} ${currentProfile.lastName}` : "Avatar"}
+          src={profileImage}
+          alt={displayName}
           sx={{ width: 36, height: 36 }}
-        />
+        >
+          {!profileImage && displayName.charAt(0).toUpperCase()}
+        </Avatar>
       </IconButton>
 
       <Menu
@@ -104,10 +134,10 @@ export const AvatarMenu: FC = () => {
         {currentProfile && (
           <Box sx={{ px: 2, py: 1, minWidth: 200 }}>
             <Typography variant="subtitle2" fontWeight={600}>
-              {`${currentProfile.firstName} ${currentProfile.lastName}`}
+              {displayName}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {currentProfile.email}
+              {displayEmail}
             </Typography>
           </Box>
         )}

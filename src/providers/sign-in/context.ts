@@ -6,13 +6,14 @@ export const SignInContext = createContext<ISignInContext>({
     signInHistory: {},
     availableCabinets: [],
     availableRoles: [],
-    setSignInData: () => {},
+    setSignInData: () => { },
     addSignIn: async () => false,
     validateSignInData: () => ({ isValid: false, errors: [] }),
-    clearSignInData: () => {},
+    clearSignInData: () => { },
     getLastSignInForEmail: () => undefined,
-    resetSignInHistory: () => {},
-    setSignInHistory: () => {},
+    resetSignInHistory: () => { },
+    setSignInHistory: () => { },
+    saveSignInInfo: () => { },
 });
 
 export const useSignInContext = () => useContext(SignInContext);

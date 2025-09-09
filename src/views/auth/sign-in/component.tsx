@@ -29,9 +29,10 @@ import { CustomPaper } from "../../settings/components/general-settings/componen
 
 export const SignIn: FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuthContext();
+  const { login, isAuthenticated, user } = useAuthContext();
   const { 
     getLastSignInForEmail,
+    saveSignInInfo,
   } = useSignInContext();
   
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +54,12 @@ export const SignIn: FC = () => {
   };
 
   useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate("/");
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  useEffect(() => {
     if (email && password && validateEmail(email)) {
       setIsButtonDisabled(false);
     } else {
@@ -70,47 +77,50 @@ export const SignIn: FC = () => {
   }, [email, getLastSignInForEmail]);
 
   const handleSubmit = async () => {
-  let hasError = false;
-  setError("");
+    let hasError = false;
+    setError("");
 
-  // validate email
-  if (!email) {
-    setEmailError("Email is required");
-    hasError = true;
-  } else if (!validateEmail(email)) {
-    setEmailError("Enter a valid email");
-    hasError = true;
-  } else {
-    setEmailError("");
-  }
-
-  // validate password
-  if (!password) {
-    setPasswordError("Password is required");
-    hasError = true;
-  } else {
-    setPasswordError("");
-  }
-
-  if (!hasError) {
-    setIsLoading(true);
-    try {
-      const success = await login(email, password);
-
-      if (success) {
-        navigate("/");
-      } else {
-        setError("Invalid credentials. Please check your email and password.");
-      }
-    } catch (err: any) {
-      setError(err?.message || "Login failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    if (!email) {
+      setEmailError("Email is required");
+      hasError = true;
+    } else if (!validateEmail(email)) {
+      setEmailError("Enter a valid email");
+      hasError = true;
+    } else {
+      setEmailError("");
     }
-  }
-};
 
-;
+    if (!password) {
+      setPasswordError("Password is required");
+      hasError = true;
+    } else {
+      setPasswordError("");
+    }
+
+    if (!hasError) {
+      setIsLoading(true);
+      try {
+        const success = await login(email, password);
+
+        if (success) {
+          
+          if (rememberMe) {
+            saveSignInInfo(email, { rememberMe: true });
+          }
+          
+          setTimeout(() => {
+            navigate("/");
+          }, 100);
+        } else {
+          setError("Invalid credentials. Please check your email and password.");
+        }
+      } catch (err: any) {
+        setError(err?.message || "Login failed. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   return (
     <SignInWrapper>

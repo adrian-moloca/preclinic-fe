@@ -1,4 +1,6 @@
-export const DEFAULT_ROLE_PERMISSIONS = {
+import { UserRole } from '../providers/auth/types';
+
+export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   doctor_owner: [
     'view_dashboard',
     'access_schedule',
@@ -54,9 +56,5 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'view_appointments',
     'manage_appointments',
     'view_chat',
-  ],
-  patient: [
-    'view_dashboard',
-    'view_appointments',
   ],
 };

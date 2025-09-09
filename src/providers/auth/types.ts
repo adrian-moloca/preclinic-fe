@@ -7,8 +7,16 @@ export interface User {
   lastName: string;
   role: UserRole;
   profileImg?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  phoneNumber?: string;
+  birthDate?: string
   customPermissions?: string[]; 
   disabledPermissions?: string[]; 
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
   clinicId?: string; // Add clinic association
 }
 

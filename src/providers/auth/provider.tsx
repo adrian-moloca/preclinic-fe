@@ -1,12 +1,25 @@
-import { FC, ReactNode, useState, useCallback, useEffect } from 'react';
+import { FC, ReactNode, useState, useCallback, useEffect, useRef } from 'react';
 import { AuthContext } from './context';
 import { User, UserRole, PermissionConfig, RegisterData } from './types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../../mock/default-role-permissions';
 import { MOCK_USERS } from '../../mock/users';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+
+// Configure axios defaults
+axios.defaults.baseURL = 'http://localhost:3001';
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+// Type for API responses that might wrap user data
+interface ApiResponse<T = any> {
+  user?: T;
+  data?: T;
+  success?: boolean;
+  message?: string;
 }
 
 const USER_STORAGE_KEY = 'preclinic_user';
@@ -15,16 +28,24 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
-
+  
+  // Use ref to prevent infinite loops in useCallback dependencies
+  const userRef = useRef<User | null>(null);
+  
   const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>({
     rolePermissions: DEFAULT_ROLE_PERMISSIONS,
     userPermissions: {}
   });
 
+  // Update ref whenever user changes
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const saveUserToStorage = useCallback((userData: User) => {
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
-      console.log('✅ User saved to localStorage:', userData);
+      console.log('✅ User saved to localStorage:', userData.email);
     } catch (error) {
       console.error('❌ Failed to save user to localStorage:', error);
     }
@@ -34,14 +55,21 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
       if (storedUser) {
-        const userData = JSON.parse(storedUser);
-
+        const userData = JSON.parse(storedUser) as User;
+        
+        // Validate user data structure
+        if (!userData.id || !userData.email) {
+          console.log('⚠️ Invalid user data in storage, clearing...');
+          localStorage.removeItem(USER_STORAGE_KEY);
+          return null;
+        }
+        
         if (!userData.role) {
           console.log('⚠️ User loaded from storage without role, setting to doctor_owner');
           userData.role = 'doctor_owner';
         }
-
-        console.log('✅ User loaded from localStorage:', userData);
+        
+        console.log('✅ User loaded from localStorage:', userData.email);
         return userData;
       }
     } catch (error) {
@@ -54,102 +82,230 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const clearUserFromStorage = useCallback(() => {
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
+      console.log('✅ User cleared from localStorage');
     } catch (error) {
       console.error('❌ Failed to clear user from localStorage:', error);
     }
   }, []);
 
-  const getAllUsersIncludingRegistered = useCallback((): User[] => {
-    return [...MOCK_USERS];
-  }, []);
-
-  const getMe = useCallback(async (): Promise<User | null> => {
+  // Helper function to extract user data from different response formats
+  const extractUserFromResponse = useCallback((response: AxiosResponse<User | ApiResponse<User>>): User | null => {
     try {
-      const response = await axios.get<User>('http://localhost:3001/api/auth/me', { withCredentials: true });
-      const userData = response.data;
-
-      // Ensure role exists
-      const finalUser = { ...userData, role: userData.role || 'doctor_owner' as UserRole };
-      setUser(finalUser);
-      saveUserToStorage(finalUser);
-      return finalUser;
-    } catch (error: any) {
-      console.log('❌ No authenticated user found:', error.response?.data || error.message);
+      const data = response.data;
+      
+      // If data is already a User object
+      if (data && typeof data === 'object' && 'id' in data && 'email' in data) {
+        return data as User;
+      }
+      
+      // If data is wrapped in an API response object
+      const apiResponse = data as ApiResponse<User>;
+      if (apiResponse.user && typeof apiResponse.user === 'object') {
+        return apiResponse.user;
+      }
+      
+      if (apiResponse.data && typeof apiResponse.data === 'object') {
+        return apiResponse.data;
+      }
+      
+      console.error('❌ Invalid user data format from server:', data);
+      return null;
+    } catch (error) {
+      console.error('❌ Error extracting user from response:', error);
       return null;
     }
-  }, [saveUserToStorage]);
+  }, []);
 
-  const register = async (data: RegisterData): Promise<boolean> => {
+  // FIXED: Removed user dependency to prevent infinite loops
+  const getMe = useCallback(async (): Promise<User | null> => {
     try {
-      const response = await axios.post<User>('http://localhost:3001/api/auth/signup', data, { withCredentials: true });
-      const newUser = { ...response.data, role: response.data.role || 'doctor_owner' as UserRole };
-      setUser(newUser);
-      saveUserToStorage(newUser);
+      console.log('🔍 Fetching current user from server...');
+      const response = await axios.get<User | ApiResponse<User>>('/api/auth/me');
+      
+      const userData = extractUserFromResponse(response);
+      
+      if (!userData) {
+        console.log('❌ No valid user data from server');
+        return userRef.current; // Return current user from ref
+      }
+      
+      // Ensure user has required fields
+      const completeUserData: User = {
+        ...userData,
+        role: userData.role || 'doctor_owner' as UserRole
+      };
+      
+      console.log('✅ Fresh user data from server:', completeUserData.email);
+      setUser(completeUserData);
+      saveUserToStorage(completeUserData);
+      return completeUserData;
+    } catch (error: any) {
+      console.log('❌ Failed to fetch user from server:', error.response?.status || error.message);
+      // Return current user from ref instead of state to avoid dependency issues
+      return userRef.current;
+    }
+  }, [saveUserToStorage, extractUserFromResponse]);
+
+  // Initialize user from localStorage and attempt server sync
+  useEffect(() => {
+    const initializeAuth = async () => {
+      console.log('🔄 Initializing auth...');
+      setLoading(true);
+      
+      try {
+        const storedUser = loadUserFromStorage();
+        if (storedUser) {
+          setUser(storedUser);
+          console.log('✅ User restored from localStorage:', storedUser.email);
+          
+          // Try to sync with server in background
+          try {
+            console.log('🔄 Attempting to sync with server...');
+            await getMe(); // This will update user state if successful
+          } catch (error: any) {
+            console.log('⚠️ Failed to sync with server, using cached user:', error.response?.status);
+            // Keep the cached user if server sync fails
+          }
+        } else {
+          console.log('ℹ️ No stored user found');
+        }
+      } catch (error) {
+        console.error('❌ Error during auth initialization:', error);
+      } finally {
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    };
+
+    // Only run once when component mounts
+    if (!isInitialized) {
+      initializeAuth();
+    }
+  }, [isInitialized, loadUserFromStorage, getMe]);
+
+  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
+    try {
+      console.log('🚀 Making registration request for:', data.email);
+      const response = await axios.post<User | ApiResponse<User>>('/api/auth/signup', data);
+      
+      const newUser = extractUserFromResponse(response);
+      
+      if (!newUser) {
+        console.error('❌ Invalid registration response');
+        return false;
+      }
+
+      const completeUserData: User = {
+        ...newUser,
+        role: newUser.role || 'doctor_owner' as UserRole
+      };
+
+      console.log('✅ Registration successful:', completeUserData.email);
+
+      setUser(completeUserData);
+      saveUserToStorage(completeUserData);
+      
       return true;
     } catch (error: any) {
       console.error("❌ Registration failed:", error.response?.data || error.message);
       return false;
     }
-  };
+  }, [saveUserToStorage, extractUserFromResponse]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('🚀 Sending login request', { email, password });
-      const response = await axios.post<User>(
-        'http://localhost:3001/api/auth/login',
-        { email, password },
-        { withCredentials: true }
-      );
-      const loggedInUser = { ...response.data, role: response.data.role || 'doctor_owner' as UserRole };
-      console.log('✅ Login successful with role:', loggedInUser.role);
+      console.log('🚀 Making login request for:', email);
+      
+      // Try both signin and login endpoints
+      let response: AxiosResponse<User | ApiResponse<User>>;
+      
+      try {
+        response = await axios.post<User | ApiResponse<User>>('/api/auth/signin', { email, password });
+      } catch (signinError: any) {
+        console.log('⚠️ /signin failed, trying /login:', signinError.response?.status);
+        response = await axios.post<User | ApiResponse<User>>('/api/auth/login', { email, password });
+      }
+      
+      const loggedInUser = extractUserFromResponse(response);
+      
+      if (!loggedInUser) {
+        console.error('❌ Invalid login response');
+        return false;
+      }
 
-      setUser(loggedInUser);
-      saveUserToStorage(loggedInUser);
+      const completeUserData: User = {
+        ...loggedInUser,
+        role: loggedInUser.role || 'doctor_owner' as UserRole
+      };
 
+      console.log('✅ Login successful:', completeUserData.email);
+
+      setUser(completeUserData);
+      saveUserToStorage(completeUserData);
+      
       return true;
     } catch (error: any) {
-      if (error.response) {
-        console.error("❌ Login failed:", {
-          status: error.response.status,
-          data: error.response.data,
-        });
-      } else if (error.request) {
-        console.error("❌ No response received:", error.request);
-      } else {
-        console.error("❌ Error setting up login request:", error.message);
-      }
+      console.error("❌ Login failed:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       return false;
     }
-  };
+  }, [saveUserToStorage, extractUserFromResponse]);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
-      await axios.post('http://localhost:3001/api/auth/logout', {}, { withCredentials: true });
-    } catch (error) {
-      console.log('⚠️ Server logout failed, continuing with local logout');
+      // Attempt server logout
+      await axios.post('/api/auth/logout', {});
+      console.log('✅ Server logout successful');
+    } catch (error: any) {
+      console.log('⚠️ Server logout failed, continuing with local logout:', error.response?.status);
     }
-
+    
+    // Always clear local state and storage
     setUser(null);
     clearUserFromStorage();
+    console.log('✅ User logged out locally');
   }, [clearUserFromStorage]);
 
   const hasPermission = useCallback((permission: string): boolean => {
-    if (!user || !user.role) return false;
-    if (user.role === 'doctor_owner') return true;
+    const currentUser = userRef.current;
+    if (!currentUser || !currentUser.role) {
+      return false;
+    }
 
-    const rolePerms = permissionConfig.rolePermissions[user.role] || [];
-    if (rolePerms.includes(permission)) return true;
+    // doctor_owner has all permissions
+    if (currentUser.role === 'doctor_owner') {
+      return true;
+    }
 
-    const userPerms = permissionConfig.userPermissions[user.id] || { granted: [], denied: [] };
-    if (userPerms.denied.includes(permission)) return false;
-    if (userPerms.granted.includes(permission)) return true;
+    const rolePerms = permissionConfig.rolePermissions[currentUser.role] || [];
+    if (rolePerms.includes(permission)) {
+      return true;
+    }
+
+    const userPerms = permissionConfig.userPermissions[currentUser.id] || { granted: [], denied: [] };
+    if (userPerms.denied.includes(permission)) {
+      return false;
+    }
+    if (userPerms.granted.includes(permission)) {
+      return true;
+    }
 
     return false;
-  }, [user, permissionConfig]);
+  }, [permissionConfig]);
 
   const canAccess = useCallback((resource: string): boolean => {
-    if (!user || !user.role) return false;
-    if (user.role === 'doctor_owner') return true;
+    const currentUser = userRef.current;
+    if (!currentUser || !currentUser.role) {
+      return false;
+    }
+
+    // doctor_owner has access to everything
+    if (currentUser.role === 'doctor_owner') {
+      return true;
+    }
 
     const resourcePermissionMap: { [key: string]: string[] } = {
       'patients': ['view_patients', 'manage_patients'],
@@ -173,19 +329,25 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
 
     const requiredPermissions = resourcePermissionMap[resource] || [];
     return requiredPermissions.some(permission => hasPermission(permission));
-  }, [user, hasPermission]);
+  }, [hasPermission]);
 
   const updateRolePermissions = useCallback((role: UserRole, permissions: string[]) => {
     setPermissionConfig(prev => ({
       ...prev,
-      rolePermissions: { ...prev.rolePermissions, [role]: permissions }
+      rolePermissions: {
+        ...prev.rolePermissions,
+        [role]: permissions
+      }
     }));
   }, []);
 
   const updateUserPermissions = useCallback((userId: string, granted: string[], denied: string[]) => {
     setPermissionConfig(prev => ({
       ...prev,
-      userPermissions: { ...prev.userPermissions, [userId]: { granted, denied } }
+      userPermissions: {
+        ...prev.userPermissions,
+        [userId]: { granted, denied }
+      }
     }));
   }, []);
 
@@ -198,22 +360,8 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   }, [permissionConfig]);
 
   const getAllUsers = useCallback((): User[] => {
-    return getAllUsersIncludingRegistered();
-  }, [getAllUsersIncludingRegistered]);
-
-  // Initialize auth state on app start
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const storedUser = loadUserFromStorage();
-      if (storedUser) setUser(storedUser);
-
-      await getMe(); // refresh user from server if session exists
-      setLoading(false);
-      setIsInitialized(true);
-    };
-
-    initializeAuth();
-  }, [loadUserFromStorage, getMe]);
+    return [...MOCK_USERS];
+  }, []);
 
   if (!isInitialized) {
     return (

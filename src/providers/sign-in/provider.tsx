@@ -23,7 +23,6 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const availableRoles = React.useMemo(() => ["doctor_owner", "doctor", "assistant"], []);
 
   useEffect(() => {
-    // Load current sign-in data
     const storedCurrent = localStorage.getItem(LOCAL_STORAGE_KEY_CURRENT);
     if (storedCurrent) {
       try {
@@ -33,7 +32,6 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
     }
 
-    // Load sign-in history
     const storedHistory = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (storedHistory) {
       try {
@@ -90,7 +88,6 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const validation = validateSignInData(signInData);
       if (!validation.isValid) {
-        console.warn("❌ Sign-in validation failed:", validation.errors);
         return false;
       }
 
@@ -108,11 +105,9 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setSignInDataState(newSignIn);
       }
 
-      console.log("✅ Sign-in data saved:", newSignIn.email);
       return true;
 
     } catch (error) {
-      console.error("❌ Sign-in failed:", error);
       return false;
     }
   }, [validateSignInData]);
@@ -139,6 +134,23 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSignInDataState(null);
   }, []);
 
+  const saveSignInInfo = useCallback((email: string, info: { rememberMe: boolean }) => {
+    const lastSignIn = getLastSignInForEmail(email);
+    if (lastSignIn) {
+      const updatedSignIn = { ...lastSignIn, rememberMe: info.rememberMe };
+      setSignInHistory((prev) => ({
+        ...prev,
+        [updatedSignIn.id]: updatedSignIn,
+      }));
+      setSignInDataState(updatedSignIn);
+      localStorage.setItem(LOCAL_STORAGE_KEY_CURRENT, JSON.stringify(updatedSignIn));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+        ...signInHistory,
+        [updatedSignIn.id]: updatedSignIn,
+      }));
+    }
+  }, [signInHistory, getLastSignInForEmail]);
+
   return (
     <SignInContext.Provider
       value={{
@@ -153,6 +165,7 @@ export const SignInProvider: FC<{ children: ReactNode }> = ({ children }) => {
         getLastSignInForEmail,
         resetSignInHistory,
         setSignInHistory,
+        saveSignInInfo,
       }}
     >
       {children}

@@ -12,6 +12,7 @@ export interface ISignInContext {
     signInHistory: Record<string, ISignIn>;
     availableCabinets: string[];
     availableRoles: string[];
+    saveSignInInfo: (email: string, info: { rememberMe: boolean }) => void;
     setSignInData: (data: ISignIn) => void;
     addSignIn: (signIn: Omit<ISignIn, 'id'>) => Promise<boolean>;
     validateSignInData: (data: Partial<ISignIn>) => { isValid: boolean; errors: string[] };
