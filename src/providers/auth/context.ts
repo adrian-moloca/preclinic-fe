@@ -10,6 +10,7 @@ export const AuthContext = createContext<AuthContextType>({
   hasPermission: () => false,
   canAccess: () => false,
   updateRolePermissions: () => {},
+  getMe: async () => null,
   updateUserPermissions: () => {},
   getRolePermissions: () => [],
   getUserPermissions: () => ({ granted: [], denied: [] }),

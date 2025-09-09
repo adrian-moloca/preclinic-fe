@@ -54,6 +54,7 @@ export interface AuthContextType {
   register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
+  getMe: () => Promise<User | null>;
   canAccess: (resource: string) => boolean;
   updateRolePermissions: (role: UserRole, permissions: string[]) => void;
   updateUserPermissions: (userId: string, granted: string[], denied: string[]) => void;

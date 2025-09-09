@@ -14,6 +14,7 @@ import {
     Select,
     MenuItem,
     Grid,
+    FormHelperText,
 } from "@mui/material";
 import { FC, useEffect, useState } from "react";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -25,6 +26,7 @@ import { RegisterWrapper, SignInSectionWrapper, TitleWrapper } from "./style";
 import { useAuthContext } from "../../../providers/auth/context";
 import { UserRole } from "../../../providers/auth/types";
 import { CustomPaper } from "../../settings/components/general-settings/components/clinic-information/style";
+import { City, Country, State } from "country-state-city";
 
 export const Register: FC = () => {
     const navigate = useNavigate();
@@ -43,8 +45,7 @@ export const Register: FC = () => {
     const [city, setCity] = useState("");
     const [address, setAddress] = useState("");
     const [zipCode, setZipCode] = useState("");
-    // eslint-disable-next-line
-    const [profileImg, setProfileImg] = useState("");
+    const [profileImg,] = useState("");
     // role defaults to "doctor_owner"
     const [role] = useState<UserRole>("doctor_owner");
     const [password, setPassword] = useState("");
@@ -72,6 +73,33 @@ export const Register: FC = () => {
 
     const handleClickShowPassword = () => setShowPassword((prev) => !prev);
     const handleClickShowConfirmPassword = () => setShowConfirmPassword((prev) => !prev);
+
+    // Country/State/City logic
+    const countries = Country.getAllCountries();
+    const selectedCountry = countries.find((c) => c.name === country);
+    const states = selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : [];
+    const selectedState = states.find((s) => s.name === state);
+    const cities = selectedState && selectedCountry
+        ? City.getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode)
+        : [];
+
+    const handleCountryChange = (countryName: string) => {
+        setCountry(countryName);
+        setState("");
+        setCity("");
+        setCountryError("");
+    };
+
+    const handleStateChange = (stateName: string) => {
+        setState(stateName);
+        setCity("");
+        setStateError("");
+    };
+
+    const handleCityChange = (cityName: string) => {
+        setCity(cityName);
+        setCityError("");
+    };
 
     const validateEmail = (value: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -136,18 +164,20 @@ export const Register: FC = () => {
                     zipCode,
                     role,
                     password,
-                    // confirmPassword
                 };
                 if (profileImg) payload.profileImg = profileImg;
 
+                console.log('🚀 Registering with payload:', payload);
                 const success = await register(payload);
 
                 if (success) {
-                    navigate('/profile/settings');
+                    console.log('✅ Registration successful, navigating to dashboard');
+                    navigate('/dashboard');
                 } else {
                     setError("Registration failed. Email or phone may already be in use.");
                 }
             } catch (err) {
+                console.error('❌ Registration error:', err);
                 setError("Registration failed. Please try again.");
             }
         }
@@ -254,12 +284,12 @@ export const Register: FC = () => {
                                     <MenuItem value="female">Female</MenuItem>
                                     <MenuItem value="other">Other</MenuItem>
                                 </Select>
+                                {genderError && (
+                                    <FormHelperText error>
+                                        {genderError}
+                                    </FormHelperText>
+                                )}
                             </FormControl>
-                            {genderError && (
-                                <Typography variant="caption" color="error">
-                                    {genderError}
-                                </Typography>
-                            )}
                         </Grid>
                     </Box>
                     <Box display="flex" gap={2} width="100%">
@@ -280,50 +310,80 @@ export const Register: FC = () => {
                                     <MenuItem value="O+">O+</MenuItem>
                                     <MenuItem value="O-">O-</MenuItem>
                                 </Select>
+                                {bloodGroupError && (
+                                    <FormHelperText error>
+                                        {bloodGroupError}
+                                    </FormHelperText>
+                                )}
                             </FormControl>
-                            {bloodGroupError && (
-                                <Typography variant="caption" color="error">
-                                    {bloodGroupError}
-                                </Typography>
-                            )}
                         </Grid>
                         <Grid>
-                            <TextField
-                                fullWidth
-                                label="Country"
-                                placeholder="Enter Country"
-                                value={country}
-                                onChange={(e) => setCountry(e.target.value)}
-                                error={!!countryError}
-                                helperText={countryError}
-                                sx={{ width: '300px' }}
-                            />
+                            <FormControl sx={{ width: "300px" }} required error={!!countryError}>
+                                <InputLabel id="country-label">Country</InputLabel>
+                                <Select
+                                    labelId="country-label"
+                                    value={country}
+                                    label="Country"
+                                    onChange={(e) => handleCountryChange(e.target.value as string)}
+                                >
+                                    {countries.map((c) => (
+                                        <MenuItem key={c.isoCode} value={c.name}>
+                                            {c.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {countryError && (
+                                    <FormHelperText error>
+                                        {countryError}
+                                    </FormHelperText>
+                                )}
+                            </FormControl>
                         </Grid>
                     </Box>
                     <Box display="flex" gap={2} width="100%">
                         <Grid>
-                            <TextField
-                                fullWidth
-                                label="State"
-                                placeholder="Enter State"
-                                value={state}
-                                onChange={(e) => setState(e.target.value)}
-                                error={!!stateError}
-                                helperText={stateError}
-                                sx={{ width: '300px' }}
-                            />
+                            <FormControl sx={{ width: "300px" }} disabled={!country} required error={!!stateError}>
+                                <InputLabel id="state-label">State/Province</InputLabel>
+                                <Select
+                                    labelId="state-label"
+                                    value={state}
+                                    label="State/Province"
+                                    onChange={(e) => handleStateChange(e.target.value as string)}
+                                >
+                                    {states.map((s) => (
+                                        <MenuItem key={s.isoCode} value={s.name}>
+                                            {s.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {stateError && (
+                                    <FormHelperText error>
+                                        {stateError}
+                                    </FormHelperText>
+                                )}
+                            </FormControl>
                         </Grid>
                         <Grid>
-                            <TextField
-                                fullWidth
-                                label="City"
-                                placeholder="Enter City"
-                                value={city}
-                                onChange={(e) => setCity(e.target.value)}
-                                error={!!cityError}
-                                helperText={cityError}
-                                sx={{ width: '300px' }}
-                            />
+                            <FormControl sx={{ width: "300px" }} disabled={!state} required error={!!cityError}>
+                                <InputLabel id="city-label">City</InputLabel>
+                                <Select
+                                    labelId="city-label"
+                                    value={city}
+                                    label="City"
+                                    onChange={(e) => handleCityChange(e.target.value as string)}
+                                >
+                                    {cities.map((c) => (
+                                        <MenuItem key={c.name} value={c.name}>
+                                            {c.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {cityError && (
+                                    <FormHelperText error>
+                                        {cityError}
+                                    </FormHelperText>
+                                )}
+                            </FormControl>
                         </Grid>
                     </Box>
                     <Box display="flex" gap={2} width="100%">
@@ -352,68 +412,72 @@ export const Register: FC = () => {
                     </Box>
                 </Grid>
 
-                <Box display="flex" gap={2} >
-                    <FormControl variant="outlined" margin="normal" error={!!passwordError} sx={{ width: "300px" }}>
-                        <InputLabel htmlFor="password">Password</InputLabel>
-                        <OutlinedInput
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            endAdornment={
-                                <InputAdornment position="end">
-                                    <IconButton onClick={handleClickShowPassword} edge="end">
-                                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            }
-                            label="Password"
-                        />
-                    </FormControl>
-                    {passwordError && (
-                        <Typography variant="caption" color="error" mt={0.5}>
-                            {passwordError}
-                        </Typography>
-                    )}
-                    {password && (
-                        <Box mt={1}>
-                            <Typography variant="caption" color={/[A-Z]/.test(password) ? "success.main" : "error"}>
-                                • Contains uppercase letter
-                            </Typography>
-                            <br />
-                            <Typography variant="caption" color={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "success.main" : "error"}>
-                                • Contains special character
-                            </Typography>
-                            <br />
-                            <Typography variant="caption" color={password.length >= 8 ? "success.main" : "error"}>
-                                • At least 8 characters
-                            </Typography>
-                        </Box>
-                    )}
+                <Box display="flex" gap={2} mt={2}>
+                    <Box sx={{ width: "300px" }}>
+                        <FormControl variant="outlined" fullWidth error={!!passwordError}>
+                            <InputLabel htmlFor="password">Password</InputLabel>
+                            <OutlinedInput
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                endAdornment={
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleClickShowPassword} edge="end">
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                }
+                                label="Password"
+                            />
+                            {passwordError && (
+                                <FormHelperText error>
+                                    {passwordError}
+                                </FormHelperText>
+                            )}
+                        </FormControl>
+                        {password && (
+                            <Box mt={1}>
+                                <Typography variant="caption" color={/[A-Z]/.test(password) ? "success.main" : "error"}>
+                                    • Contains uppercase letter
+                                </Typography>
+                                <br />
+                                <Typography variant="caption" color={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "success.main" : "error"}>
+                                    • Contains special character
+                                </Typography>
+                                <br />
+                                <Typography variant="caption" color={password.length >= 8 ? "success.main" : "error"}>
+                                    • At least 8 characters
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
 
-                    <FormControl variant="outlined" margin="normal" error={!!confirmPasswordError} sx={{ width: "300px" }}>
-                        <InputLabel htmlFor="confirm-password">Confirm Password</InputLabel>
-                        <OutlinedInput
-                            id="confirm-password"
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            endAdornment={
-                                <InputAdornment position="end">
-                                    <IconButton onClick={handleClickShowConfirmPassword} edge="end">
-                                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            }
-                            label="Confirm Password"
-                        />
-                    </FormControl>
+                    <Box sx={{ width: "300px" }}>
+                        <FormControl variant="outlined" fullWidth error={!!confirmPasswordError}>
+                            <InputLabel htmlFor="confirm-password">Confirm Password</InputLabel>
+                            <OutlinedInput
+                                id="confirm-password"
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                endAdornment={
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={handleClickShowConfirmPassword} edge="end">
+                                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                }
+                                label="Confirm Password"
+                            />
+                            {confirmPasswordError && (
+                                <FormHelperText error>
+                                    {confirmPasswordError}
+                                </FormHelperText>
+                            )}
+                        </FormControl>
+                    </Box>
                 </Box>
-                {confirmPasswordError && (
-                    <Typography variant="caption" color="error" mt={0.5}>
-                        {confirmPasswordError}
-                    </Typography>
-                )}
 
                 <RemindMeWrapper>
                     <Checkbox
@@ -457,11 +521,11 @@ export const Register: FC = () => {
                 </SignInSectionWrapper>
             </CustomPaper>
 
-            <>
+            <Box>
                 <Typography variant="caption" color="text.secondary" mt={4}>
                     Copyright © 2025 – Preclinic. All rights reserved.
                 </Typography>
-            </>
+            </Box>
         </RegisterWrapper>
     );
 };
