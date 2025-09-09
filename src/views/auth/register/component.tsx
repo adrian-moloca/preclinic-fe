@@ -172,7 +172,7 @@ export const Register: FC = () => {
 
                 if (success) {
                     console.log('✅ Registration successful, navigating to dashboard');
-                    navigate('/dashboard');
+                    navigate('/');
                 } else {
                     setError("Registration failed. Email or phone may already be in use.");
                 }
