@@ -75,8 +75,8 @@ export const CreatePatientForm: FC = () => {
   const handleSubmit = () => {
     if (!isFormValid) return;
 
-    const patient: PatientsEntry = {
-      id: crypto.randomUUID(),
+    // FIXED: Removed id generation - backend will handle it
+    const patient: Omit<PatientsEntry, 'id'> = {
       profileImg,
       firstName,
       lastName,
@@ -90,9 +90,10 @@ export const CreatePatientForm: FC = () => {
       country,
       state,
       city,
+      // Role will be automatically added by the provider
     };
 
-    addPatient(patient);
+    addPatient(patient as PatientsEntry); // Cast since addPatient expects full PatientsEntry
     navigate("/patients/all-patients");
   };
 
