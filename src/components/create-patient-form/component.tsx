@@ -17,6 +17,25 @@ import { useNavigate } from "react-router-dom";
 import { PatentDetailsWrapper, CreatePatientFormWrapper } from "./style";
 import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/style";
 
+export interface Patient {
+  profileImg: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string;
+  birthDate: string;
+  gender: string;
+  bloodGroup: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  zipCode: string;
+  medicalHistory?: string;
+  allergies?: string;
+  currentMedications?: string;
+}
+
 export const CreatePatientForm: FC = () => {
   const { addPatient } = usePatientsContext();
   const navigate = useNavigate();
@@ -76,7 +95,7 @@ export const CreatePatientForm: FC = () => {
     if (!isFormValid) return;
 
     // FIXED: Removed id generation - backend will handle it
-    const patient: Omit<PatientsEntry, 'id'> = {
+    const patient: Omit<Patient, 'id'> = {
       profileImg,
       firstName,
       lastName,
@@ -90,7 +109,6 @@ export const CreatePatientForm: FC = () => {
       country,
       state,
       city,
-      _id: ""
     };
 
     addPatient(patient as PatientsEntry); // Cast since addPatient expects full PatientsEntry

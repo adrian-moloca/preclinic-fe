@@ -36,7 +36,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         role: 'patient' as const
       };
 
-      const response = await axios.put<PatientsEntry>(`/patient/${updatedEntry._id}`, patientData);
+      const response = await axios.put<PatientsEntry>(`/api/patient/patch/${updatedEntry._id}`, patientData);
 
       if (response.status === 200) {
         setPatients(prev => prev?.map(entry => entry._id === updatedEntry._id ? response.data : entry));
