@@ -13,7 +13,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         role: 'patient' as const
       };
       
-      const response = await axios.post<PatientsEntry>('/api/user', patientData);
+      const response = await axios.post<PatientsEntry>('/api/patient/create', patientData);
 
       if (response.status === 201 || response.status === 200) {
         setPatients(prev => [...(prev ?? []), response.data]);
