@@ -86,7 +86,7 @@ export const MedicalCaseForm: FC<any> = ({
             patientsArray = patientsValues[0] as any[];
           }
         }
-        const foundPatient = patientsArray.find(p => p._id === foundAppointment.patientId);
+        const foundPatient = patientsArray.find(p => p.id === foundAppointment.patientId);
         setPatient(foundPatient || null);
         
         if (foundPatient) {

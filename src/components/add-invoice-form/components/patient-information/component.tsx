@@ -29,7 +29,7 @@ export const PatientInformation: FC<PatientInformationProps> = ({
     onAppointmentFilterChange
 }) => {
     const handlePatientSelection = (patientId: string) => {
-        const patient = patientsArray.find(p => p._id === patientId) || null;
+        const patient = patientsArray.find(p => p.id === patientId) || null;
         onPatientChange(patient);
     };
 
@@ -54,7 +54,7 @@ export const PatientInformation: FC<PatientInformationProps> = ({
                             SelectProps={{
                                 renderValue: (selected) => {
                                     if (!selected) return <em>Select a patient</em>;
-                                    const patient = patientsArray.find(p => p._id === selected);
+                                    const patient = patientsArray.find(p => p.id === selected);
                                     return patient ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <Avatar 
@@ -70,7 +70,7 @@ export const PatientInformation: FC<PatientInformationProps> = ({
                             }}
                         >
                             {patientsArray.map((patient) => (
-                                <MenuItem key={patient._id} value={patient._id}>
+                                <MenuItem key={patient.id} value={patient.id}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <Avatar 
                                             src={patient.profileImg} 

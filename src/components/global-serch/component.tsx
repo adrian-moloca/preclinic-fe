@@ -148,7 +148,7 @@ export const GlobalSearch: FC<GlobalSearchProps> = ({
             avatar: item.profileImg,
           });
         } else if (filter.type === 'prescription') {
-          const patient = allData.patients.find(p => p._id === item.patientId);
+          const patient = allData.patients.find(p => p.id === item.patientId);
           quickResults.push({
             id: item.id,
             type: 'prescription',

@@ -43,7 +43,7 @@ export const AllAppointments: FC = () => {
     }, [allAppointments]);
 
     const getPatientName = useCallback((patientId: string) => {
-        const patient = allPatients.find(p => p._id === patientId);
+        const patient = allPatients.find(p => p.id === patientId);
         return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
     }, [allPatients]);
 
@@ -151,7 +151,7 @@ export const AllAppointments: FC = () => {
             label: 'Patient',
             minWidth: 200,
             render: (value, row: AppointmentsEntry) => {
-                const patient = allPatients.find(p => p._id === row.patientId);
+                const patient = allPatients.find(p => p.id === row.patientId);
                 return (
                     <Box display="flex" alignItems="center" gap={2}>
                         <Avatar src={patient?.profileImg}>

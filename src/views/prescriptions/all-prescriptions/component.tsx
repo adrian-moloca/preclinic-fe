@@ -43,7 +43,7 @@ export const AllPrescriptions: FC = () => {
     }, [prescriptionList]);
 
     const getPatientName = (patientId: string) => {
-        const patient = allPatients.find(p => p._id === patientId);
+        const patient = allPatients.find(p => p.id === patientId);
         return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
     };
 
@@ -142,7 +142,7 @@ export const AllPrescriptions: FC = () => {
             label: 'Patient',
             minWidth: 200,
             render: (value, row: Prescription) => {
-                const patient = allPatients.find(p => p._id === row.patientId);
+                const patient = allPatients.find(p => p.id === row.patientId);
                 return (
                     <Box display="flex" alignItems="center" gap={2}>
                         <Avatar src={patient?.profileImg}>

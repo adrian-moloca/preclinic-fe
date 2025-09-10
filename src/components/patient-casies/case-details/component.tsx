@@ -22,20 +22,7 @@ export const CaseDetails: FC<{ caseId: string }> = ({ caseId }) => {
   if (medicalCase) {
     const allPatients: Patient[] = Array.isArray(patients)
       ? patients
-          .filter((p: any) => p && typeof p.id === "string" && typeof p.firstName === "string" && typeof p.lastName === "string")
-          .map((p: any) => ({
-            id: String(p.id),
-            firstName: String(p.firstName),
-            lastName: String(p.lastName)
-          }))
-      : Object.values(patients)
-          .flat()
-          .filter((p: any) => p && typeof p.id === "string" && typeof p.firstName === "string" && typeof p.lastName === "string")
-          .map((p: any) => ({
-            id: String(p.id),
-            firstName: String(p.firstName),
-            lastName: String(p.lastName)
-          }));
+      : (Object.values(patients).flat() as Patient[]);
     patient = allPatients.find(p => p.id === medicalCase.patientId);
     appointment = appointments.find(a => a.id === medicalCase.appointmentId);
   }

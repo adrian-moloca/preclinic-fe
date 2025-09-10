@@ -77,12 +77,12 @@ export const useGlobalSearch = () => {
 
             if (searchFields.some(field => field?.includes(normalizedQuery))) {
               results.push({
-                id: patient._id,
+                id: patient.id,
                 type: 'patient',
                 title: `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
                 subtitle: patient.email || patient.phoneNumber || '',
                 description: patient.address || '',
-                route: `/patients/${patient._id}`,
+                route: `/patients/${patient.id}`,
                 avatar: patient.profileImg,
               });
             }
@@ -95,7 +95,7 @@ export const useGlobalSearch = () => {
       if (allData.appointments) {
         allData.appointments.forEach(appointment => {
           try {
-            const patient = allData.patients.find(p => p._id === appointment.patientId);
+            const patient = allData.patients.find(p => p.id === appointment.patientId);
             const patientName = patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase() : '';
             const searchFields = [
               patientName,
@@ -126,7 +126,7 @@ export const useGlobalSearch = () => {
       if (allData.prescriptions) {
         allData.prescriptions.forEach(prescriptionItem => {
           try {
-            const patient = allData.patients.find(p => p._id === prescriptionItem.patientId);
+            const patient = allData.patients.find(p => p.id === prescriptionItem.patientId);
             const patientName = patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase() : '';
             const medicationNames = prescriptionItem.medications?.map(m => m.name?.toLowerCase()).join(' ') || '';
             const searchFields = [

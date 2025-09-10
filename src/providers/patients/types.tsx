@@ -1,5 +1,5 @@
 export type PatientsEntry = {
-  _id: string;
+  id: string;
   profileImg: string;
   firstName: string;
   lastName: string;

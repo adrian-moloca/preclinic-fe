@@ -31,7 +31,6 @@ import { useCasesContext } from "../../../providers/cases/context";
 import { usePatientsContext } from "../../../providers/patients";
 import { useAppointmentsContext } from "../../../providers/appointments";
 import { IInvoice } from "../../../providers/invoices/types";
-import { PatientsEntry } from "../../../providers/patients/types";
 
 export const CaseDetails: FC = () => {
   const params = useParams();
@@ -61,20 +60,7 @@ export const CaseDetails: FC = () => {
   if (medicalCase) {
     const allPatients: Patient[] = Array.isArray(patients)
       ? patients
-          .filter((p): p is PatientsEntry => typeof p._id === "string")
-          .map((p) => ({
-            id: (p as PatientsEntry)._id,
-            firstName: p.firstName,
-            lastName: p.lastName,
-            birthDate: p.birthDate,
-            gender: p.gender,
-            phoneNumber: p.phoneNumber,
-            allergies: p.allergies,
-            currentMedications: p.currentMedications,
-          }))
-      : Object.values(patients)
-          .flat()
-          .filter((p): p is Patient => typeof (p as Patient).id === "string");
+      : (Object.values(patients).flat() as Patient[]);
     patient = allPatients.find((p) => p.id === medicalCase.patientId);
     appointment = appointments.find((a) => a.id === medicalCase.appointmentId);
   }

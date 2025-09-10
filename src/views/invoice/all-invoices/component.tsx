@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
-import { PatientsEntry } from "../../../providers/patients/types";
 
 export const AllInvoices: FC = () => {
     const { invoices, deleteInvoice } = useInvoicesContext();
@@ -34,11 +33,18 @@ export const AllInvoices: FC = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const patientsArray: PatientsEntry[] = useMemo(() => {
+    interface Patient {
+        id: string;
+        firstName: string;
+        lastName: string;
+        profileImg?: string;
+        [key: string]: any;
+    }
+    const patientsArray: Patient[] = useMemo(() => {
         if (Array.isArray(patients)) {
-            return patients as PatientsEntry[];
+            return patients as Patient[];
         }
-        return Object.values(patients).flat() as PatientsEntry[];
+        return Object.values(patients).flat() as Patient[];
     }, [patients]);
 
     const handleSearch = useCallback((query: string) => {
@@ -50,7 +56,7 @@ export const AllInvoices: FC = () => {
 
         const lowerQuery = query.toLowerCase();
         const filtered = invoices.filter((invoice) => {
-            const patient = patientsArray.find(p => p._id === invoice.patientId);
+            const patient = patientsArray.find(p => p.id === invoice.patientId);
             const patientName = patient ? `${patient.firstName} ${patient.lastName}` : invoice.patientName;
 
             return (
@@ -142,12 +148,12 @@ export const AllInvoices: FC = () => {
     };
 
     const getPatientName = (invoice: IInvoice) => {
-        const patient = patientsArray.find(p => p._id === invoice.patientId);
+        const patient = patientsArray.find(p => p.id === invoice.patientId);
         return patient ? `${patient.firstName} ${patient.lastName}` : invoice.patientName || "Unknown Patient";
     };
 
     const getPatientAvatar = (invoice: IInvoice) => {
-        const patient = patientsArray.find(p => p._id === invoice.patientId);
+        const patient = patientsArray.find(p => p.id === invoice.patientId);
         return patient?.profileImg || "";
     };
 

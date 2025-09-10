@@ -181,7 +181,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
 
     const [selectedPatient, setSelectedPatient] = useState<PatientsEntry | null>(() => {
         if (initialData?.patientId) {
-            const patient = patientsArray.find(p => p._id === initialData.patientId);
+            const patient = patientsArray.find(p => p.id === initialData.patientId);
             return patient || null;
         }
         return null;
@@ -232,11 +232,11 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
 
     useEffect(() => {
         if (selectedPatient) {
-            const appointments = appointmentsArray.filter(app => app.patientId === selectedPatient._id);
+            const appointments = appointmentsArray.filter(app => app.patientId === selectedPatient.id);
             setPatientAppointments(appointments);
             setFormData(prev => ({
                 ...prev,
-                patientId: selectedPatient._id,
+                patientId: selectedPatient.id,
                 patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
                 email: selectedPatient.email,
                 patientAddress: selectedPatient.address || ""
@@ -246,7 +246,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
 
     useEffect(() => {
         if (initialData && !selectedPatient) {
-            const patient = patientsArray.find(p => p._id === initialData.patientId);
+            const patient = patientsArray.find(p => p.id === initialData.patientId);
             if (patient) {
                 setSelectedPatient(patient);
             }
@@ -263,7 +263,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
     const handlePatientChange = (patient: PatientsEntry | null) => {
         setSelectedPatient(patient);
         if (patient) {
-            const appointments = appointmentsArray.filter(app => app.patientId === patient._id);
+            const appointments = appointmentsArray.filter(app => app.patientId === patient.id);
             setPatientAppointments(appointments);
         } else {
             setPatientAppointments([]);
