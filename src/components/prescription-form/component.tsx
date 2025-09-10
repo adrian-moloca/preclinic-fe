@@ -162,7 +162,7 @@ export const PrescriptionForm: FC = () => {
 
     addPrescription(prescription);
 
-    const patient = patientsArray.find(p => p.id === prescription.patientId);
+    const patient = patientsArray.find(p => p._id === prescription.patientId);
     if (patient) {
       emitPrescriptionAdded(prescription, patient);
     }
@@ -214,7 +214,7 @@ export const PrescriptionForm: FC = () => {
               renderValue: (selected) => {
                 if (!selected) return <em>Select a patient</em>;
                 const patient = patientsArray.find(
-                  (p: PatientsEntry) => p.id === selected
+                  (p: PatientsEntry) => p._id === selected
                 );
                 return patient ? `${patient.firstName} ${patient.lastName}` : "";
               },
@@ -223,8 +223,8 @@ export const PrescriptionForm: FC = () => {
             {patientsArray.length > 0 ? (
               patientsArray.map((patient: PatientsEntry) => (
                 <MenuItem
-                  key={patient.id}
-                  value={patient.id}
+                  key={patient._id}
+                  value={patient._id}
                   sx={{ display: "flex", alignItems: "center", gap: 1 }}
                 >
                   <Avatar

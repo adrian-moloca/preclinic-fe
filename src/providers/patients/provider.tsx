@@ -36,10 +36,10 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         role: 'patient' as const
       };
 
-      const response = await axios.put<PatientsEntry>(`/patient/${updatedEntry.id}`, patientData);
+      const response = await axios.put<PatientsEntry>(`/patient/${updatedEntry._id}`, patientData);
 
       if (response.status === 200) {
-        setPatients(prev => prev?.map(entry => entry.id === updatedEntry.id ? response.data : entry));
+        setPatients(prev => prev?.map(entry => entry._id === updatedEntry._id ? response.data : entry));
       } else {
         console.error("Unexpected response:", response);
       }
@@ -57,7 +57,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const response = await axios.delete(`/patient/${id}`);
 
       if (response.status === 200 || response.status === 204) {
-        setPatients(prev => prev?.filter(entry => entry.id !== id));
+        setPatients(prev => prev?.filter(entry => entry._id !== id));
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {

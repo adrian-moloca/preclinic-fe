@@ -95,7 +95,7 @@ export const AppointmentDetails: FC = () => {
           }
         }
         
-        const foundPatient = patientsArray.find(p => p.id === foundAppointment.patientId);
+        const foundPatient = patientsArray.find(p => p._id === foundAppointment.patientId);
         setPatient((foundPatient as unknown as Patient) || null);
       }
     }

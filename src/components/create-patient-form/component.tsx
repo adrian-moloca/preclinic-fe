@@ -90,7 +90,7 @@ export const CreatePatientForm: FC = () => {
       country,
       state,
       city,
-      // Role will be automatically added by the provider
+      _id: ""
     };
 
     addPatient(patient as PatientsEntry); // Cast since addPatient expects full PatientsEntry

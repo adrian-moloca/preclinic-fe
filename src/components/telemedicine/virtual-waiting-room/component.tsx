@@ -43,7 +43,7 @@ export const WaitingRoom: FC<WaitingRoomProps> = ({ appointmentId, onJoinCall })
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const appointment = appointments.find(apt => apt.id === appointmentId);
-  const patient = appointment ? patients.find(p => p.id === appointment.patientId) : null;
+  const patient = appointment ? patients.find(p => p._id === appointment.patientId) : null;
 
   useEffect(() => {
     const timer = setInterval(() => {

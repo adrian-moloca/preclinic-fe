@@ -33,7 +33,7 @@ export const BasicInformationCard: FC = () => {
     return onlineAppointments
       .map((appointment) => {
         const patient = patients.find(
-          (p) => String(p.id).trim() === String(appointment.patientId).trim()
+          (p) => String(p._id).trim() === String(appointment.patientId).trim()
         );
         return patient ? { appointment, patient } : null;
       })

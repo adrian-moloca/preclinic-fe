@@ -44,7 +44,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = () => {
 
     const getPatientName = (): string => {
         if (!currentInvoice?.patientId) return "Unknown Patient";
-        const patient = patients.find(p => p.id === currentInvoice.patientId);
+        const patient = patients.find(p => p._id === currentInvoice.patientId);
         return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
     };
 

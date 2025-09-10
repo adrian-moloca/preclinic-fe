@@ -23,6 +23,7 @@ import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPatients: FC = () => {
   const { patients, deletePatient } = usePatientsContext();
+  console.log("All patients:", patients); 
   const allPatients = useMemo(() => Object.values(patients).flat(), [patients]);
   const [filteredPatients, setFilteredPatients] = useState<PatientsEntry[]>(allPatients);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,7 +51,7 @@ export const AllPatients: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deletePatient(selectedPatient.id);
+      await deletePatient(selectedPatient._id);
       setDeleteModalOpen(false);
       setSelectedPatient(null);
       setAnchorEl(null);
@@ -90,18 +91,18 @@ export const AllPatients: FC = () => {
 
   const handleEditPatient = () => {
     if (selectedPatient) {
-      navigate(`/patients/edit/${selectedPatient.id}`);
+      navigate(`/patients/edit/${selectedPatient._id}`);
       handleMenuClose();
     }
   };
 
   const handleRowClick = (patient: PatientsEntry) => {
     addRecentItem({
-      id: patient.id,
+      id: patient._id,
       type: 'patient',
       title: `${patient.firstName} ${patient.lastName}`,
       subtitle: patient.email || patient.phoneNumber || '',
-      url: `/patients/${patient.id}`,
+      url: `/patients/${patient._id}`,
       metadata: {
         gender: patient.gender,
         email: patient.email,
@@ -109,7 +110,7 @@ export const AllPatients: FC = () => {
       },
     });
     
-    navigate(`/patients/${patient.id}`);
+    navigate(`/patients/${patient._id}`);
   };
 
   const handleSearch = (query: string) => {
@@ -146,7 +147,7 @@ export const AllPatients: FC = () => {
               {row.firstName} {row.lastName}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              ID: {row.id}
+              ID: {row._id}
             </Typography>
           </Box>
         </Box>
@@ -180,11 +181,11 @@ export const AllPatients: FC = () => {
       sortable: false,
       render: (_: unknown, row: PatientsEntry) => {
         const favoriteItem = {
-          id: row.id,
+          id: row._id,
           type: 'patient' as const,
           title: `${row.firstName} ${row.lastName}`,
           subtitle: row.email || row.phoneNumber || '',
-          url: `/patients/${row.id}`,
+          url: `/patients/${row._id}`,
           metadata: {
             gender: row.gender,
             email: row.email,
@@ -201,18 +202,18 @@ export const AllPatients: FC = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                    addRecentItem({
-                    id: row.id,
+                    id: row._id,
                     type: 'patient',
                     title: `${row.firstName} ${row.lastName}`,
                     subtitle: row.email || row.phoneNumber || '',
-                    url: `/patients/${row.id}`,
+                    url: `/patients/${row._id}`,
                     metadata: {
                       gender: row.gender,
                       email: row.email,
                       phone: row.phoneNumber,
                     },
                   });
-                  navigate(`/patients/${row.id}`);
+                  navigate(`/patients/${row._id}`);
                 }}
                 color="primary"
                 size="small"
