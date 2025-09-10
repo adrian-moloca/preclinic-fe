@@ -94,7 +94,7 @@ export const UpcomingAppointmentsCard: FC = () => {
     const patientId = nextAppointment.patientId ||
       (nextAppointment.patients && nextAppointment.patients.length > 0 ? nextAppointment.patients[0] : null);
 
-    return (allPatients as PatientsEntry[]).find((p) => p.id === patientId) || null;
+    return (allPatients as PatientsEntry[]).find((p) => p._id === patientId) || null;
   }, [nextAppointment, allPatients]);
 
   const formatAppointmentTime = (time: string) => {
@@ -199,7 +199,7 @@ export const UpcomingAppointmentsCard: FC = () => {
               }
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              #{appointmentPatient?.id || nextAppointment.patientId || 'N/A'}
+              #{appointmentPatient?._id || nextAppointment.patientId || 'N/A'}
             </Typography>
           </Box>
         </UserWrapper>

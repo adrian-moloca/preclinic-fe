@@ -76,7 +76,7 @@ export const TelemedicineDashboard: FC = () => {
   };
 
   const getPatientName = (patientId: string) => {
-    const patient = patients.find(p => p.id === patientId);
+    const patient = patients.find(p => p._id === patientId);
     return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
   };
 
@@ -138,7 +138,7 @@ export const TelemedicineDashboard: FC = () => {
               ) : (
                 <List>
                   {todayAppointments.map((appointment) => {
-                    const patient = patients.find(p => p.id === appointment.patientId);
+                    const patient = patients.find(p => p._id === appointment.patientId);
                     const status = getAppointmentStatus(appointment);
                     
                     return (
@@ -282,7 +282,7 @@ export const TelemedicineDashboard: FC = () => {
               ) : (
                 <Grid container spacing={2}>
                   {upcomingAppointments.slice(0, 6).map((appointment) => {
-                    const patient = patients.find(p => p.id === appointment.patientId);
+                    const patient = patients.find(p => p._id === appointment.patientId);
                     const appointmentDate = new Date(appointment.date);
                     
                     return (

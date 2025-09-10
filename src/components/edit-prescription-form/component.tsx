@@ -197,7 +197,7 @@ export const EditPrescriptionForm: FC = () => {
             MenuProps: menuProps,
             renderValue: (selected) => {
               if (!selected) return <em>Select a patient</em>;
-              const patient = patientsArray.find((p) => p.id === selected);
+              const patient = patientsArray.find((p) => p._id === selected);
               return patient ? `${patient.firstName} ${patient.lastName}` : "";
             },
           }}
@@ -205,8 +205,8 @@ export const EditPrescriptionForm: FC = () => {
           {patientsArray.length > 0 ? (
             patientsArray.map((patient) => (
               <MenuItem
-                key={patient.id}
-                value={patient.id}
+                key={patient._id}
+                value={patient._id}
                 sx={{ display: "flex", alignItems: "center", gap: 1 }}
               >
                 <Avatar

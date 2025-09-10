@@ -83,7 +83,7 @@ export const EditCaseForm: FC = () => {
           }
         }
         const foundPatient = patientsArray.find(
-          (p) => p.id === foundAppointment.patientId
+          (p) => p._id === foundAppointment.patientId
         );
         setPatient(foundPatient || null);
       }

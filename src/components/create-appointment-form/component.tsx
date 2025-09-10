@@ -78,9 +78,9 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     const navigate = useNavigate();
 
     const patientsArray: Patient[] = Array.isArray(patients)
-        ? (patients as Patient[])
-        : Array.isArray((Object.values(patients)[0] as Patient[]))
-            ? (Object.values(patients)[0] as Patient[])
+        ? (patients as unknown as Patient[])
+        : Array.isArray((Object.values(patients)[0] as unknown as Patient[]))
+            ? (Object.values(patients)[0] as unknown as Patient[])
             : [];
 
     const departmentsArray: IDepartments[] = Array.isArray(departments)

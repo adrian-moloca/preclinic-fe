@@ -105,7 +105,7 @@ export const EditInvoiceForm: FC = () => {
                 amount: currentInvoice.amount || "0"
             });
 
-            const patient = patientsArray.find(p => p.id === currentInvoice.patientId);
+            const patient = patientsArray.find(p => p._id === currentInvoice.patientId);
             if (patient) {
                 setSelectedPatient(patient);
             }
@@ -145,7 +145,7 @@ export const EditInvoiceForm: FC = () => {
         if (!selectedPatient) return [];
         
         let filtered = appointmentsArray.filter(
-            appointment => appointment.patientId === selectedPatient.id
+            appointment => appointment.patientId === selectedPatient._id
         );
 
         if (appointmentFilter.trim()) {
@@ -163,7 +163,7 @@ export const EditInvoiceForm: FC = () => {
     useEffect(() => {
         if (selectedPatient) {
             const filteredAppointments = appointmentsArray.filter(
-                appointment => appointment.patientId === selectedPatient.id
+                appointment => appointment.patientId === selectedPatient._id
             );
             setPatientAppointments(filteredAppointments);
         } else {
@@ -177,7 +177,7 @@ export const EditInvoiceForm: FC = () => {
             setSelectedPatient(patient);
             setFormData(prev => ({
                 ...prev,
-                patientId: patient.id,
+                patientId: patient._id,
                 patientName: `${patient.firstName} ${patient.lastName}`,
                 email: patient.email,
                 patientAddress: `${patient.address}, ${patient.city}, ${patient.state}, ${patient.country}`,

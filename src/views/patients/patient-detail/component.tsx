@@ -43,19 +43,19 @@ export const PatientDetails: FC = () => {
   const { getAlertsForPatient } = useMedicalAlerts();
 
   const allPatients = Object.values(patients).flat();
-  const patient = allPatients.find((p) => p.id === id);
+  const patient = allPatients.find((p) => p._id === id);
 
-  const patientCases = patient ? getCasesByPatientId(patient.id) : [];
-  const patientAlerts = patient ? getAlertsForPatient(patient.id) : [];
+  const patientCases = patient ? getCasesByPatientId(patient._id) : [];
+  const patientAlerts = patient ? getAlertsForPatient(patient._id) : [];
 
   useEffect(() => {
     if (patient && id) {
       addRecentItem({
-        id: patient.id,
+        id: patient._id,
         type: 'patient',
         title: `${patient.firstName} ${patient.lastName}`,
         subtitle: patient.email || patient.phoneNumber || '',
-        url: `/patients/${patient.id}`,
+        url: `/patients/${patient._id}`,
         metadata: {
           gender: patient.gender,
           email: patient.email,
@@ -137,7 +137,7 @@ export const PatientDetails: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deletePatient(patient.id);
+      await deletePatient(patient._id);
       setDeleteModalOpen(false);
       navigate('/patients/all-patients');
     } catch (error) {
@@ -155,7 +155,7 @@ export const PatientDetails: FC = () => {
 
   const handleEditPatient = () => {
     if (patient) {
-      navigate(`/patients/edit/${patient.id}`);
+      navigate(`/patients/edit/${patient._id}`);
     }
   };
 
@@ -168,11 +168,11 @@ export const PatientDetails: FC = () => {
   }
 
   const favoriteItem = {
-    id: patient.id,
+    id: patient._id,
     type: 'patient' as const,
     title: `${patient.firstName} ${patient.lastName}`,
     subtitle: patient.email || patient.phoneNumber || '',
-    url: `/patients/${patient.id}`,
+    url: `/patients/${patient._id}`,
     metadata: {
       gender: patient.gender,
       email: patient.email,
@@ -346,7 +346,7 @@ export const PatientDetails: FC = () => {
         
         <Card elevation={2}>
           <AlertPanel 
-            patientId={patient.id}
+            patientId={patient._id}
             showOnlyPatient={true}
             maxHeight={400}
           />

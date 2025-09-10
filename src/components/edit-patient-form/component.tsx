@@ -32,7 +32,7 @@ export const EditPatientForm: FC = () => {
   useEffect(() => {
     if (!id || !Array.isArray(patients)) return;
 
-    const match = patients.find((patient) => String(patient.id) === String(id));
+    const match = patients.find((patient) => String(patient._id) === String(id));
 
     if (match) {
       setFormData({ ...match });
