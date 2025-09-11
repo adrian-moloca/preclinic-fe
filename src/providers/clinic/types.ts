@@ -41,6 +41,7 @@ export interface CreateClinicData {
   description: string;
   logo: string;
   address: string;
+  country: string;
   city: string;
   state: string;
   zipCode: string;

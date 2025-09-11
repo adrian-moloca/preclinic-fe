@@ -292,38 +292,31 @@ export const ClinicInformationSettings: FC = () => {
           country: country || formData.country,  // Use the separate country state variable
           city: city || formData.city,  // Use the separate city state variable
           state: state || formData.state,  // Use the separate state state variable
-          // ownerId: currentUser.id,
           businessHours,
-          // settings: {
-          //   timeZone: 'Europe/Bucharest',
-          //   dateFormat: 'DD/MM/YYYY',
-          //   timeFormat: '24h',
-          //   currency: 'RON',
-          //   language: 'Romanian',
-          //   theme: 'light',
-          //   emailNotifications: true,
-          //   smsNotifications: true,
-          //   appointmentReminders: true,
-          //   marketingEmails: false,
-          //   systemAlerts: true,
-          // }
         };
 
         console.log('Creating clinic with data:', clinicData);
-        await createClinic(clinicData);
-        setSaveMessage("Clinic created successfully!");
-        setIsCreatingClinic(false);
+        const newClinic = await createClinic(clinicData);
+        
+        // Ensure the clinic is fully created and persisted
+        if (newClinic && newClinic.id) {
+          setSaveMessage("Clinic created successfully!");
+          setIsCreatingClinic(false);
 
-        setTimeout(() => {
-          navigate('/');
-        }, 1500);
+          // Add a small delay to ensure all async operations complete
+          setTimeout(() => {
+            navigate('/');
+          }, 1500);
+        } else {
+          throw new Error('Failed to create clinic - invalid response');
+        }
       } else if (selectedClinic) {
         await updateClinic(selectedClinic.id, { ...formData, businessHours });
         setHasChanges(false);
         setSaveMessage("Clinic information updated successfully!");
+        setTimeout(() => setSaveMessage(""), 3000);
       }
 
-      setTimeout(() => setSaveMessage(""), 3000);
     } catch (error) {
       console.error('Error saving clinic:', error);
       setSaveMessage(isCreatingClinic ? "Failed to create clinic. Please try again." : "Failed to update clinic information. Please try again.");

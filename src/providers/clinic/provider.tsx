@@ -1,10 +1,19 @@
-import React, { FC, ReactNode, useState, useCallback } from 'react';
+import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
 import { ClinicContext } from './context';
 import { Clinic, CreateClinicData } from './types';
-import axios from 'axios';
 
 const LOCAL_STORAGE_KEY = 'clinics';
 const SELECTED_CLINIC_KEY = 'selectedClinic';
+
+const defaultBusinessHours = {
+  monday: { open: '09:00', close: '17:00', isClosed: false },
+  tuesday: { open: '09:00', close: '17:00', isClosed: false },
+  wednesday: { open: '09:00', close: '17:00', isClosed: false },
+  thursday: { open: '09:00', close: '17:00', isClosed: false },
+  friday: { open: '09:00', close: '17:00', isClosed: false },
+  saturday: { open: '09:00', close: '13:00', isClosed: false },
+  sunday: { open: '09:00', close: '13:00', isClosed: true },
+};
 
 interface ClinicProviderProps {
   children: ReactNode;
@@ -16,26 +25,117 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
-  const createClinic = async (data: CreateClinicData): Promise<Clinic> => {
-    try {
-      const response = await axios.post('/api/clinic/create', data);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to create clinic', error);
-      throw error;
+  useEffect(() => {
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (stored) {
+      try {
+        setClinics(JSON.parse(stored));
+      } catch {
+        console.warn('Failed to parse clinics from localStorage');
+      }
     }
-  }
 
-const updateClinic = async (id: string, clinicData: Partial<Clinic>): Promise<Clinic> => {
-  try {
-    const response = await axios.put(`/api/clinic/update/${id}`, clinicData);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to update clinic', error);
-    throw error;
-  }
-}
+    const selectedStored = localStorage.getItem(SELECTED_CLINIC_KEY);
+    if (selectedStored) {
+      try {
+        setSelectedClinic(JSON.parse(selectedStored));
+      } catch {
+        console.warn('Failed to parse selected clinic from localStorage');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinics));
+  }, [clinics]);
+
+  useEffect(() => {
+    if (selectedClinic) {
+      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(selectedClinic));
+    }
+  }, [selectedClinic]);
+
+  const createClinic = useCallback(async (clinicData: CreateClinicData): Promise<Clinic> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      const newClinic: Clinic = {
+        id: crypto.randomUUID(),
+        ...clinicData,
+        ownerId: JSON.parse(localStorage.getItem('currentUser') || '{}').id || '',
+        departments: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'active',
+        businessHours: clinicData.businessHours || defaultBusinessHours,
+        country: clinicData.country || 'Romania', // Add default or from clinicData
+        // settings: { ...defaultSettings, ...clinicData.settings },
+      };
+
+      // Update state
+      setClinics(prev => {
+        const updated = [...prev, newClinic];
+        // Immediately persist to localStorage
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+      
+      setSelectedClinic(newClinic);
+      
+      // Ensure selected clinic is persisted immediately
+      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(newClinic));
+      
+      return newClinic;
+    } catch (err) {
+      setError('Failed to create clinic');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateClinic = useCallback(async (id: string, clinicData: Partial<Clinic>): Promise<Clinic> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const currentClinic = clinics.find(c => c.id === id);
+      if (!currentClinic) {
+        throw new Error('Clinic not found');
+      }
+      
+      const updatedClinic = {
+        ...currentClinic,
+        ...clinicData,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setClinics(prev => {
+        const updated = prev.map(c => c.id === id ? updatedClinic : c);
+        // Immediately persist to localStorage
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+      
+      if (selectedClinic?.id === id) {
+        setSelectedClinic(updatedClinic);
+        // Immediately persist selected clinic
+        localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(updatedClinic));
+      }
+
+      return updatedClinic;
+    } catch (err) {
+      setError('Failed to update clinic');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [clinics, selectedClinic]);
 
   const deleteClinic = useCallback(async (id: string): Promise<void> => {
     setLoading(true);
@@ -44,7 +144,12 @@ const updateClinic = async (id: string, clinicData: Partial<Clinic>): Promise<Cl
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      setClinics(prev => prev.filter(c => c.id !== id));
+      setClinics(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        // Immediately persist to localStorage
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
       
       if (selectedClinic?.id === id) {
         setSelectedClinic(null);
@@ -62,6 +167,7 @@ const updateClinic = async (id: string, clinicData: Partial<Clinic>): Promise<Cl
     const clinic = clinics.find(c => c.id === clinicId);
     if (clinic) {
       setSelectedClinic(clinic);
+      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(clinic));
     }
   }, [clinics]);
 
