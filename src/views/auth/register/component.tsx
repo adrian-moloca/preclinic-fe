@@ -27,10 +27,12 @@ import { useAuthContext } from "../../../providers/auth/context";
 import { UserRole } from "../../../providers/auth/types";
 import { CustomPaper } from "../../settings/components/general-settings/components/clinic-information/style";
 import { City, Country, State } from "country-state-city";
+import { useClinicContext } from "../../../providers/clinic/context";
 
 export const Register: FC = () => {
     const navigate = useNavigate();
-    const { register, loading } = useAuthContext();
+    const { register, loading, user, isAuthenticated } = useAuthContext();
+    const { getUserClinics, clinics } = useClinicContext();
 
     // Form fields
     const [firstName, setFirstName] = useState("");
@@ -55,6 +57,7 @@ export const Register: FC = () => {
     const [isButtonDisabled, setIsButtonDisabled] = useState(true);
     const [termsChecked, setTermsChecked] = useState(false);
     const [error, setError] = useState("");
+    const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
     // Validation errors
     const [firstNameError, setFirstNameError] = useState("");
@@ -111,6 +114,32 @@ export const Register: FC = () => {
         const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
         return hasUpperCase && hasSpecialChar && pwd.length >= 8;
     };
+
+    // Check for user authentication and redirect after successful registration
+    useEffect(() => {
+        if (registrationSuccess && isAuthenticated && user) {
+            console.log('🔍 Checking user after registration:', user);
+            
+            // Check if user is doctor_owner
+            if (user.role === 'doctor_owner') {
+                // Check if doctor_owner has any clinics
+                const userClinics = getUserClinics(user.id);
+                console.log('🏥 User clinics:', userClinics);
+                
+                // Also check if there are any clinics in the system
+                if ((!userClinics || userClinics.length === 0) && clinics.length === 0) {
+                    console.log('🏥 Doctor owner has no clinics, redirecting to clinic information page');
+                    navigate('/settings/clinic-information');
+                } else {
+                    console.log('📊 Doctor owner has existing clinics, redirecting to dashboard');
+                    navigate('/');
+                }
+            } else {
+                console.log('📊 User is not a doctor owner, redirecting to dashboard');
+                navigate('/');
+            }
+        }
+    }, [registrationSuccess, isAuthenticated, user, getUserClinics, clinics, navigate]);
 
     useEffect(() => {
         const isFormValid =
@@ -171,8 +200,9 @@ export const Register: FC = () => {
                 const success = await register(payload);
 
                 if (success) {
-                    console.log('✅ Registration successful, navigating to dashboard');
-                    navigate('/');
+                    console.log('✅ Registration successful');
+                    // Set flag to trigger redirect in useEffect
+                    setRegistrationSuccess(true);
                 } else {
                     setError("Registration failed. Email or phone may already be in use.");
                 }
@@ -503,8 +533,8 @@ export const Register: FC = () => {
                     sx={{ mt: 3, bgcolor: "#2C2C9E", textTransform: "none" }}
                     disabled={isButtonDisabled || loading}
                     onClick={handleSubmit}
-                >
-                    {loading ? "Creating Account..." : "Create Account"}
+                >Account
+                    {loading ? "Creating ..." : "Create Account"}
                 </Button>
 
                 <Divider sx={{ my: 2 }}>OR</Divider>

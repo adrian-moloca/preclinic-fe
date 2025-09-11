@@ -3,6 +3,7 @@ export interface Clinic {
   name: string;
   description: string;
   logo: string;
+  country: string;
   address: string;
   city: string;
   state: string;
@@ -15,25 +16,25 @@ export interface Clinic {
     [day: string]: { open: string; close: string; isClosed: boolean };
   };
   departments: string[];
-  settings: ClinicSettings;
+  // settings: ClinicSettings;
   createdAt: string;
   updatedAt: string;
   status: 'active' | 'inactive' | 'pending';
 }
 
-export interface ClinicSettings {
-  timeZone: string;
-  dateFormat: string;
-  timeFormat: string;
-  currency: string;
-  language: string;
-  theme: string;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  appointmentReminders: boolean;
-  marketingEmails: boolean;
-  systemAlerts: boolean;
-}
+// export interface ClinicSettings {
+//   timeZone: string;
+//   dateFormat: string;
+//   timeFormat: string;
+//   currency: string;
+//   language: string;
+//   theme: string;
+//   emailNotifications: boolean;
+//   smsNotifications: boolean;
+//   appointmentReminders: boolean;
+//   marketingEmails: boolean;
+//   systemAlerts: boolean;
+// }
 
 export interface CreateClinicData {
   name: string;
@@ -49,7 +50,7 @@ export interface CreateClinicData {
   businessHours: {
     [day: string]: { open: string; close: string; isClosed: boolean };
   };
-  settings: ClinicSettings;
+  // settings: ClinicSettings;
 }
 
 export interface ClinicContextType {

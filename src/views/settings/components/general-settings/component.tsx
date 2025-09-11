@@ -34,17 +34,17 @@ export const GeneralSettings: FC = () => {
         }, {} as any),
         
         // Settings
-        timeZone: selectedClinic.settings?.timeZone || "Europe/Bucharest",
-        dateFormat: selectedClinic.settings?.dateFormat || "DD/MM/YYYY",
-        timeFormat: selectedClinic.settings?.timeFormat || "24h",
-        currency: selectedClinic.settings?.currency || "RON",
-        language: selectedClinic.settings?.language || "Romanian",
-        theme: selectedClinic.settings?.theme || "light",
-        emailNotifications: selectedClinic.settings?.emailNotifications ?? true,
-        smsNotifications: selectedClinic.settings?.smsNotifications ?? true,
-        appointmentReminders: selectedClinic.settings?.appointmentReminders ?? true,
-        marketingEmails: selectedClinic.settings?.marketingEmails ?? false,
-        systemAlerts: selectedClinic.settings?.systemAlerts ?? true,
+        // timeZone: selectedClinic.settings?.timeZone || "Europe/Bucharest",
+        // dateFormat: selectedClinic.settings?.dateFormat || "DD/MM/YYYY",
+        // timeFormat: selectedClinic.settings?.timeFormat || "24h",
+        // currency: selectedClinic.settings?.currency || "RON",
+        // language: selectedClinic.settings?.language || "Romanian",
+        // theme: selectedClinic.settings?.theme || "light",
+        // emailNotifications: selectedClinic.settings?.emailNotifications ?? true,
+        // smsNotifications: selectedClinic.settings?.smsNotifications ?? true,
+        // appointmentReminders: selectedClinic.settings?.appointmentReminders ?? true,
+        // marketingEmails: selectedClinic.settings?.marketingEmails ?? false,
+        // systemAlerts: selectedClinic.settings?.systemAlerts ?? true,
       });
     }
   }, [selectedClinic]);

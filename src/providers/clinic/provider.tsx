@@ -1,33 +1,10 @@
-import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { FC, ReactNode, useState, useCallback } from 'react';
 import { ClinicContext } from './context';
-import { Clinic, CreateClinicData, ClinicSettings } from './types';
+import { Clinic, CreateClinicData } from './types';
+import axios from 'axios';
 
 const LOCAL_STORAGE_KEY = 'clinics';
 const SELECTED_CLINIC_KEY = 'selectedClinic';
-
-const defaultSettings: ClinicSettings = {
-  timeZone: 'Europe/Bucharest',
-  dateFormat: 'DD/MM/YYYY',
-  timeFormat: '24h',
-  currency: 'RON',
-  language: 'Romanian',
-  theme: 'light',
-  emailNotifications: true,
-  smsNotifications: true,
-  appointmentReminders: true,
-  marketingEmails: false,
-  systemAlerts: true,
-};
-
-const defaultBusinessHours = {
-  monday: { open: '09:00', close: '17:00', isClosed: false },
-  tuesday: { open: '09:00', close: '17:00', isClosed: false },
-  wednesday: { open: '09:00', close: '17:00', isClosed: false },
-  thursday: { open: '09:00', close: '17:00', isClosed: false },
-  friday: { open: '09:00', close: '17:00', isClosed: false },
-  saturday: { open: '09:00', close: '13:00', isClosed: false },
-  sunday: { open: '09:00', close: '13:00', isClosed: true },
-};
 
 interface ClinicProviderProps {
   children: ReactNode;
@@ -39,94 +16,26 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        setClinics(JSON.parse(stored));
-      } catch {
-        console.warn('Failed to parse clinics from localStorage');
-      }
-    }
 
-    const selectedStored = localStorage.getItem(SELECTED_CLINIC_KEY);
-    if (selectedStored) {
-      try {
-        setSelectedClinic(JSON.parse(selectedStored));
-      } catch {
-        console.warn('Failed to parse selected clinic from localStorage');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinics));
-  }, [clinics]);
-
-  useEffect(() => {
-    if (selectedClinic) {
-      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(selectedClinic));
-    }
-  }, [selectedClinic]);
-
-  const createClinic = useCallback(async (clinicData: CreateClinicData): Promise<Clinic> => {
-    setLoading(true);
-    setError(null);
-    
+  const createClinic = async (data: CreateClinicData): Promise<Clinic> => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      const newClinic: Clinic = {
-        id: crypto.randomUUID(),
-        ...clinicData,
-        ownerId: JSON.parse(localStorage.getItem('currentUser') || '{}').id || '',
-        departments: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active',
-        businessHours: clinicData.businessHours || defaultBusinessHours,
-        settings: { ...defaultSettings, ...clinicData.settings },
-      };
-
-      setClinics(prev => [...prev, newClinic]);
-      setSelectedClinic(newClinic);
-      
-      return newClinic;
-    } catch (err) {
-      setError('Failed to create clinic');
-      throw err;
-    } finally {
-      setLoading(false);
+      const response = await axios.post('/api/clinic/create', data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create clinic', error);
+      throw error;
     }
-  }, []);
+  }
 
-  const updateClinic = useCallback(async (id: string, clinicData: Partial<Clinic>): Promise<Clinic> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const updatedClinic = {
-        ...clinics.find(c => c.id === id)!,
-        ...clinicData,
-        updatedAt: new Date().toISOString(),
-      };
-
-      setClinics(prev => prev.map(c => c.id === id ? updatedClinic : c));
-      
-      if (selectedClinic?.id === id) {
-        setSelectedClinic(updatedClinic);
-      }
-
-      return updatedClinic;
-    } catch (err) {
-      setError('Failed to update clinic');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [clinics, selectedClinic]);
+const updateClinic = async (id: string, clinicData: Partial<Clinic>): Promise<Clinic> => {
+  try {
+    const response = await axios.put(`/api/clinic/update/${id}`, clinicData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update clinic', error);
+    throw error;
+  }
+}
 
   const deleteClinic = useCallback(async (id: string): Promise<void> => {
     setLoading(true);
