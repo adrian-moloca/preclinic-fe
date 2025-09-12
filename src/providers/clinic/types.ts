@@ -90,6 +90,7 @@ export interface ClinicContextType {
   deleteClinic: (id: string) => Promise<void>;
   getMyClinic: () => Promise<Clinic | null>;
   selectClinic: (clinicId: string) => void;
+  setSelectedClinic?: (clinic: any) => void;
   getUserClinics: (userId: string) => Clinic[];
   resetClinics: () => void;
 }

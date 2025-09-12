@@ -127,35 +127,35 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
             }
           }
           
-          try {
-            const response = await axios.get('/api/clinic/user-clinics');
-            const userClinics = response.data;
+          // try {
+          //   const response = await axios.get('/api/clinic/user-clinics');
+          //   const userClinics = response.data;
             
-            if (userClinics && userClinics.length > 0) {
-              const clinicsWithSettings = userClinics.map((clinic: Clinic) => ({
-                ...clinic,
-                settings: clinic.settings || defaultClinicSettings
-              }));
+          //   if (userClinics && userClinics.length > 0) {
+          //     const clinicsWithSettings = userClinics.map((clinic: Clinic) => ({
+          //       ...clinic,
+          //       settings: clinic.settings || defaultClinicSettings
+          //     }));
               
-              setClinics(clinicsWithSettings);
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinicsWithSettings));
+          //     setClinics(clinicsWithSettings);
+          //     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinicsWithSettings));
               
-              if (clinicsWithSettings.length > 0 && !selectedClinic) {
-                setSelectedClinic(clinicsWithSettings[0]);
-                localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(clinicsWithSettings[0]));
-              }
-            } else {
-              const myClinic = await getMyClinic();
-              if (myClinic) {
-                setClinics([myClinic]);
-                setSelectedClinic(myClinic);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([myClinic]));
-                localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(myClinic));
-              }
-            }
-          } catch (apiError) {
-            console.log('API fetch failed, using localStorage data');
-          }
+          //     if (clinicsWithSettings.length > 0 && !selectedClinic) {
+          //       setSelectedClinic(clinicsWithSettings[0]);
+          //       localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(clinicsWithSettings[0]));
+          //     }
+          //   } else {
+          //     const myClinic = await getMyClinic();
+          //     if (myClinic) {
+          //       setClinics([myClinic]);
+          //       setSelectedClinic(myClinic);
+          //       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([myClinic]));
+          //       localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(myClinic));
+          //     }
+          //   }
+          // } catch (apiError) {
+          //   console.log('API fetch failed, using localStorage data');
+          // }
           
           setLoading(false);
           setInitialized(true);
@@ -325,43 +325,85 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
   }, [clinics]);
 
   const updateClinic = useCallback(async (id: string, updatedData: Partial<Clinic>): Promise<Clinic> => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // Find the current clinic to preserve any backend-specific fields
+    const currentClinic = clinics.find(c => c.id === id);
+    
+    // Remove frontend-only fields and preserve backend fields
+    const { settings, businessHours, ...dataForApi } = updatedData;
+    
+    // Prepare the update payload
+    let updatePayload: any = { id, ...dataForApi };
+    
+    // Only include businessHours if it has actually changed
+    if (businessHours && currentClinic) {
+      // Check if businessHours has actually changed
+      const currentBusinessHoursStr = JSON.stringify(currentClinic.businessHours);
+      const newBusinessHoursStr = JSON.stringify(businessHours);
       
-      const { settings, ...dataForApi } = updatedData;
-      
-      const response = await axios.put<Clinic>('/api/clinic/patch', { id, ...dataForApi });
-      let updatedClinic = response.data;
-      
-      if (settings) {
-        updatedClinic = { ...updatedClinic, settings };
-      } else if (!updatedClinic.settings) {
-        updatedClinic.settings = defaultClinicSettings;
+      if (currentBusinessHoursStr !== newBusinessHoursStr) {
+        // If businessHours exists in current clinic with _id fields, preserve them
+        if (currentClinic.businessHours) {
+          const mergedBusinessHours: any = {};
+          
+          Object.keys(businessHours).forEach(day => {
+            const currentDay = (currentClinic.businessHours as any)[day];
+            const newDay = (businessHours as any)[day];
+            
+            // Preserve _id if it exists in the current data
+            mergedBusinessHours[day] = {
+              ...newDay,
+              ...(currentDay?._id && { _id: currentDay._id })
+            };
+          });
+          
+          updatePayload.businessHours = mergedBusinessHours;
+        } else {
+          updatePayload.businessHours = businessHours;
+        }
       }
-      
-      const updatedClinics = clinics.map(c => c.id === id ? updatedClinic : c);
-      setClinics(updatedClinics);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClinics));
-      
-      if (selectedClinic?.id === id) {
-        setSelectedClinic(updatedClinic);
-        localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(updatedClinic));
-      }
-      
-      setLoading(false);
-      return updatedClinic;
-    } catch (error) {
-      setLoading(false);
-      console.error('Failed to update clinic:', error);
-      
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message || 'Failed to update clinic');
-      }
-      
-      throw new Error('Failed to update clinic');
+      // If businessHours hasn't changed, don't include it in the update
     }
-  }, [clinics, selectedClinic]);
+    
+    console.log('Sending update to API:', updatePayload);
+    
+    const response = await axios.put<Clinic>('/api/clinic/patch', updatePayload);
+    let updatedClinic = response.data;
+    
+    // Add settings back to the response for local state
+    if (settings) {
+      updatedClinic = { ...updatedClinic, settings };
+    } else if (!updatedClinic.settings) {
+      updatedClinic.settings = defaultClinicSettings;
+    }
+    
+    const updatedClinics = clinics.map(c => c.id === id ? updatedClinic : c);
+    setClinics(updatedClinics);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClinics));
+    
+    if (selectedClinic?.id === id) {
+      setSelectedClinic(updatedClinic);
+      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(updatedClinic));
+    }
+    
+    setLoading(false);
+    return updatedClinic;
+  } catch (error) {
+    setLoading(false);
+    console.error('Failed to update clinic:', error);
+    
+    if (axios.isAxiosError(error)) {
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update clinic';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    throw new Error('Failed to update clinic');
+  }
+}, [clinics, selectedClinic]);
 
   const deleteClinic = useCallback(async (id: string): Promise<void> => {
     try {
