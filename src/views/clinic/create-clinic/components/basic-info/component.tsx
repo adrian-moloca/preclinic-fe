@@ -3,8 +3,8 @@ import {
   Box,
   TextField,
   Typography,
-  Grid,
   Paper,
+  Divider,
 } from '@mui/material';
 import { Business as BusinessIcon } from '@mui/icons-material';
 import ProfileImageUploader from '../../../../../components/profile-image';
@@ -25,20 +25,29 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
             Basic Information
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Tell us about your clinic
+            Let's start with the basic details of your clinic
           </Typography>
         </Box>
       </Box>
 
-      <Box display="flex" justifyContent="center" mb={4}>
+      {/* Logo Upload Section */}
+      <Box mb={4} display="flex" flexDirection="column" alignItems="center">
+        <Typography variant="subtitle1" fontWeight={500} mb={2}>
+          Clinic Logo
+        </Typography>
         <ProfileImageUploader
-          image={formData.logo}
+          image={formData.logo || ''}
           setImage={(logo) => onChange('logo', logo)}
         />
+        <Typography variant="caption" color="text.secondary" mt={1}>
+          Upload your clinic's logo (recommended: 200x200px)
+        </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid>
+      <Divider sx={{ my: 3 }} />
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
           <TextField
             fullWidth
             label="Clinic Name"
@@ -49,57 +58,51 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
             helperText={errors.name}
             required
           />
-        </Grid>
-
-        <Grid>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Description"
-            placeholder="Brief description of your clinic"
-            value={formData.description || ''}
-            onChange={(e) => onChange('description', e.target.value)}
-          />
-        </Grid>
-
-        <Grid>
           <TextField
             fullWidth
             label="Email"
-            type="email"
             placeholder="clinic@example.com"
+            type="email"
             value={formData.email || ''}
             onChange={(e) => onChange('email', e.target.value)}
             error={!!errors.email}
             helperText={errors.email}
             required
           />
-        </Grid>
+        </Box>
 
-        <Grid>
+        <TextField
+          fullWidth
+          label="Description"
+          placeholder="Brief description of your clinic"
+          multiline
+          rows={3}
+          value={formData.description || ''}
+          onChange={(e) => onChange('description', e.target.value)}
+          error={!!errors.description}
+          helperText={errors.description}
+        />
+
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
           <TextField
             fullWidth
             label="Phone"
-            placeholder="+1 234 567 8900"
+            placeholder="+40 123 456 789"
             value={formData.phone || ''}
             onChange={(e) => onChange('phone', e.target.value)}
             error={!!errors.phone}
             helperText={errors.phone}
             required
           />
-        </Grid>
-
-        <Grid>
           <TextField
             fullWidth
             label="Website"
-            placeholder="https://www.yourclinic.com"
+            placeholder="www.yourclinic.com"
             value={formData.website || ''}
             onChange={(e) => onChange('website', e.target.value)}
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Paper>
   );
 };

@@ -9,15 +9,18 @@ import {
   Container,
   Paper,
   Alert,
-  Chip,
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useClinicContext } from '../../../providers/clinic/context';
-import { defaultBusinessHours } from '../../../providers/clinic/types';
+import { CreateClinicData, Clinic } from '../../../providers/clinic/types';
 import BasicInfoStep from './components/basic-info';
 import ContactStep from './components/contact';
 import BusinessHoursStep from './components/business-hours';
-import { Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
+
+interface CreateClinicWizardProps {
+  editMode?: boolean;
+  existingClinic?: Clinic | null;
+}
 
 const steps = [
   'Basic Information',
@@ -25,111 +28,127 @@ const steps = [
   'Business Hours',
 ];
 
-export const CreateClinicWizard: FC = () => {
+const defaultBusinessHours = {
+  monday: { open: '09:00', close: '17:00', isClosed: false },
+  tuesday: { open: '09:00', close: '17:00', isClosed: false },
+  wednesday: { open: '09:00', close: '17:00', isClosed: false },
+  thursday: { open: '09:00', close: '17:00', isClosed: false },
+  friday: { open: '09:00', close: '17:00', isClosed: false },
+  saturday: { open: '09:00', close: '13:00', isClosed: false },
+  sunday: { open: '09:00', close: '13:00', isClosed: true },
+};
+
+export const CreateClinicWizard: FC<CreateClinicWizardProps> = ({ 
+  editMode = false, 
+  existingClinic 
+}) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { createClinic, updateClinic, selectedClinic, setSelectedClinic, loading, error: contextError } = useClinicContext();
-  
-  const isEditMode = !!selectedClinic && (location.pathname.includes('edit') || location.pathname.includes('settings'));
+  const { createClinic, updateClinic, loading } = useClinicContext();
   
   const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState<any>({
-    name: '',
-    description: '',
-    logo: '',
-    email: '',
-    phone: '',
-    website: '',
-    country: '', 
-    state: '',
-    city: '',
-    address: '',
-    zipCode: '',
-    businessHours: defaultBusinessHours,
+  
+  // Initialize formData with existing clinic data if in edit mode
+  const [formData, setFormData] = useState<Partial<CreateClinicData>>(() => {
+    if (editMode && existingClinic) {
+      return {
+        name: existingClinic.name || '',
+        description: existingClinic.description || '',
+        logo: existingClinic.logo || '',
+        email: existingClinic.email || '',
+        phone: existingClinic.phone || '',
+        website: existingClinic.website || '',
+        address: existingClinic.address || '',
+        city: existingClinic.city || '',
+        state: existingClinic.state || '',
+        zipCode: existingClinic.zipCode || '',
+        businessHours: existingClinic.businessHours || defaultBusinessHours,
+        settings: existingClinic.settings || {
+          timeZone: 'Europe/Bucharest',
+          dateFormat: 'DD/MM/YYYY',
+          timeFormat: '24h',
+          currency: 'RON',
+          language: 'Romanian',
+          theme: 'light',
+          emailNotifications: true,
+          smsNotifications: true,
+          appointmentReminders: true,
+          marketingEmails: false,
+          systemAlerts: true,
+        }
+      };
+    }
+    
+    // Default empty state for create mode
+    return {
+      name: '',
+      description: '',
+      logo: '',
+      email: '',
+      phone: '',
+      website: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      businessHours: defaultBusinessHours,
+      settings: {
+        timeZone: 'Europe/Bucharest',
+        dateFormat: 'DD/MM/YYYY',
+        timeFormat: '24h',
+        currency: 'RON',
+        language: 'Romanian',
+        theme: 'light',
+        emailNotifications: true,
+        smsNotifications: true,
+        appointmentReminders: true,
+        marketingEmails: false,
+        systemAlerts: true,
+      }
+    };
   });
+  
   const [errors, setErrors] = useState<any>({});
   const [submitError, setSubmitError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [hasChanges, setHasChanges] = useState(false);
-  const [initialData, setInitialData] = useState<any>(null);
-  const [justCreated, setJustCreated] = useState(false);
 
+  // Update form data when existingClinic changes (for edit mode)
   useEffect(() => {
-    if (selectedClinic && (isEditMode || justCreated)) {
-      const prefillData = {
-        name: selectedClinic.name || '',
-        description: selectedClinic.description || '',
-        logo: selectedClinic.logo || '',
-        email: selectedClinic.email || '',
-        phone: selectedClinic.phone || '',
-        website: selectedClinic.website || '',
-        
-        country: '',
-        state: selectedClinic.state || '',
-        city: selectedClinic.city || '',
-        address: selectedClinic.address || '',
-        zipCode: selectedClinic.zipCode || '',
-        
-        businessHours: selectedClinic.businessHours || defaultBusinessHours,
-      };
-      
-      setFormData(prefillData);
-      setInitialData(prefillData);
-      
-      if (!justCreated) {
-        setActiveStep(0);
-      }
-      
-      setHasChanges(false);
-      
-      console.log('Prefilled clinic data:', prefillData);
-      
-      if (justCreated) {
-        setJustCreated(false);
-      }
-    } else if (!isEditMode && !justCreated) {
-      const emptyData = {
-        name: '',
-        description: '',
-        logo: '',
-        email: '',
-        phone: '',
-        website: '',
-        country: '',
-        state: '',
-        city: '',
-        address: '',
-        zipCode: '',
-        businessHours: defaultBusinessHours,
-      };
-      
-      setFormData(emptyData);
-      setInitialData(emptyData);
-      setActiveStep(0);
-      setHasChanges(false);
+    if (editMode && existingClinic) {
+      setFormData({
+        name: existingClinic.name || '',
+        description: existingClinic.description || '',
+        logo: existingClinic.logo || '',
+        email: existingClinic.email || '',
+        phone: existingClinic.phone || '',
+        website: existingClinic.website || '',
+        address: existingClinic.address || '',
+        city: existingClinic.city || '',
+        state: existingClinic.state || '',
+        zipCode: existingClinic.zipCode || '',
+        businessHours: existingClinic.businessHours || defaultBusinessHours,
+        settings: existingClinic.settings || {
+          timeZone: 'Europe/Bucharest',
+          dateFormat: 'DD/MM/YYYY',
+          timeFormat: '24h',
+          currency: 'RON',
+          language: 'Romanian',
+          theme: 'light',
+          emailNotifications: true,
+          smsNotifications: true,
+          appointmentReminders: true,
+          marketingEmails: false,
+          systemAlerts: true,
+        }
+      });
     }
-  }, [selectedClinic, isEditMode, justCreated]);
+  }, [editMode, existingClinic]);
 
   const handleChange = useCallback((field: string, value: any) => {
-    setFormData((prev: any) => {
-      const updated = { ...prev, [field]: value };
-      
-      if (initialData) {
-        const hasAnyChange = JSON.stringify(updated) !== JSON.stringify(initialData);
-        setHasChanges(hasAnyChange);
-      } else {
-        setHasChanges(true);
-      }
-      
-      return updated;
-    });
-    
-    setSuccessMessage('');
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     if (errors[field]) {
       setErrors((prev: any) => ({ ...prev, [field]: '' }));
     }
-  }, [errors, initialData]);
+  }, [errors]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: any = {};
@@ -147,14 +166,12 @@ export const CreateClinicWizard: FC = () => {
       case 1:
         if (!formData.address?.trim()) newErrors.address = 'Address is required';
         if (!formData.city?.trim()) newErrors.city = 'City is required';
-        if (!formData.state?.trim() && !formData.country?.trim()) {
-          newErrors.state = 'State is required';
-        }
+        if (!formData.state?.trim()) newErrors.state = 'State is required';
         if (!formData.zipCode?.trim()) newErrors.zipCode = 'ZIP code is required';
         break;
         
       case 2:
-        // Business hours are optional
+        // Business hours validation if needed
         break;
     }
 
@@ -179,111 +196,46 @@ export const CreateClinicWizard: FC = () => {
 
     try {
       setSubmitError('');
-      setSuccessMessage('');
       
-      console.log(`${isEditMode ? 'Updating' : 'Creating'} clinic with form data:`, formData);
-      
-      const { country, businessHours, ...dataWithoutExtras } = formData;
-      
-      const clinicData: any = {
-        name: dataWithoutExtras.name || '',
-        description: dataWithoutExtras.description || '',
-        logo: dataWithoutExtras.logo || '',
-        address: dataWithoutExtras.address || '',
-        city: dataWithoutExtras.city || '',
-        state: dataWithoutExtras.state || '',
-        country: dataWithoutExtras.country || '',
-        zipCode: dataWithoutExtras.zipCode || '',
-        phone: dataWithoutExtras.phone || '',
-        email: dataWithoutExtras.email || '',
-        website: dataWithoutExtras.website || '',
-      };
-      
-      if (!isEditMode) {
-        clinicData.businessHours = businessHours || defaultBusinessHours;
-      }
-      
-      console.log(`Sending to API for ${isEditMode ? 'update' : 'create'}:`, clinicData);
-      
-      let result;
-      if (isEditMode && selectedClinic) {
-        result = await updateClinic(selectedClinic.id, clinicData);
-        setSuccessMessage('Clinic updated successfully!');
-        setHasChanges(false);
-        
-        setInitialData(formData);
-        
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
+      if (editMode && existingClinic) {
+        // Update existing clinic
+        await updateClinic(existingClinic.id, formData);
+        navigate('/settings');
       } else {
-        result = await createClinic(clinicData);
+        // Create new clinic
+        const completeData: CreateClinicData = {
+          name: formData.name || '',
+          description: formData.description || '',
+          logo: formData.logo || '',
+          email: formData.email || '',
+          phone: formData.phone || '',
+          website: formData.website || '',
+          address: formData.address || '',
+          city: formData.city || '',
+          state: formData.state || '',
+          country: formData.country || '',
+          zipCode: formData.zipCode || '',
+          businessHours: formData.businessHours || defaultBusinessHours,
+          settings: formData.settings || {
+            timeZone: 'Europe/Bucharest',
+            dateFormat: 'DD/MM/YYYY',
+            timeFormat: '24h',
+            currency: 'RON',
+            language: 'Romanian',
+            theme: 'light',
+            emailNotifications: true,
+            smsNotifications: true,
+            appointmentReminders: true,
+            marketingEmails: false,
+            systemAlerts: true,
+          },
+        };
         
-        if (result && result.id) {
-          console.log('Clinic created successfully:', result);
-          
-          if (setSelectedClinic) {
-             setSelectedClinic(result);
-          }
-          
-          setJustCreated(true);
-          
-          setSuccessMessage('Clinic created successfully! You can continue editing your clinic settings.');
-          
-          navigate(`/clinic/${result.id}/edit`, { replace: true });
-          
-          setInitialData({
-            name: result.name || '',
-            description: result.description || '',
-            logo: result.logo || '',
-            email: result.email || '',
-            phone: result.phone || '',
-            website: result.website || '',
-            country: '',
-            state: result.state || '',
-            city: result.city || '',
-            address: result.address || '',
-            zipCode: result.zipCode || '',
-            businessHours: result.businessHours || defaultBusinessHours,
-          });
-          
-          setHasChanges(false);
-          
-          setTimeout(() => {
-            setSuccessMessage('');
-          }, 5000);
-        } else {
-          throw new Error('Failed to create clinic - invalid response');
-        }
+        await createClinic(completeData);
+        navigate('/');
       }
-      
-    } catch (error: any) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'create'} clinic:`, error);
-      setSubmitError(error.message || contextError || `Failed to ${isEditMode ? 'update' : 'create'} clinic. Please try again.`);
-      
-      setTimeout(() => {
-        setSubmitError('');
-      }, 5000);
-    }
-  };
-
-  const handleCancel = () => {
-    if (hasChanges) {
-      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
-        navigate(-1);
-      }
-    } else {
-      navigate(-1);
-    }
-  };
-
-  const handleReset = () => {
-    if (initialData) {
-      setFormData(initialData);
-      setHasChanges(false);
-      setErrors({});
-      setSuccessMessage('Form reset to original values');
-      setTimeout(() => setSuccessMessage(''), 2000);
+    } catch (error) {
+      setSubmitError(editMode ? 'Failed to update clinic. Please try again.' : 'Failed to create clinic. Please try again.');
     }
   };
 
@@ -318,49 +270,15 @@ export const CreateClinicWizard: FC = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', py: 4 }}>
+    <Box sx={{ bgcolor: editMode ? 'transparent' : 'grey.50', minHeight: editMode ? 'auto' : '100vh', py: editMode ? 0 : 4 }}>
       <Container maxWidth="lg">
         <Paper elevation={1} sx={{ p: 4, mb: 4 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h4" fontWeight={600}>
-              {isEditMode ? 'Edit Clinic Settings' : 'Create Your Clinic'}
-            </Typography>
-            {isEditMode && (
-              <Box display="flex" gap={1}>
-                <Chip
-                  icon={<EditIcon />}
-                  label="Edit Mode"
-                  color="primary"
-                  variant="outlined"
-                />
-                {hasChanges && (
-                  <Chip
-                    label="Unsaved Changes"
-                    color="warning"
-                    size="small"
-                  />
-                )}
-              </Box>
-            )}
-          </Box>
-          
-          <Typography variant="body1" color="text.secondary" mb={4}>
-            {isEditMode 
-              ? 'Update your clinic information and settings'
-              : "Let's set up your clinic profile to get started"
-            }
+          <Typography variant="h4" fontWeight={600} textAlign="center" mb={2}>
+            {editMode ? 'Update Clinic Information' : 'Create Your Clinic'}
           </Typography>
-
-          {selectedClinic && isEditMode && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              Editing: <strong>{selectedClinic.name}</strong>
-              {selectedClinic.id && (
-                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                  ID: {selectedClinic.id}
-                </Typography>
-              )}
-            </Alert>
-          )}
+          <Typography variant="body1" textAlign="center" color="text.secondary" mb={4}>
+            {editMode ? 'Update your clinic profile information' : "Let's set up your clinic profile to get started"}
+          </Typography>
 
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map((label) => (
@@ -376,61 +294,28 @@ export const CreateClinicWizard: FC = () => {
             </Alert>
           )}
 
-          {successMessage && (
-            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessMessage('')}>
-              {successMessage}
-            </Alert>
-          )}
-
           <Box sx={{ mb: 4 }}>
             {renderStepContent(activeStep)}
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Box>
-              {isEditMode && (
-                <>
-                  <Button
-                    onClick={handleCancel}
-                    variant="outlined"
-                    color="secondary"
-                    sx={{ mr: 1 }}
-                  >
-                    Cancel
-                  </Button>
-                  {hasChanges && (
-                    <Button
-                      onClick={handleReset}
-                      variant="outlined"
-                      sx={{ mr: 1 }}
-                    >
-                      Reset
-                    </Button>
-                  )}
-                </>
-              )}
-              <Button
-                disabled={activeStep === 0}
-                onClick={handleBack}
-                variant="outlined"
-              >
-                Back
-              </Button>
-            </Box>
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              variant="outlined"
+            >
+              Back
+            </Button>
 
             <Box>
               {activeStep === steps.length - 1 ? (
                 <Button
                   variant="contained"
                   onClick={handleSubmit}
-                  disabled={loading || (!hasChanges && isEditMode)}
-                  startIcon={isEditMode ? <EditIcon /> : <AddIcon />}
+                  disabled={loading}
                   sx={{ ml: 1 }}
                 >
-                  {loading 
-                    ? (isEditMode ? 'Updating...' : 'Creating...') 
-                    : (isEditMode ? (hasChanges ? 'Update Clinic' : 'No Changes') : 'Create Clinic')
-                  }
+                  {loading ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Clinic' : 'Create Clinic')}
                 </Button>
               ) : (
                 <Button
@@ -443,14 +328,6 @@ export const CreateClinicWizard: FC = () => {
               )}
             </Box>
           </Box>
-
-          {isEditMode && selectedClinic && (
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                Last updated: {new Date(selectedClinic.updatedAt).toLocaleString()}
-              </Typography>
-            </Box>
-          )}
         </Paper>
       </Container>
     </Box>
