@@ -8,13 +8,13 @@ import {
   Button,
   Box,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ProfileImageUploader from "../profile-image";
 import { Country, State, City } from "country-state-city";
 import { usePatientsContext } from "../../providers/patients";
-import { PatientsEntry } from "../../providers/patients/types";
 import {
   FormFieldWrapper,
 } from "../create-patient-form/style";
@@ -25,40 +25,68 @@ export const EditPatientForm: FC = () => {
   const navigate = useNavigate();
   const { patients, updatePatient } = usePatientsContext();
 
-  const [formData, setFormData] = useState<PatientsEntry | null>(null);
+  const [formData, setFormData] = useState<any>(null);
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id || !Array.isArray(patients)) return;
-
-    const match = patients.find((patient) => String(patient._id) === String(id));
-
-    if (match) {
-      setFormData({ ...match });
+    if (!id) {
+      setLoading(false);
+      return;
     }
+
+    // Get all patients from the context
+    const allPatients = Object.values(patients).flat();
+    const patient = allPatients.find((p: any) => p._id === id);
+    
+    if (patient) {
+      // Extract the actual patient data from the user object
+      const patientData = (patient as any).user || patient;
+      
+      // Set form data with the extracted patient data
+      setFormData({
+        _id: patient._id, // Keep the patient ID
+        firstName: patientData.firstName || '',
+        lastName: patientData.lastName || '',
+        email: patientData.email || '',
+        phoneNumber: patientData.phoneNumber || '',
+        birthDate: patientData.birthDate || '',
+        gender: patientData.gender || '',
+        bloodGroup: patientData.bloodGroup || '',
+        address: patientData.address || '',
+        city: patientData.city || '',
+        state: patientData.state || '',
+        country: patientData.country || '',
+        zipCode: patientData.zipCode || '',
+        profileImg: patientData.profileImg || '',
+        allergies: patientData.allergies || '',
+        medicalHistory: patientData.medicalHistory || '',
+        currentMedications: patientData.currentMedications || '',
+      });
+    }
+    setLoading(false);
   }, [id, patients]);
 
   const validateEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const validatePhone = (value: string) =>
-    /^[0-9+\-()\s]{10}$/.test(value);
+    /^[0-9+\-()\s]{10,}$/.test(value);
 
   useEffect(() => {
     if (formData) {
       setEmailError(
-        !validateEmail(formData.email) ? "Invalid email format" : ""
+        formData.email && !validateEmail(formData.email) ? "Invalid email format" : ""
       );
       setPhoneError(
-        !validatePhone(formData.phoneNumber) ? "Invalid phone number" : ""
+        formData.phoneNumber && !validatePhone(formData.phoneNumber) ? "Invalid phone number" : ""
       );
     }
-    //eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData?.email, formData?.phoneNumber]);
+  }, [formData?.email, formData?.phoneNumber, formData]);
 
-  const updateField = (field: keyof PatientsEntry, value: string) => {
-    setFormData((prev) => (prev ? { ...prev, [field]: value } : prev));
+  const updateField = (field: string, value: string) => {
+    setFormData((prev: any) => (prev ? { ...prev, [field]: value } : prev));
   };
 
   const countries = Country.getAllCountries();
@@ -77,13 +105,27 @@ export const EditPatientForm: FC = () => {
       )
       : [];
 
-  if (!formData) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!formData) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Typography>Patient not found</Typography>
+      </Box>
+    );
+  }
 
   const isFormValid =
-    formData.firstName.trim() &&
-    formData.lastName.trim() &&
-    formData.phoneNumber.trim() &&
-    formData.email.trim() &&
+    formData.firstName?.trim() &&
+    formData.lastName?.trim() &&
+    formData.phoneNumber?.trim() &&
+    formData.email?.trim() &&
     validatePhone(formData.phoneNumber) &&
     validateEmail(formData.email) &&
     formData.birthDate &&
@@ -95,11 +137,36 @@ export const EditPatientForm: FC = () => {
     formData.state &&
     formData.city;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isFormValid || !formData) return;
 
-    updatePatient(formData);
-    navigate("/patients/all-patients");
+    try {
+      // Prepare the data in the correct format for the API
+      const updateData = {
+        _id: formData._id,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        bloodGroup: formData.bloodGroup,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        zipCode: formData.zipCode,
+        profileImg: formData.profileImg,
+        allergies: formData.allergies,
+        medicalHistory: formData.medicalHistory,
+        currentMedications: formData.currentMedications,
+      };
+
+      updatePatient(updateData);
+      navigate("/patients/all-patients");
+    } catch (error) {
+      console.error("Error updating patient:", error);
+    }
   };
 
   return (
@@ -116,21 +183,21 @@ export const EditPatientForm: FC = () => {
         <FormFieldWrapper>
           <TextField
             label="First Name"
-            value={formData.firstName}
+            value={formData.firstName || ''}
             onChange={(e) => updateField("firstName", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             required
           />
           <TextField
             label="Last Name"
-            value={formData.lastName}
+            value={formData.lastName || ''}
             onChange={(e) => updateField("lastName", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             required
           />
           <TextField
             label="Phone Number"
-            value={formData.phoneNumber}
+            value={formData.phoneNumber || ''}
             onChange={(e) => updateField("phoneNumber", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             error={!!phoneError}
@@ -139,7 +206,7 @@ export const EditPatientForm: FC = () => {
           />
           <TextField
             label="Email Address"
-            value={formData.email}
+            value={formData.email || ''}
             onChange={(e) => updateField("email", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             error={!!emailError}
@@ -150,7 +217,7 @@ export const EditPatientForm: FC = () => {
             label="Birth Date"
             type="date"
             InputLabelProps={{ shrink: true }}
-            value={formData.birthDate}
+            value={formData.birthDate || ''}
             onChange={(e) => updateField("birthDate", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             required
@@ -160,7 +227,7 @@ export const EditPatientForm: FC = () => {
             <InputLabel id="gender-label">Gender</InputLabel>
             <Select
               labelId="gender-label"
-              value={formData.gender}
+              value={formData.gender || ''}
               label="Gender"
               onChange={(e) => updateField("gender", e.target.value)}
             >
@@ -175,7 +242,7 @@ export const EditPatientForm: FC = () => {
             <InputLabel id="blood-group-label">Blood Group</InputLabel>
             <Select
               labelId="blood-group-label"
-              value={formData.bloodGroup}
+              value={formData.bloodGroup || ''}
               label="Blood Group"
               onChange={(e) => updateField("bloodGroup", e.target.value)}
             >
@@ -192,14 +259,14 @@ export const EditPatientForm: FC = () => {
 
           <TextField
             label="Address"
-            value={formData.address}
+            value={formData.address || ''}
             onChange={(e) => updateField("address", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             required
           />
           <TextField
             label="Zip Code"
-            value={formData.zipCode}
+            value={formData.zipCode || ''}
             onChange={(e) => updateField("zipCode", e.target.value)}
             sx={{ width: 500, marginY: 1 }}
             required
@@ -209,7 +276,8 @@ export const EditPatientForm: FC = () => {
             <InputLabel id="country-label">Country</InputLabel>
             <Select
               labelId="country-label"
-              value={formData.country}
+              value={formData.country || ''}
+              label="Country"
               onChange={(e) => {
                 updateField("country", e.target.value);
                 updateField("state", "");
@@ -232,7 +300,8 @@ export const EditPatientForm: FC = () => {
             <InputLabel id="state-label">State</InputLabel>
             <Select
               labelId="state-label"
-              value={formData.state}
+              value={formData.state || ''}
+              label="State"
               onChange={(e) => {
                 updateField("state", e.target.value);
                 updateField("city", "");
@@ -254,7 +323,8 @@ export const EditPatientForm: FC = () => {
             <InputLabel id="city-label">City</InputLabel>
             <Select
               labelId="city-label"
-              value={formData.city}
+              value={formData.city || ''}
+              label="City"
               onChange={(e) => updateField("city", e.target.value)}
             >
               {cities.map((c) => (
@@ -264,6 +334,32 @@ export const EditPatientForm: FC = () => {
               ))}
             </Select>
           </FormControl>
+
+          {/* Optional Medical Information */}
+          <TextField
+            label="Allergies"
+            value={formData.allergies || ''}
+            onChange={(e) => updateField("allergies", e.target.value)}
+            sx={{ width: 500, marginY: 1 }}
+            multiline
+            rows={2}
+          />
+          <TextField
+            label="Medical History"
+            value={formData.medicalHistory || ''}
+            onChange={(e) => updateField("medicalHistory", e.target.value)}
+            sx={{ width: 500, marginY: 1 }}
+            multiline
+            rows={2}
+          />
+          <TextField
+            label="Current Medications"
+            value={formData.currentMedications || ''}
+            onChange={(e) => updateField("currentMedications", e.target.value)}
+            sx={{ width: 500, marginY: 1 }}
+            multiline
+            rows={2}
+          />
         </FormFieldWrapper>
 
         <Button

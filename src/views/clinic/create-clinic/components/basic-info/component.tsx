@@ -5,7 +5,6 @@ import {
   Typography,
   Grid,
   Paper,
-  Divider,
 } from '@mui/material';
 import { Business as BusinessIcon } from '@mui/icons-material';
 import ProfileImageUploader from '../../../../../components/profile-image';
@@ -26,26 +25,17 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
             Basic Information
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Let's start with the basic details of your clinic
+            Tell us about your clinic
           </Typography>
         </Box>
       </Box>
 
-      {/* Logo Upload Section */}
-      <Box mb={4} display="flex" flexDirection="column" alignItems="center">
-        <Typography variant="subtitle1" fontWeight={500} mb={2}>
-          Clinic Logo
-        </Typography>
+      <Box display="flex" justifyContent="center" mb={4}>
         <ProfileImageUploader
-          image={formData.logo || ''}
+          image={formData.logo}
           setImage={(logo) => onChange('logo', logo)}
         />
-        <Typography variant="caption" color="text.secondary" mt={1}>
-          Upload your clinic's logo (recommended: 200x200px)
-        </Typography>
       </Box>
-
-      <Divider sx={{ my: 3 }} />
 
       <Grid container spacing={3}>
         <Grid>
@@ -64,13 +54,12 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
         <Grid>
           <TextField
             fullWidth
+            multiline
+            rows={3}
             label="Description"
             placeholder="Brief description of your clinic"
-            rows={3}
             value={formData.description || ''}
             onChange={(e) => onChange('description', e.target.value)}
-            error={!!errors.description}
-            helperText={errors.description}
           />
         </Grid>
 
@@ -78,8 +67,8 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
           <TextField
             fullWidth
             label="Email"
-            placeholder="clinic@example.com"
             type="email"
+            placeholder="clinic@example.com"
             value={formData.email || ''}
             onChange={(e) => onChange('email', e.target.value)}
             error={!!errors.email}
@@ -92,7 +81,7 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
           <TextField
             fullWidth
             label="Phone"
-            placeholder="+40 123 456 789"
+            placeholder="+1 234 567 8900"
             value={formData.phone || ''}
             onChange={(e) => onChange('phone', e.target.value)}
             error={!!errors.phone}
@@ -105,11 +94,9 @@ export const BasicInfoStep: FC<BasicInfoStepProps> = ({ formData, onChange, erro
           <TextField
             fullWidth
             label="Website"
-            placeholder="https://your-clinic.com"
+            placeholder="https://www.yourclinic.com"
             value={formData.website || ''}
             onChange={(e) => onChange('website', e.target.value)}
-            error={!!errors.website}
-            helperText={errors.website}
           />
         </Grid>
       </Grid>

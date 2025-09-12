@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useClinicContext } from '../../../providers/clinic/context';
-import { CreateClinicData } from '../../../providers/clinic/types';
+import { CreateClinicData, defaultBusinessHours } from '../../../providers/clinic/types';
 import BasicInfoStep from './components/basic-info';
 import ContactStep from './components/contact';
 import BusinessHoursStep from './components/business-hours';
@@ -23,29 +23,35 @@ const steps = [
   'Business Hours',
 ];
 
-const defaultBusinessHours = {
-  monday: { open: '09:00', close: '17:00', isClosed: false },
-  tuesday: { open: '09:00', close: '17:00', isClosed: false },
-  wednesday: { open: '09:00', close: '17:00', isClosed: false },
-  thursday: { open: '09:00', close: '17:00', isClosed: false },
-  friday: { open: '09:00', close: '17:00', isClosed: false },
-  saturday: { open: '09:00', close: '13:00', isClosed: false },
-  sunday: { open: '09:00', close: '13:00', isClosed: true },
-};
-
 export const CreateClinicWizard: FC = () => {
   const navigate = useNavigate();
-  const { createClinic, loading } = useClinicContext();
+  const { createClinic, loading, error: contextError } = useClinicContext();
   
   const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState<Partial<CreateClinicData>>({
+  const [formData, setFormData] = useState<any>({
+    // Basic info
+    name: '',
+    description: '',
+    logo: '',
+    email: '',
+    phone: '',
+    website: '',
+    
+    // Location - country is for UI only
+    country: '', // This is for UI selection only
+    state: '',
+    city: '',
+    address: '',
+    zipCode: '',
+    
+    // Business hours
     businessHours: defaultBusinessHours,
   });
   const [errors, setErrors] = useState<any>({});
   const [submitError, setSubmitError] = useState('');
 
   const handleChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
     
     if (errors[field]) {
       setErrors((prev: any) => ({ ...prev, [field]: '' }));
@@ -68,11 +74,14 @@ export const CreateClinicWizard: FC = () => {
       case 1:
         if (!formData.address?.trim()) newErrors.address = 'Address is required';
         if (!formData.city?.trim()) newErrors.city = 'City is required';
-        if (!formData.state?.trim()) newErrors.state = 'State is required';
+        if (!formData.state?.trim() && !formData.country?.trim()) {
+          newErrors.state = 'State is required';
+        }
         if (!formData.zipCode?.trim()) newErrors.zipCode = 'ZIP code is required';
         break;
         
       case 2:
+        // Business hours are optional
         break;
     }
 
@@ -97,10 +106,42 @@ export const CreateClinicWizard: FC = () => {
 
     try {
       setSubmitError('');
-      await createClinic(formData as CreateClinicData);
-      navigate('/');
-    } catch (error) {
-      setSubmitError('Failed to create clinic. Please try again.');
+      
+      console.log('Creating clinic with form data:', formData);
+      
+      // IMPORTANT: Remove country field and prepare data for API
+      const { country, ...dataWithoutCountry } = formData;
+      
+      // Prepare the data matching your CreateClinicData type
+      const clinicData: CreateClinicData = {
+        name: dataWithoutCountry.name || '',
+        description: dataWithoutCountry.description || '',
+        logo: dataWithoutCountry.logo || '',
+        address: dataWithoutCountry.address || '',
+        city: dataWithoutCountry.city || '',
+        state: dataWithoutCountry.state || '', 
+        country: dataWithoutCountry.country || '', // Use country as fallback for state
+        zipCode: dataWithoutCountry.zipCode || '',
+        phone: dataWithoutCountry.phone || '',
+        email: dataWithoutCountry.email || '',
+        website: dataWithoutCountry.website || '',
+        businessHours: dataWithoutCountry.businessHours || defaultBusinessHours,
+      };
+      
+      console.log('Sending to API (without country):', clinicData);
+      
+      const newClinic = await createClinic(clinicData);
+      
+      if (newClinic && newClinic.id) {
+        console.log('Clinic created successfully, navigating to dashboard');
+        navigate('/');
+      } else {
+        throw new Error('Failed to create clinic - invalid response');
+      }
+      
+    } catch (error: any) {
+      console.error('Failed to create clinic:', error);
+      setSubmitError(error.message || contextError || 'Failed to create clinic. Please try again.');
     }
   };
 
@@ -153,9 +194,9 @@ export const CreateClinicWizard: FC = () => {
             ))}
           </Stepper>
 
-          {submitError && (
+          {(submitError || contextError) && (
             <Alert severity="error" sx={{ mb: 3 }}>
-              {submitError}
+              {submitError || contextError}
             </Alert>
           )}
 

@@ -6,6 +6,23 @@ import axios from 'axios';
 export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [patients, setPatients] = useState<PatientsEntry[]>([]);
 
+  const getAllPatients = async () => {
+    try {
+      const response = await axios.get<PatientsEntry[]>('/api/patient/getAll');
+      if (response.status === 200) {
+        setPatients(response.data);
+      } else {
+        console.error("Unexpected response:", response);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Axios error:", error.response?.data || error.message);
+      } else {
+        console.error("Unexpected error:", error);
+      }
+    }
+  }
+
   const addPatient = async (newEntry: Omit<PatientsEntry, 'id'>) => {
     try {
       const patientData = {
@@ -78,6 +95,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         patients,
         setPatients,
         addPatient,
+        getAllPatients,
         updatePatient,
         deletePatient,
         resetPatients,

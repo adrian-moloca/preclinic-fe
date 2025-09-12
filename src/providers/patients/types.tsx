@@ -21,6 +21,7 @@ export type PatientsEntry = {
 export interface IPatientsContext {
   patients: PatientsEntry[];
   setPatients: React.Dispatch<React.SetStateAction<PatientsEntry[]>>;
+  getAllPatients: () => void;
   addPatient: (entry: PatientsEntry) => void;
   updatePatient: (entry: PatientsEntry) => void;
   deletePatient: (id: string) => void;

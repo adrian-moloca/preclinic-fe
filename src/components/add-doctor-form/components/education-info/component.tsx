@@ -32,10 +32,10 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
 }) => {
   const [educationList, setEducationList] = useState<EducationEntry[]>([
     {
-      educationalDegrees: formData.educationalDegrees || '',
-      university: formData.university || '',
-      from: formData.from ? new Date(formData.from) : null,
-      to: formData.to ? new Date(formData.to) : null
+      educationalDegrees: formData.educationInformation?.educationalDegrees || '',
+      university: formData.educationInformation?.university || '',
+      from: formData.educationInformation?.from ? new Date(formData.educationInformation.from) : null,
+      to: formData.educationInformation?.to ? new Date(formData.educationInformation.to) : null
     }
   ]);
 
@@ -44,10 +44,12 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
       const primaryEducation = educationList[0];
       setFormData(prev => ({
         ...prev,
-        educationalDegrees: primaryEducation.educationalDegrees,
-        university: primaryEducation.university,
-        from: primaryEducation.from ? primaryEducation.from.getFullYear().toString() : '',
-        to: primaryEducation.to ? primaryEducation.to.getFullYear().toString() : ''
+        educationInformation: {
+          educationalDegrees: primaryEducation.educationalDegrees,
+          university: primaryEducation.university,
+          from: primaryEducation.from ? primaryEducation.from.getFullYear().toString() : '',
+          to: primaryEducation.to ? primaryEducation.to.getFullYear().toString() : ''
+        }
       }));
     }
   }, [educationList, setFormData]);
@@ -170,7 +172,6 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
                   />
                 </Grid>
                 <Grid>
-                  {/* ✅ Fixed DatePicker implementation */}
                   <DatePicker
                     views={['year']}
                     label="To Year"
@@ -199,5 +200,3 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
     </LocalizationProvider>
   );
 };
-
-export default EducationInfoSection;

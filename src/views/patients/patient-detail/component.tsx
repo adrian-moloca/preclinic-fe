@@ -44,26 +44,29 @@ export const PatientDetails: FC = () => {
 
   const allPatients = Object.values(patients).flat();
   const patient = allPatients.find((p) => p._id === id);
+  
+  // Extract the actual patient data from the user object
+  const patientData = (patient as any)?.user || patient;
 
   const patientCases = patient ? getCasesByPatientId(patient._id) : [];
   const patientAlerts = patient ? getAlertsForPatient(patient._id) : [];
 
   useEffect(() => {
-    if (patient && id) {
+    if (patient && patientData && id) {
       addRecentItem({
         id: patient._id,
         type: 'patient',
-        title: `${patient.firstName} ${patient.lastName}`,
-        subtitle: patient.email || patient.phoneNumber || '',
+        title: `${patientData.firstName} ${patientData.lastName}`,
+        subtitle: patientData.email || patientData.phoneNumber || '',
         url: `/patients/${patient._id}`,
         metadata: {
-          gender: patient.gender,
-          email: patient.email,
-          phone: patient.phoneNumber,
+          gender: patientData.gender,
+          email: patientData.email,
+          phone: patientData.phoneNumber,
         },
       });
     }
-  }, [patient, id, addRecentItem]);
+  }, [patient, patientData, id, addRecentItem]);
 
   const caseColumns = [
     { id: "id", label: "Case ID" },
@@ -159,7 +162,7 @@ export const PatientDetails: FC = () => {
     }
   };
 
-  if (!patient) {
+  if (!patient || !patientData) {
     return (
       <Box p={3}>
         <Typography variant="h6">Patient not found</Typography>
@@ -170,13 +173,13 @@ export const PatientDetails: FC = () => {
   const favoriteItem = {
     id: patient._id,
     type: 'patient' as const,
-    title: `${patient.firstName} ${patient.lastName}`,
-    subtitle: patient.email || patient.phoneNumber || '',
+    title: `${patientData.firstName} ${patientData.lastName}`,
+    subtitle: patientData.email || patientData.phoneNumber || '',
     url: `/patients/${patient._id}`,
     metadata: {
-      gender: patient.gender,
-      email: patient.email,
-      phone: patient.phoneNumber,
+      gender: patientData.gender,
+      email: patientData.email,
+      phone: patientData.phoneNumber,
     },
   };
 
@@ -190,14 +193,16 @@ export const PatientDetails: FC = () => {
         <Box display="flex" alignItems="center" justifyContent={"space-between"} gap={3} mb={3}>
           <Box display={"flex"} alignItems={"center"} gap={2}>
             <Avatar
-              src={patient.profileImg}
-              alt={`${patient.firstName} ${patient.lastName}`}
+              src={patientData.profileImg}
+              alt={`${patientData.firstName} ${patientData.lastName}`}
               sx={{ width: 100, height: 100 }}
-            />
+            >
+              {patientData.firstName?.[0]}{patientData.lastName?.[0]}
+            </Avatar>
             <Box>
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography variant="h5">
-                  {patient.firstName} {patient.lastName}
+                  {patientData.firstName} {patientData.lastName}
                 </Typography>
                 <FavoriteButton item={favoriteItem} />
                 {patientAlerts.length > 0 && (
@@ -221,10 +226,10 @@ export const PatientDetails: FC = () => {
                 )}
               </Box>
               <Typography variant="body1" color="text.secondary">
-                {patient.email}
+                {patientData.email}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {patient.gender}
+                {patientData.gender}
               </Typography>
             </Box>
           </Box>
@@ -250,69 +255,69 @@ export const PatientDetails: FC = () => {
           <PatientDetailsWrapper>
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Birth Date</Typography>
-              <Typography>{patient.birthDate}</Typography>
+              <Typography>{patientData.birthDate || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Phone</Typography>
-              <Typography>{patient.phoneNumber}</Typography>
+              <Typography>{patientData.phoneNumber || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Address</Typography>
-              <Typography>{patient.address}</Typography>
+              <Typography>{patientData.address || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">City</Typography>
-              <Typography>{patient.city}</Typography>
+              <Typography>{patientData.city || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">State</Typography>
-              <Typography>{patient.state}</Typography>
+              <Typography>{patientData.state || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Country</Typography>
-              <Typography>{patient.country}</Typography>
+              <Typography>{patientData.country || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Blood Group</Typography>
-              <Typography>{patient.bloodGroup}</Typography>
+              <Typography>{patientData.bloodGroup || 'N/A'}</Typography>
             </Box>
 
             <Box width={{ xs: "100%", sm: "45%" }}>
               <Typography variant="subtitle2">Zip Code</Typography>
-              <Typography>{patient.zipCode}</Typography>
+              <Typography>{patientData.zipCode || 'N/A'}</Typography>
             </Box>
 
-            {(patient.allergies || patient.medicalHistory || patient.currentMedications) && (
+            {(patientData.allergies || patientData.medicalHistory || patientData.currentMedications) && (
               <>
                 <Divider sx={{ width: '100%', my: 2 }} />
                 <Typography variant="h6" sx={{ width: '100%', mb: 2, color: 'primary.main' }}>
                   Medical Information
                 </Typography>
                 
-                {patient.allergies && (
+                {patientData.allergies && (
                   <Box width={{ xs: "100%", sm: "45%" }}>
                     <Typography variant="subtitle2" color="error.main">Known Allergies</Typography>
-                    <Typography>{patient.allergies}</Typography>
+                    <Typography>{patientData.allergies}</Typography>
                   </Box>
                 )}
 
-                {patient.medicalHistory && (
+                {patientData.medicalHistory && (
                   <Box width={{ xs: "100%", sm: "45%" }}>
                     <Typography variant="subtitle2">Medical History</Typography>
-                    <Typography>{patient.medicalHistory}</Typography>
+                    <Typography>{patientData.medicalHistory}</Typography>
                   </Box>
                 )}
 
-                {patient.currentMedications && (
+                {patientData.currentMedications && (
                   <Box width={{ xs: "100%", sm: "45%" }}>
                     <Typography variant="subtitle2">Current Medications</Typography>
-                    <Typography>{patient.currentMedications}</Typography>
+                    <Typography>{patientData.currentMedications}</Typography>
                   </Box>
                 )}
               </>
@@ -387,8 +392,8 @@ export const PatientDetails: FC = () => {
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         title="Delete Patient"
-        itemName={patient ? `${patient.firstName} ${patient.lastName}` : undefined}
-        message={patient ? `Are you sure you want to delete ${patient.firstName} ${patient.lastName}? This action cannot be undone.` : undefined}
+        itemName={patientData ? `${patientData.firstName} ${patientData.lastName}` : undefined}
+        message={patientData ? `Are you sure you want to delete ${patientData.firstName} ${patientData.lastName}? This action cannot be undone.` : undefined}
         isDeleting={isDeleting}
       />
     </Box>

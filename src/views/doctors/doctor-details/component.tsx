@@ -315,21 +315,21 @@ export const DoctorDetails: FC = () => {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Educational Degrees"
-                      secondary={doctor.educationalDegrees || 'Not provided'}
+                      secondary={doctor.educationInformation?.educationalDegrees || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="University"
-                      secondary={doctor.university || 'Not provided'}
+                      secondary={doctor.educationInformation?.university || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Duration"
                       secondary={
-                        doctor.from && doctor.to
-                          ? `${doctor.from} - ${doctor.to}`
+                        doctor.educationInformation?.from && doctor.educationInformation?.to
+                          ? `${doctor.educationInformation.from} - ${doctor.educationInformation.to}`
                           : 'Not provided'
                       }
                     />

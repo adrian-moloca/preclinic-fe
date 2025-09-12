@@ -104,6 +104,7 @@ export const ProfessionalInfoSection: React.FC<ProfessionalInfoSectionProps> = (
                             fullWidth
                             label="Years of Experience"
                             type="number"
+                            slotProps={{ htmlInput: { min: 0 } }}
                             value={formData.yearsOfExperience}
                             onChange={handleInputChange('yearsOfExperience')}
                             sx={{ width: 300 }}

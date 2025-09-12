@@ -26,13 +26,15 @@ export type IDoctor = {
   appointmentType?: string; 
   appointmentDuration?: number; 
   consultationCharge: number;
-
-  educationalDegrees: string;
-  university: string;
-  from: string; 
-  to: string;   
   workingSchedule?: Record<string, any[]>;
-};
+  
+  educationInformation: {
+    educationalDegrees: string;
+    university: string;
+    from: string;
+    to: string;
+  };
+}; 
 
 
 export interface IDoctorsContext {

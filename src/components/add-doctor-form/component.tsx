@@ -38,10 +38,12 @@ export const AddDoctorForm: React.FC = () => {
     appointmentType: '',
     appointmentDuration: 30,
     consultationCharge: 0,
-    educationalDegrees: '',
-    university: '',
-    from: '',
-    to: '',
+    educationInformation: {
+      educationalDegrees: '',
+      university: '',
+      from: '',
+      to: '',
+    },
     workingSchedule: {},
   });
 
@@ -159,10 +161,12 @@ export const AddDoctorForm: React.FC = () => {
         appointmentType: '',
         appointmentDuration: 30,
         consultationCharge: 0,
-        educationalDegrees: '',
-        university: '',
-        from: '',
-        to: '',
+        educationInformation: {
+          educationalDegrees: '',
+          university: '',
+          from: '',
+          to: '',
+        },
         workingSchedule: {},
       });
       latestScheduleRef.current = {};
@@ -195,10 +199,12 @@ export const AddDoctorForm: React.FC = () => {
       appointmentType: '',
       appointmentDuration: 30,
       consultationCharge: 0,
-      educationalDegrees: '',
-      university: '',
-      from: '',
-      to: '',
+      educationInformation: {
+        educationalDegrees: '',
+        university: '',
+        from: '',
+        to: '',
+      },
       workingSchedule: {},
     });
     latestScheduleRef.current = {};
@@ -228,7 +234,6 @@ export const AddDoctorForm: React.FC = () => {
               handleInputChange={handleInputChange}
             />
           </Box>
-
 
           <Box mb={4}>
             <AddressInfoSection 
@@ -263,7 +268,6 @@ export const AddDoctorForm: React.FC = () => {
           </Box>
 
           <Box mb={4}>
-            
             <ScheduleForm
               role="doctor"
               title={`Working Hours for Dr. ${formData.firstName} ${formData.lastName}`}

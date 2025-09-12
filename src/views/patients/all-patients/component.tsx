@@ -6,6 +6,7 @@ import {
   Menu,
   MenuItem,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { FC, useState, useMemo, useEffect } from "react";
 import { usePatientsContext } from "../../../providers/patients";
@@ -22,8 +23,9 @@ import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPatients: FC = () => {
-  const { patients, deletePatient } = usePatientsContext();
-  console.log("All patients:", patients); 
+  const { patients, deletePatient, getAllPatients } = usePatientsContext();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const allPatients = useMemo(() => Object.values(patients).flat(), [patients]);
   const [filteredPatients, setFilteredPatients] = useState<PatientsEntry[]>(allPatients);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,6 +37,26 @@ export const AllPatients: FC = () => {
   
   const { addRecentItem } = useRecentItems();
 
+  // Fetch patients when component mounts
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await getAllPatients();
+      } catch (err) {
+        console.error('Error fetching patients:', err);
+        setError('Failed to load patients. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
+
+  // Update filtered patients when patients data changes
   useEffect(() => {
     setFilteredPatients(allPatients);
   }, [allPatients]);
@@ -55,6 +77,8 @@ export const AllPatients: FC = () => {
       setDeleteModalOpen(false);
       setSelectedPatient(null);
       setAnchorEl(null);
+      // Refresh patients list after deletion
+      await getAllPatients();
     } catch (error) {
       console.error('Error deleting patient:', error);
     } finally {
@@ -71,6 +95,8 @@ export const AllPatients: FC = () => {
   const handleDeleteMultiple = async (selectedIds: string[]) => {
     try {
       await Promise.all(selectedIds.map(id => deletePatient(id)));
+      // Refresh patients list after deletion
+      await getAllPatients();
     } catch (error) {
       console.error('Error deleting patients:', error);
     }
@@ -97,16 +123,17 @@ export const AllPatients: FC = () => {
   };
 
   const handleRowClick = (patient: PatientsEntry) => {
+    const patientData = (patient as any).user || patient;
     addRecentItem({
       id: patient._id,
       type: 'patient',
-      title: `${patient.firstName} ${patient.lastName}`,
-      subtitle: patient.email || patient.phoneNumber || '',
+      title: `${patientData.firstName} ${patientData.lastName}`,
+      subtitle: patientData.email || patientData.phoneNumber || '',
       url: `/patients/${patient._id}`,
       metadata: {
-        gender: patient.gender,
-        email: patient.email,
-        phone: patient.phoneNumber,
+        gender: patientData.gender,
+        email: patientData.email,
+        phone: patientData.phoneNumber,
       },
     });
     
@@ -121,13 +148,16 @@ export const AllPatients: FC = () => {
     }
 
     const lowerQuery = query.toLowerCase();
-    const filtered = allPatients.filter((patient) =>
-      patient.firstName?.toLowerCase().includes(lowerQuery) ||
-      patient.lastName?.toLowerCase().includes(lowerQuery) ||
-      patient.email?.toLowerCase().includes(lowerQuery) ||
-      patient.phoneNumber?.toLowerCase().includes(lowerQuery) ||
-      patient.address?.toLowerCase().includes(lowerQuery)
-    );
+    const filtered = allPatients.filter((patient: any) => {
+      const patientData = patient.user || patient;
+      return (
+        patientData.firstName?.toLowerCase().includes(lowerQuery) ||
+        patientData.lastName?.toLowerCase().includes(lowerQuery) ||
+        patientData.email?.toLowerCase().includes(lowerQuery) ||
+        patientData.phoneNumber?.toLowerCase().includes(lowerQuery) ||
+        patientData.address?.toLowerCase().includes(lowerQuery)
+      );
+    });
 
     setFilteredPatients(filtered);
   };
@@ -137,41 +167,63 @@ export const AllPatients: FC = () => {
       id: 'patient',
       label: 'Patient',
       minWidth: 200,
-      render: (value, row: PatientsEntry) => (
-        <Box display="flex" alignItems="center" gap={2}>
-          <Avatar src={row.profileImg}>
-            {row.firstName?.[0]}{row.lastName?.[0]}
-          </Avatar>
-          <Box>
-            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-              {row.firstName} {row.lastName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ID: {row._id}
-            </Typography>
+      render: (value, row: any) => {
+        const patientData = row.user || row;
+        return (
+          <Box display="flex" alignItems="center" gap={2}>
+            <Avatar src={patientData.profileImg}>
+              {patientData.firstName?.[0]}{patientData.lastName?.[0]}
+            </Avatar>
+            <Box>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {patientData.firstName} {patientData.lastName}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                ID: {row._id}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      ),
+        );
+      },
     },
     {
       id: 'birthDate',
       label: 'Birth Date',
       minWidth: 120,
+      render: (value, row: any) => {
+        const patientData = row.user || row;
+        return (
+          <Typography variant="body2">
+            {patientData.birthDate || 'N/A'}
+          </Typography>
+        );
+      },
     },
     {
       id: 'phoneNumber',
       label: 'Phone',
       minWidth: 130,
+      render: (value, row: any) => {
+        const patientData = row.user || row;
+        return (
+          <Typography variant="body2">
+            {patientData.phoneNumber || 'N/A'}
+          </Typography>
+        );
+      },
     },
     {
       id: 'address',
       label: 'Address',
       minWidth: 200,
-      render: (value: string) => (
-        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {value}
-        </Typography>
-      ),
+      render: (value, row: any) => {
+        const patientData = row.user || row;
+        return (
+          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {patientData.address || 'N/A'}
+          </Typography>
+        );
+      },
     },
     {
       id: 'actions',
@@ -179,17 +231,18 @@ export const AllPatients: FC = () => {
       minWidth: 140,
       align: 'right',
       sortable: false,
-      render: (_: unknown, row: PatientsEntry) => {
+      render: (_: unknown, row: any) => {
+        const patientData = row.user || row;
         const favoriteItem = {
           id: row._id,
           type: 'patient' as const,
-          title: `${row.firstName} ${row.lastName}`,
-          subtitle: row.email || row.phoneNumber || '',
+          title: `${patientData.firstName} ${patientData.lastName}`,
+          subtitle: patientData.email || patientData.phoneNumber || '',
           url: `/patients/${row._id}`,
           metadata: {
-            gender: row.gender,
-            email: row.email,
-            phone: row.phoneNumber,
+            gender: patientData.gender,
+            email: patientData.email,
+            phone: patientData.phoneNumber,
           },
         };
 
@@ -204,13 +257,13 @@ export const AllPatients: FC = () => {
                    addRecentItem({
                     id: row._id,
                     type: 'patient',
-                    title: `${row.firstName} ${row.lastName}`,
-                    subtitle: row.email || row.phoneNumber || '',
+                    title: `${patientData.firstName} ${patientData.lastName}`,
+                    subtitle: patientData.email || patientData.phoneNumber || '',
                     url: `/patients/${row._id}`,
                     metadata: {
-                      gender: row.gender,
-                      email: row.email,
-                      phone: row.phoneNumber,
+                      gender: patientData.gender,
+                      email: patientData.email,
+                      phone: patientData.phoneNumber,
                     },
                   });
                   navigate(`/patients/${row._id}`);
@@ -229,6 +282,24 @@ export const AllPatients: FC = () => {
       },
     },
   ];
+
+  // Show loading spinner while fetching patients
+  if (loading) {
+    return (
+      <Box p={3} display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show error message if fetch failed
+  if (error) {
+    return (
+      <Box p={3}>
+        <Typography color="error" variant="h6">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box p={3} sx={{ overflowX: "auto" }}>
@@ -271,8 +342,8 @@ export const AllPatients: FC = () => {
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
         title="Delete Patient"
-        itemName={selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : undefined}
-        message={selectedPatient ? `Are you sure you want to delete ${selectedPatient.firstName} ${selectedPatient.lastName}? This action cannot be undone.` : undefined}
+        itemName={selectedPatient ? `${(selectedPatient as any).user?.firstName || ''} ${(selectedPatient as any).user?.lastName || ''}` : undefined}
+        message={selectedPatient ? `Are you sure you want to delete ${(selectedPatient as any).user?.firstName || ''} ${(selectedPatient as any).user?.lastName || ''}? This action cannot be undone.` : undefined}
         isDeleting={isDeleting}
       />
     </Box>

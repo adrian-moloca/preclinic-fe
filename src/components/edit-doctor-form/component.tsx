@@ -42,10 +42,12 @@ export const EditDoctorForm: React.FC = () => {
     appointmentType: '',
     appointmentDuration: 30,
     consultationCharge: 0,
-    educationalDegrees: '',
-    university: '',
-    from: '',
-    to: '',
+    educationInformation: {
+      educationalDegrees: '',
+      university: '',
+      from: '',
+      to: '',
+    },
     workingSchedule: {}, 
   });
 
@@ -77,10 +79,12 @@ export const EditDoctorForm: React.FC = () => {
         appointmentType: doctor.appointmentType || '',
         appointmentDuration: doctor.appointmentDuration || 30,
         consultationCharge: doctor.consultationCharge || 0,
-        educationalDegrees: doctor.educationalDegrees || '',
-        university: doctor.university || '',
-        from: doctor.from || '',
-        to: doctor.to || '',
+        educationInformation: {
+          educationalDegrees: doctor.educationInformation?.educationalDegrees || '',
+          university: doctor.educationInformation?.university || '',
+          from: doctor.educationInformation?.from || '',
+          to: doctor.educationInformation?.to || '',
+        },
         workingSchedule: doctor.workingSchedule || {},
       });
       
