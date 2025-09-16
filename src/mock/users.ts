@@ -8,6 +8,7 @@ export const MOCK_USERS: User[] = [
     lastName: 'Smith',
     role: 'doctor_owner',
     profileImg: '',
+    verificationLink: ''
   },
   {
     id: 'user-2',
@@ -16,6 +17,7 @@ export const MOCK_USERS: User[] = [
     lastName: 'Johnson',
     role: 'doctor',
     profileImg: '',
+    verificationLink: ''
   },
   {
     id: 'user-3',
@@ -24,5 +26,6 @@ export const MOCK_USERS: User[] = [
     lastName: 'Wilson',
     role: 'assistant',
     profileImg: '',
+    verificationLink: ''
   },
 ];

@@ -15,9 +15,11 @@ export interface User {
   customPermissions?: string[]; 
   disabledPermissions?: string[]; 
   dateOfBirth?: string;
+  emailVerified?: boolean;
   gender?: string;
   address?: string;
   clinicId?: string; // Add clinic association
+  verificationLink: string; // For account verification
 }
 
 export interface RolePermissions {
@@ -59,11 +61,12 @@ export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string, clinicId?: string, role?: UserRole) => Promise<boolean>;
-  register: (userData: RegisterData) => Promise<boolean>;
+  register: (userData: RegisterData) => Promise<{ success: boolean; verificationLink?: string }>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   getMe: () => Promise<User | null>;
   canAccess: (resource: string) => boolean;
+  // verifyAccount: (verificationLink: string) => Promise<{ success: boolean; message?: string }>;
   updateRolePermissions: (role: UserRole, permissions: string[]) => void;
   updateUserPermissions: (userId: string, granted: string[], denied: string[]) => void;
   getRolePermissions: (role: UserRole) => string[];

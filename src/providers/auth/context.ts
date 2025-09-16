@@ -5,13 +5,16 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   login: async () => false,
-  register: async () => false,
+  register: async () => ({ success: false }),
   logout: () => {},
   hasPermission: () => false,
   canAccess: () => false,
   updateRolePermissions: () => {},
   getMe: async () => null,
   updateUserPermissions: () => {},
+  // verifyAccount: async (verificationLink: string) => {
+  //   return { success: false };
+  // },
   getRolePermissions: () => [],
   getUserPermissions: () => ({ granted: [], denied: [] }),
   getAllUsers: () => [],

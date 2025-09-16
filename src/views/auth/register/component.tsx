@@ -129,7 +129,7 @@ export const Register: FC = () => {
                 // Also check if there are any clinics in the system
                 if ((!userClinics || userClinics.length === 0) && clinics.length === 0) {
                     console.log('🏥 Doctor owner has no clinics, redirecting to clinic information page');
-                    navigate('/settings/clinic-information');
+                    navigate('/wait-email-verification');
                 } else {
                     console.log('📊 Doctor owner has existing clinics, redirecting to dashboard');
                     navigate('/');
@@ -139,7 +139,7 @@ export const Register: FC = () => {
                 navigate('/');
             }
         }
-    }, [registrationSuccess, isAuthenticated, user, getUserClinics, clinics, navigate]);
+    }, [registrationSuccess, isAuthenticated, user, email, getUserClinics, clinics, navigate]);
 
     useEffect(() => {
         const isFormValid =
@@ -200,8 +200,10 @@ export const Register: FC = () => {
                 const success = await register(payload);
 
                 if (success) {
-                    console.log('✅ Registration successful');
-                    // Set flag to trigger redirect in useEffect
+                    // This line puts the token in the PATH
+                    // If you have a token, replace 'token' with the actual token variable, otherwise remove it
+                    // If you need query parameters, define them above, otherwise remove '?${queryParams.toString()}'
+                    navigate(`/account-verification`, { state: { email, method: 'link' } });
                     setRegistrationSuccess(true);
                 } else {
                     setError("Registration failed. Email or phone may already be in use.");

@@ -18,6 +18,8 @@ interface ApiResponse<T = any> {
   data?: T;
   success?: boolean;
   message?: string;
+  verificationLink?: string;
+  confirmationUrl?: string;
 }
 
 const USER_STORAGE_KEY = 'preclinic_user';
@@ -151,25 +153,39 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
-    try {
-      const response = await axios.post<User | ApiResponse<User>>('/api/auth/signup', data);
-      const newUser = extractUserFromResponse(response);
-      if (!newUser) return false;
-      
-      const completeUserData: User = {
-        ...newUser,
-        id: newUser.id || `user-${Date.now()}`,
-        role: newUser.role || 'doctor_owner' as UserRole
-      };
-      
-      setUser(completeUserData);
-      saveUserToStorage(completeUserData);
-      return true;
-    } catch {
-      return false;
+ const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; verificationLink?: string }> => {
+  try {
+    const response = await axios.post<User | ApiResponse<User>>('/api/auth/signup', data);
+    const newUser = extractUserFromResponse(response);
+    
+    let verificationLink: string | undefined = undefined;
+    if (response.data && typeof response.data === 'object' && 'verificationLink' in response.data) {
+      verificationLink = (response.data as ApiResponse<User>).verificationLink;
+    } else if (response.data && typeof response.data === 'object' && 'confirmationUrl' in response.data) {
+      verificationLink = (response.data as ApiResponse<User>).confirmationUrl;
     }
-  }, [saveUserToStorage, extractUserFromResponse]);
+    
+    if (!newUser) return { success: false };
+    
+    // DON'T save user during registration - they need to verify first
+    // Remove these lines:
+    // const completeUserData: User = {
+    //   ...newUser,
+    //   id: newUser.id || `user-${Date.now()}`,
+    //   role: newUser.role || 'doctor_owner' as UserRole
+    // };
+    // setUser(completeUserData);
+    // saveUserToStorage(completeUserData);
+    
+    return { 
+      success: true, 
+      verificationLink 
+    };
+  } catch {
+    return { success: false };
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // Remove dependencies since we're not using them
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
@@ -192,7 +208,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       }
       
       if (!userData) {
-        const mockUser = MOCK_USERS.find(u => u.email === email);
+        const mockUser = MOCK_USERS.find((u: User) => u.email === email);
         if (mockUser) {
           userData = {
             ...mockUser,
@@ -220,7 +236,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       
       return false;
     } catch (error) {
-      const mockUser = MOCK_USERS.find(u => u.email === email);
+      const mockUser = MOCK_USERS.find((u: User) => u.email === email);
       if (mockUser) {
         const completeUserData: User = {
           ...mockUser,
@@ -318,6 +334,104 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     return [...MOCK_USERS];
   }, []);
 
+  // const verifyAccount = useCallback(async (verificationLink: string): Promise<{ success: boolean; message?: string }> => {
+  //   try {
+  //     let token: string;
+      
+  //     if (verificationLink.startsWith('http')) {
+  //       const url = new URL(verificationLink);
+  //       token = url.searchParams.get('token') || 
+  //               url.searchParams.get('code') || 
+  //               url.pathname.split('/').pop() || '';
+  //     } else {
+  //       token = verificationLink;
+  //     }
+      
+  //     const response = await axios.post('/api/auth/verify', { 
+  //       token,
+  //       verificationLink: verificationLink.startsWith('http') ? verificationLink : undefined
+  //     });
+      
+  //     if (response.data?.success) {
+  //       // DON'T set user or save to storage here during verification
+  //       // Just return success and let the user log in properly
+  //       return { 
+  //         success: true, 
+  //         message: response.data?.message || 'Email verified successfully!' 
+  //       };
+  //     }
+      
+  //     return { 
+  //       success: false, 
+  //       message: 'Verification failed' 
+  //     };
+      
+  //   } catch (error: any) {
+  //     console.error('Email verification error:', error);
+      
+  //     // Don't return success for 404 errors
+  //     if (error.response?.status === 404) {
+  //       return { 
+  //         success: false, 
+  //         message: 'Verification link not found' 
+  //       };
+  //     }
+      
+  //     if (error.response?.status === 400) {
+  //       return { 
+  //         success: false, 
+  //         message: 'Invalid or expired verification link' 
+  //       };
+  //     }
+      
+  //     return { 
+  //       success: false, 
+  //       message: error.response?.data?.message || 'Failed to verify email' 
+  //     };
+  //   }
+  // }, []); // Remove dependencies on getMe and saveUserToStorage
+
+  // Also update the initialization to be more robust
+  useEffect(() => {
+  if (isInitialized) return;
+  
+  const initializeAuth = async () => {
+    setLoading(true);
+    
+    try {
+      const storedUser = loadUserFromStorage();
+      if (storedUser && storedUser.emailVerified !== false) {
+        // Only try to validate if user is verified
+        try {
+          const validatedUser = await getMe();
+          if (!validatedUser) {
+            clearUserFromStorage();
+            setUser(null);
+          }
+        } catch (error) {
+          // Clear on error
+          clearUserFromStorage();
+          setUser(null);
+        }
+      } else if (storedUser && storedUser.emailVerified === false) {
+        // If unverified user found, clear it
+        clearUserFromStorage();
+        setUser(null);
+      }
+    } catch (error) {
+      clearUserFromStorage();
+      setUser(null);
+    } finally {
+      setLoading(false);
+      setIsInitialized(true);
+    }
+  };
+  
+  initializeAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // Run only once
+
+
   if (!isInitialized) {
     return (
       <div style={{
@@ -339,6 +453,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated: !!user,
       login,
       register,
+      // verifyAccount,
       logout,
       hasPermission,
       canAccess,

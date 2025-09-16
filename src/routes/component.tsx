@@ -76,6 +76,8 @@ const WaitingRoomView = lazy(() => import("../views/waiting-room/index"));
 const StockOverview = lazy(() => import("../views/products/stock-overview/index"));
 const CreateClinic = lazy(() => import("../views/clinic/create-clinic/index"));
 const ClinicInformationSettings = lazy(() => import("../views/settings/components/clinic-information/index"));
+const AccountVerification = lazy(() => import("../views/auth/account-verification/index"));
+const WaitEmailVerification = lazy(() => import("../views/auth/wait-email/index"))
 
 export const Routing: FC = () => {
   return (
@@ -475,6 +477,8 @@ export const Routing: FC = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/otp" element={<OtpPage />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/account-verification/:token?" element={<AccountVerification />} />
+      <Route path="/wait-email-verification" element={<WaitEmailVerification />} />
     </Routes>
   );
 };
