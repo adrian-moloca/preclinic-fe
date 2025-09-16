@@ -18,8 +18,8 @@ export interface User {
   emailVerified?: boolean;
   gender?: string;
   address?: string;
-  clinicId?: string; // Add clinic association
-  verificationLink: string; // For account verification
+  clinicId?: string; 
+  verificationLink: string; 
 }
 
 export interface RolePermissions {
@@ -66,7 +66,6 @@ export interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   getMe: () => Promise<User | null>;
   canAccess: (resource: string) => boolean;
-  // verifyAccount: (verificationLink: string) => Promise<{ success: boolean; message?: string }>;
   updateRolePermissions: (role: UserRole, permissions: string[]) => void;
   updateUserPermissions: (userId: string, granted: string[], denied: string[]) => void;
   getRolePermissions: (role: UserRole) => string[];

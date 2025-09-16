@@ -29,23 +29,18 @@ export const AccountVerification: FC = () => {
         setIsActivated(true);
         setVerificationSuccess(true);
         
-        // Clear any stored data
         localStorage.clear();
         
-        // Return success
         return { success: true, message: "Verification successful!" };
       }
       
-      // If not 200, return failure
       return { success: false, message: "Verification failed" };
       
     } catch (error: any) {
       console.error('Verification error:', error);
       
-      // Check for expired OTP
       if (error.response?.status === 410 || 
           error.response?.data?.message?.toLowerCase().includes('expired')) {
-        // Redirect to register for expired OTP
         setTimeout(() => navigate('/register'), 100);
         return { success: false, message: "OTP expired" };
       }
@@ -76,7 +71,6 @@ export const AccountVerification: FC = () => {
       const result = await verifyAccountFn(paramToken, otp);
       
       if (!result.success) {
-        // Don't show error message, just clear the OTP
         setActualOtp('');
       }
     } catch (err) {
@@ -88,7 +82,6 @@ export const AccountVerification: FC = () => {
   };
 
   const handleResendOtp = () => {
-    // TODO: Implement resend logic
     console.log("Resend OTP clicked");
   };
 
@@ -128,7 +121,6 @@ export const AccountVerification: FC = () => {
               disabled={isLoading}
             />
             
-            {/* Remove the Send button - OTP auto-submits on completion */}
           </CustomPaper>
         </Box>
       )}

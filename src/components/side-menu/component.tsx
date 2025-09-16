@@ -46,7 +46,6 @@ export const SideDrawer: FC = () => {
 
   const toggleDrawer = () => setOpen(!open);
 
-  // ... (keep all the existing menu items arrays as they are)
   
   const mainMenuItems = [
     { 
@@ -132,8 +131,11 @@ export const SideDrawer: FC = () => {
     {
       label: "Departments",
       icon: <MedicalServicesIcon />,
-      route: "/departments",
-      permission: "manage_departments"
+      resoruce: "departments",
+      subItems: [
+        { label: "All Departments", icon: <MedicalServicesIcon />, route: "/departments/all", permission: "view_departments" },
+        { label: "Add Department", icon: <PersonAddIcon />, route: "/departments/create", permission: "manage_departments" },
+      ]
     },
     {
       label: "Leaves",
@@ -147,9 +149,10 @@ export const SideDrawer: FC = () => {
     {
       label: "Payroll",
       icon: <PaymentsIcon />,
+      resource: "payroll",
       subItems: [
         { label: "Add Payroll", icon: <PaymentsIcon />, route: "/payroll/add", permission: "manage_payroll" },
-        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all", permission: "view_payrolls" },
+        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all", permission: "view_payroll" },
       ]
     },
     {
@@ -414,7 +417,7 @@ export const SideDrawer: FC = () => {
             title="Administration"
             items={administrationItems}
             open={open}
-            requiredPermission="manage_settings"
+            // requiredPermission={"manage_settings"}
           />
         </List>
       </Box>
