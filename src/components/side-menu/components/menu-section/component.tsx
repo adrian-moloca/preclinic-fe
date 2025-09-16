@@ -20,6 +20,7 @@ interface MenuSectionProps {
     }>;
   }>;
   open: boolean;
+  setOpen?: (value: boolean) => void;
   requiredPermission?: string;
   requiredResources?: string[];
 }
@@ -28,41 +29,19 @@ export const MenuSection: FC<MenuSectionProps> = ({
   title,
   items,
   open,
+  setOpen,
   requiredPermission,
   requiredResources,
 }) => {
   const { hasPermission, canAccess, user } = useAuthContext();
 
-   const filteredItems = items.filter(item => {
-    // ADD THIS CHECK FOR DOCTOR_OWNER
-    if (user?.role === 'doctor_owner') {
-      return true; // Doctor owner sees everything
-    }
-    
-    // Existing permission check
-    if (item.permission) {
-      return user?.permissions?.includes(item.permission);
-    }
-    
-    // If item has subitems, check those too
-    if (item.subItems) {
-      item.subItems = item.subItems.filter(subItem => {
-        // ADD THIS CHECK FOR DOCTOR_OWNER
-        if (user?.role === 'doctor_owner') {
-          return true;
-        }
-        
-        if (subItem.permission) {
-          return user?.permissions?.includes(subItem.permission);
-        }
-        return true;
-      });
-    }
-    
-    return true; // No permission required
-  });
+  // Check if user is doctor_owner - they have access to everything
+  const isDoctorOwner = user?.role === 'doctor_owner';
 
   const shouldShowSection = () => {
+    // Doctor owner sees all sections
+    if (isDoctorOwner) return true;
+
     if (requiredPermission && !hasPermission(requiredPermission)) return false;
 
     if (requiredResources) {
@@ -70,7 +49,7 @@ export const MenuSection: FC<MenuSectionProps> = ({
       if (!hasResourceAccess) return false;
     }
 
-    return filteredItems.some(item => {
+    return items.some(item => {
       if (item.permission && !hasPermission(item.permission)) return false;
       if (item.resource && !canAccess(item.resource)) return false;
       return true;
@@ -82,11 +61,35 @@ export const MenuSection: FC<MenuSectionProps> = ({
   return (
     <Box>
       <SectionHeader title={title} open={open} />
-      {filteredItems.map((item) => {
+      {items.map((item) => {
+        // Doctor owner bypasses all permission checks
+        if (isDoctorOwner) {
+          return (
+            <MenuItem
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              route={item.route}
+              permission={item.permission}
+              subItems={item.subItems}
+              open={open}
+            />
+          );
+        }
+
+        // For other users, check permissions
         const hasAccess = item.permission ? hasPermission(item.permission) :
           item.resource ? canAccess(item.resource) : true;
 
         if (!hasAccess) return null;
+
+        // Filter subitems based on permissions for non-doctor_owner users
+        const filteredSubItems = item.subItems?.filter(subItem => {
+          if (subItem.permission) {
+            return hasPermission(subItem.permission);
+          }
+          return true;
+        });
 
         return (
           <MenuItem
@@ -95,7 +98,7 @@ export const MenuSection: FC<MenuSectionProps> = ({
             icon={item.icon}
             route={item.route}
             permission={item.permission}
-            subItems={item.subItems}
+            subItems={filteredSubItems}
             open={open}
           />
         );

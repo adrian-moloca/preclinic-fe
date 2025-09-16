@@ -12,14 +12,9 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   CalendarMonth as CalendarMonthIcon,
-  AccessTime as AccessTimeIcon,
-  Person as PersonIcon,
-  PersonAdd as PersonAddIcon,
   Settings as SettingsIcon,
   Medication as MedicationIcon,
-  ExitToApp as ExitToAppIcon,
   VideoCall as VideoCallIcon,
-  Inventory as InventoryIcon,
   Reviews as ReviewsIcon,
   Business as BusinessIcon,
 } from "@mui/icons-material";
@@ -28,15 +23,32 @@ import { useAuthContext } from "../../providers/auth/context";
 import { useClinicContext } from "../../providers/clinic/context";
 import UserInfo from "./components/user-info";
 import MenuSection from "./components/menu-section";
+// Additional icon imports for better representations
+import GroupIcon from '@mui/icons-material/Group';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import AddBoxIcon from '@mui/icons-material/AddBox';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import BadgeIcon from '@mui/icons-material/Badge';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import DomainIcon from '@mui/icons-material/Domain';
+import DomainAddIcon from '@mui/icons-material/DomainAdd';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import PrivacyTipIcon from '@mui/icons-material/PrivacyTip';
 import GavelIcon from '@mui/icons-material/Gavel';
-import PaymentsIcon from '@mui/icons-material/Payments';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import FolderIcon from '@mui/icons-material/Folder';
+import CalendarViewMonthIcon from '@mui/icons-material/CalendarViewMonth';
 
 const drawerWidthOpen = 260;
-const drawerWidthClosed = 70;
+const drawerWidthClosed = 90;
 
 export const SideDrawer: FC = () => {
   const [open, setOpen] = useState(true);
@@ -56,7 +68,7 @@ export const SideDrawer: FC = () => {
     },
     { 
       label: "Schedule", 
-      icon: <AccessTimeIcon />, 
+      icon: <CalendarViewMonthIcon />, 
       route: "/schedule", 
       resource: "schedule" 
     },
@@ -65,11 +77,11 @@ export const SideDrawer: FC = () => {
   const clinicOperationsItems = [
     {
       label: "Patients",
-      icon: <PersonIcon />,
+      icon: <GroupIcon />,
       resource: "patients",
       subItems: [
-        { label: "All Patients", icon: <PersonIcon />, route: "/patients/all-patients", permission: "view_patients" },
-        { label: "Add Patient", icon: <PersonAddIcon />, route: "/patients/create", permission: "manage_patients" },
+        { label: "All Patients", icon: <GroupIcon />, route: "/patients/all-patients", permission: "view_patients" },
+        { label: "Add Patient", icon: <GroupAddIcon />, route: "/patients/create", permission: "manage_patients" },
       ]
     },
     {
@@ -78,16 +90,16 @@ export const SideDrawer: FC = () => {
       resource: "services",
       subItems: [
         { label: "All Services", icon: <MedicalServicesIcon />, route: "/services/all", permission: "view_services" },
-        { label: "Add Service", icon: <PersonAddIcon />, route: "/services/create", permission: "manage_services" },
+        { label: "Add Service", icon: <AddBoxIcon />, route: "/services/create", permission: "manage_services" },
       ]
     },
     {
       label: "Doctors",
-      icon: <PersonIcon />,
+      icon: <LocalHospitalIcon />,
       resource: "doctors",
       subItems: [
-        { label: "All Doctors", icon: <PersonIcon />, route: "/doctors/all-doctors", permission: "view_doctors" },
-        { label: "Add Doctor", icon: <PersonAddIcon />, route: "/doctors/create", permission: "manage_doctors" },
+        { label: "All Doctors", icon: <LocalHospitalIcon />, route: "/doctors/all-doctors", permission: "view_doctors" },
+        { label: "Add Doctor", icon: <BadgeIcon />, route: "/doctors/create", permission: "manage_doctors" },
       ]
     },
     {
@@ -105,16 +117,16 @@ export const SideDrawer: FC = () => {
       resource: "prescriptions",
       subItems: [
         { label: "All Prescriptions", icon: <MedicationIcon />, route: "/prescriptions/all", permission: "view_prescriptions" },
-        { label: "Add Prescription", icon: <PersonAddIcon />, route: "/prescriptions/create", permission: "manage_prescriptions" },
+        { label: "Add Prescription", icon: <NoteAddIcon />, route: "/prescriptions/create", permission: "manage_prescriptions" },
       ]
     },
     {
       label: "Products",
-      icon: <InventoryIcon />,
+      icon: <Inventory2Icon />,
       resource: "products",
       subItems: [
-        { label: "All Products", icon: <InventoryIcon />, route: "/products/all", permission: "view_products" },
-        { label: "Add Product", icon: <PersonAddIcon />, route: "/products/create", permission: "manage_products" },
+        { label: "All Products", icon: <Inventory2Icon />, route: "/products/all", permission: "view_products" },
+        { label: "Add Product", icon: <AddShoppingCartIcon />, route: "/products/create", permission: "manage_products" },
       ]
     },
     {
@@ -130,29 +142,29 @@ export const SideDrawer: FC = () => {
   const staffManagementItems = [
     {
       label: "Departments",
-      icon: <MedicalServicesIcon />,
+      icon: <DomainIcon />,
       resoruce: "departments",
       subItems: [
-        { label: "All Departments", icon: <MedicalServicesIcon />, route: "/departments/all", permission: "view_departments" },
-        { label: "Add Department", icon: <PersonAddIcon />, route: "/departments/create", permission: "manage_departments" },
+        { label: "All Departments", icon: <DomainIcon />, route: "/departments/all", permission: "view_departments" },
+        { label: "Add Department", icon: <DomainAddIcon />, route: "/departments/create", permission: "manage_departments" },
       ]
     },
     {
       label: "Leaves",
-      icon: <ExitToAppIcon />,
+      icon: <EventBusyIcon />,
       resource: "leaves",
       subItems: [
-        { label: "All Leaves", icon: <ExitToAppIcon />, route: "/leaves/all-leaves", permission: "view_leaves" },
-        { label: "Add Leave", icon: <PersonAddIcon />, route: "/leaves/create", permission: "request_leaves" },
+        { label: "All Leaves", icon: <EventBusyIcon />, route: "/leaves/all-leaves", permission: "view_leaves" },
+        { label: "Add Leave", icon: <EventAvailableIcon />, route: "/leaves/create", permission: "request_leaves" },
       ]
     },
     {
       label: "Payroll",
-      icon: <PaymentsIcon />,
+      icon: <AccountBalanceIcon />,
       resource: "payroll",
       subItems: [
-        { label: "Add Payroll", icon: <PaymentsIcon />, route: "/payroll/add", permission: "manage_payroll" },
-        { label: "All Payrolls", icon: <PaymentsIcon />, route: "/payroll/all", permission: "view_payroll" },
+        { label: "Add Payroll", icon: <RequestQuoteIcon />, route: "/payroll/add", permission: "manage_payroll" },
+        { label: "All Payrolls", icon: <AccountBalanceIcon />, route: "/payroll/all", permission: "view_payroll" },
       ]
     },
     {
@@ -160,8 +172,8 @@ export const SideDrawer: FC = () => {
       icon: <ReceiptIcon />,
       resources: "invoices",
       subItems: [
-        { label: "Add Invoice", icon: <ReceiptIcon />, route: "/invoices/create", permission: "manage_invoices" },
-        { label: "All Invoices", icon: <ReceiptIcon />, route: "/invoices/all", permission: "view_invoices" },
+        { label: "Add Invoice", icon: <DescriptionIcon />, route: "/invoices/create", permission: "manage_invoices" },
+        { label: "All Invoices", icon: <ReceiptLongIcon />, route: "/invoices/all", permission: "view_invoices" },
       ]
     }
   ];
@@ -392,12 +404,14 @@ export const SideDrawer: FC = () => {
             title="Main"
             items={mainMenuItems}
             open={open}
+            setOpen={setOpen}
           />
 
           <MenuSection
             title="Clinic Operations"
             items={clinicOperationsItems}
             open={open}
+            setOpen={setOpen}
             requiredResources={["patients", "appointments", "prescriptions", "products", "reviews"]}
           />
 
@@ -405,6 +419,7 @@ export const SideDrawer: FC = () => {
             title="Staff Management"
             items={staffManagementItems}
             open={open}
+            setOpen={setOpen}
             requiredResources={["leaves"]}
           />
 
@@ -412,11 +427,13 @@ export const SideDrawer: FC = () => {
             title="Policy"
             items={commonPagesItems}
             open={open}
+            setOpen={setOpen}
           />
           <MenuSection
             title="Administration"
             items={administrationItems}
             open={open}
+            setOpen={setOpen}
             // requiredPermission={"manage_settings"}
           />
         </List>

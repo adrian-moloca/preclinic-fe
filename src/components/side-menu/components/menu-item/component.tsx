@@ -1,155 +1,217 @@
-import {
-  Box,
-  Collapse,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
+import { 
+  ListItemButton, 
+  ListItemIcon, 
+  ListItemText, 
+  Collapse, 
+  List, 
   Tooltip,
+  Box,
+  Popover,
+  Paper
 } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { FC, JSX, useState } from "react";
+import { useState, FC, useRef, JSX } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthContext } from "../../../../providers/auth/context";
-
-interface SubItem {
-  label: string;
-  icon: JSX.Element;
-  route: string;
-  permission: string;
-}
 
 interface MenuItemProps {
   label: string;
   icon: JSX.Element;
   route?: string;
-  permission?: string;
-  subItems?: SubItem[];
   open: boolean;
+  permission?: string;
+  subItems?: Array<{
+    label: string;
+    icon: JSX.Element;
+    route: string;
+    permission?: string;
+  }>;
 }
 
-export const MenuItem: FC<MenuItemProps> = ({
-  label,
-  icon,
-  route,
-  permission,
-  subItems,
+export const MenuItem: FC<MenuItemProps> = ({ 
+  label, 
+  icon, 
+  route, 
+  subItems, 
   open,
+  permission 
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { hasPermission } = useAuthContext();
 
-  const handleClick = () => {
-    if (subItems) {
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (!open && subItems) {
+      // When closed with subitems, show popover
+      setAnchorEl(event.currentTarget);
+    } else if (subItems && open) {
+      // When open with subitems, expand/collapse
       setExpanded(!expanded);
     } else if (route) {
+      // Navigate for items without subitems
       navigate(route);
     }
   };
 
-  const hasAccess = permission ? hasPermission(permission) : true;
-  if (!hasAccess) return null;
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
 
-  return (
-    <Box>
-      <Tooltip title={!open ? label : ""} placement="right">
-        <ListItemButton
-          onClick={handleClick}
-          sx={{
-            px: 2.5,
-            py: 1.5,
-            borderRadius: 2,
-            mx: 1,
-            mb: 0.5,
-            color: "#333",
-            position: "relative",
-            overflow: "hidden",
-            "&:hover": {
-              backgroundColor: "#e3f2fd",
-              transform: "translateX(4px)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            },
-            "&:before": {
-              content: '""',
-              position: "absolute",
-              left: 0,
-              top: 0,
-              height: "100%",
-              width: "3px",
-              backgroundColor: "primary.main",
-              transform: "scaleY(0)",
-              transition: "transform 0.2s ease",
-            },
-            "&:hover:before": {
-              transform: "scaleY(1)",
-            },
-            transition: "all 0.2s ease",
-          }}
-        >
+  const handleSubItemClick = (subRoute: string) => {
+    navigate(subRoute);
+    handlePopoverClose();
+  };
+
+  // When drawer is closed
+  if (!open) {
+    const tooltipText = subItems ? `${label}` : label;
+    const popoverOpen = Boolean(anchorEl);
+    
+    return (
+      <>
+        <Tooltip title={tooltipText} placement="right">
+          <ListItemButton
+            ref={buttonRef}
+            onClick={handleClick}
+            sx={{
+              minHeight: 48,
+              width: '100%',
+              justifyContent: 'center',
+              px: 0,
+              py: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.primary',
+                '& svg': {
+                  fontSize: '1.5rem',
+                }
+              }}
+            >
+              {icon}
+            </Box>
+          </ListItemButton>
+        </Tooltip>
+
+        {/* Popover for subitems when drawer is closed */}
+        {subItems && (
+          <Popover
+            open={popoverOpen}
+            anchorEl={anchorEl}
+            onClose={handlePopoverClose}
+            anchorOrigin={{
+              vertical: 'center',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'center',
+              horizontal: 'left',
+            }}
+            sx={{ ml: 1 }}
+          >
+            <Paper sx={{ p: 1, minWidth: 200 }}>
+              <Box sx={{ fontWeight: 600, px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+                {label}
+              </Box>
+              <List dense>
+                {subItems.map((subItem) => (
+                  <ListItemButton
+                    key={subItem.route}
+                    onClick={() => handleSubItemClick(subItem.route)}
+                    sx={{ py: 1 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      {subItem.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={subItem.label} />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Paper>
+          </Popover>
+        )}
+      </>
+    );
+  }
+
+  // When drawer is open with subitems
+  if (subItems && subItems.length > 0) {
+    return (
+      <>
+        <ListItemButton onClick={handleClick} sx={{ minHeight: 48, px: 2 }}>
           <ListItemIcon 
             sx={{ 
-              minWidth: 0, 
-              mr: open ? 2 : "auto", 
-              justifyContent: "center",
-              color: "inherit",
+              minWidth: 40,
+              color: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             {icon}
           </ListItemIcon>
-          {open && <ListItemText primary={label} />}
-          {open && subItems && (expanded ? <ExpandLess /> : <ExpandMore />)}
+          <ListItemText primary={label} />
+          {expanded ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
-      </Tooltip>
-
-      {subItems && (
+        
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {subItems.map((subItem) => {
-              if (!hasPermission(subItem.permission)) return null;
-              
-              return (
-                <ListItemButton
-                  key={subItem.label}
-                  onClick={() => navigate(subItem.route)}
-                  sx={{
-                    pl: open ? 8 : 2,
-                    py: 1,
-                    mx: 1,
-                    borderRadius: 2,
-                    color: "#555",
-                    position: "relative",
-                    "&:hover": {
-                      backgroundColor: "#f1f1f1",
-                      color: "primary.main",
-                      transform: "translateX(2px)",
-                    },
-                    "&:before": {
-                      content: '""',
-                      position: "absolute",
-                      left: open ? 6 : 1,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "4px",
-                      height: "4px",
-                      borderRadius: "50%",
-                      backgroundColor: "primary.main",
-                      opacity: 0,
-                      transition: "opacity 0.2s ease",
-                    },
-                    "&:hover:before": {
-                      opacity: 1,
-                    },
-                    transition: "all 0.2s ease",
+            {subItems.map((subItem) => (
+              <ListItemButton
+                key={subItem.route}
+                sx={{ pl: 3, minHeight: 44 }}
+                onClick={() => navigate(subItem.route)}
+              >
+                <ListItemIcon 
+                  sx={{ 
+                    minWidth: 40,
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  {open && <ListItemText primary={subItem.label} />}
-                </ListItemButton>
-              );
-            })}
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {subItem.icon}
+                  </Box>
+                </ListItemIcon>
+                <ListItemText 
+                  primary={subItem.label} 
+                  primaryTypographyProps={{ fontSize: '0.9rem' }}
+                />
+              </ListItemButton>
+            ))}
           </List>
         </Collapse>
-      )}
-    </Box>
+      </>
+    );
+  }
+
+  // When drawer is open without subitems
+  return (
+    <ListItemButton 
+      onClick={() => { if (route) navigate(route); }} 
+      sx={{ minHeight: 48, px: 2 }}
+    >
+      <ListItemIcon 
+        sx={{ 
+          minWidth: 40,
+          color: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {icon}
+      </ListItemIcon>
+      <ListItemText primary={label} />
+    </ListItemButton>
   );
 };
