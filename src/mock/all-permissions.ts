@@ -12,4 +12,7 @@ export const ALL_PERMISSIONS = [
   'delete_data',
   'access_schedule',
   'access_ai_assistant',
+  'view_departments', 'manage_departments',
+  'view_payroll', 'manage_payroll',
+  'view_files', 'manage_files',
 ];

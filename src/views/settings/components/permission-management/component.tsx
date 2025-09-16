@@ -88,7 +88,8 @@ export const PermissionManagement: FC = () => {
     'Services': ['view_services', 'manage_services'],
     'Departments': ['view_departments', 'manage_departments'],
     'Payroll': ['view_payroll', 'manage_payroll'],
-    'Invoices': ['view_invoices', 'manage_invoices']
+    'Invoices': ['view_invoices', 'manage_invoices'],
+    'File Manager': ['view_files', 'manage_files'],
   };
 
   const getPermissionLabel = useCallback((permission: string) => {
@@ -200,7 +201,7 @@ export const PermissionManagement: FC = () => {
           </Typography>
           
           <Grid container spacing={3}>
-            {(['doctor', 'assistant', 'doctor_owner'] as UserRole[]).map((role) => (
+            {(['doctor', 'assistant'] as UserRole[]).map((role) => (
               <Grid key={role}>
                 <Card variant="outlined">
                   <CardContent>

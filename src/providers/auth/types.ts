@@ -16,6 +16,7 @@ export interface User {
   disabledPermissions?: string[]; 
   dateOfBirth?: string;
   emailVerified?: boolean;
+  permissions?: string[];
   gender?: string;
   address?: string;
   clinicId?: string; 
