@@ -23,7 +23,7 @@ import { DividerFormWrapper, PaperFormWrapper } from "../create-leaves-form/styl
 export const EditPatientForm: FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { patients, updatePatient } = usePatientsContext();
+  const { patients, updatePatient, loading: patientsLoading } = usePatientsContext();
 
   const [formData, setFormData] = useState<any>(null);
   const [emailError, setEmailError] = useState("");
@@ -36,37 +36,38 @@ export const EditPatientForm: FC = () => {
       return;
     }
 
-    // Get all patients from the context
-    const allPatients = Object.values(patients).flat();
-    const patient = allPatients.find((p: any) => p._id === id);
+    // Wait for patients to be loaded
+    if (patientsLoading) {
+      return;
+    }
+
+    // Patients are already transformed, so they have all fields flat
+    const patient = patients.find((p: any) => p._id === id);
+    
+    console.log('Found patient for editing:', patient); // Debug log
     
     if (patient) {
-      // Extract the actual patient data from the user object
-      const patientData = (patient as any).user || patient;
-      
-      // Set form data with the extracted patient data
+      // Data is already transformed by the provider
       setFormData({
-        _id: patient._id, // Keep the patient ID
-        firstName: patientData.firstName || '',
-        lastName: patientData.lastName || '',
-        email: patientData.email || '',
-        phoneNumber: patientData.phoneNumber || '',
-        birthDate: patientData.birthDate || '',
-        gender: patientData.gender || '',
-        bloodGroup: patientData.bloodGroup || '',
-        address: patientData.address || '',
-        city: patientData.city || '',
-        state: patientData.state || '',
-        country: patientData.country || '',
-        zipCode: patientData.zipCode || '',
-        profileImg: patientData.profileImg || '',
-        allergies: patientData.allergies || '',
-        medicalHistory: patientData.medicalHistory || '',
-        currentMedications: patientData.currentMedications || '',
+        _id: patient._id,
+        userId: patient.userId, // This is critical for the update
+        firstName: patient.firstName || '',
+        lastName: patient.lastName || '',
+        email: patient.email || '',
+        phoneNumber: patient.phoneNumber || '',
+        birthDate: patient.birthDate || '',
+        gender: patient.gender || '',
+        bloodGroup: patient.bloodGroup || '',
+        address: patient.address || '',
+        city: patient.city || '',
+        state: patient.state || '',
+        country: patient.country || '',
+        zipCode: patient.zipCode || '',
+        profileImg: patient.profileImg || '',
       });
     }
     setLoading(false);
-  }, [id, patients]);
+  }, [id, patients, patientsLoading]);
 
   const validateEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -105,7 +106,8 @@ export const EditPatientForm: FC = () => {
       )
       : [];
 
-  if (loading) {
+  // Show loading if either local loading or patients are loading
+  if (loading || patientsLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -141,9 +143,12 @@ export const EditPatientForm: FC = () => {
     if (!isFormValid || !formData) return;
 
     try {
-      // Prepare the data in the correct format for the API
+      console.log('Submitting update with userId:', formData.userId); // Debug log
+      
+      // Include userId so updatePatient can use it in the URL
       const updateData = {
         _id: formData._id,
+        userId: formData.userId, // CRITICAL: This is used in the URL
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -157,15 +162,13 @@ export const EditPatientForm: FC = () => {
         country: formData.country,
         zipCode: formData.zipCode,
         profileImg: formData.profileImg,
-        allergies: formData.allergies,
-        medicalHistory: formData.medicalHistory,
-        currentMedications: formData.currentMedications,
       };
 
-      updatePatient(updateData);
+      await updatePatient(updateData);
       navigate("/patients/all-patients");
     } catch (error) {
       console.error("Error updating patient:", error);
+      alert("Failed to update patient. Please check console for details.");
     }
   };
 
@@ -334,32 +337,6 @@ export const EditPatientForm: FC = () => {
               ))}
             </Select>
           </FormControl>
-
-          {/* Optional Medical Information */}
-          <TextField
-            label="Allergies"
-            value={formData.allergies || ''}
-            onChange={(e) => updateField("allergies", e.target.value)}
-            sx={{ width: 500, marginY: 1 }}
-            multiline
-            rows={2}
-          />
-          <TextField
-            label="Medical History"
-            value={formData.medicalHistory || ''}
-            onChange={(e) => updateField("medicalHistory", e.target.value)}
-            sx={{ width: 500, marginY: 1 }}
-            multiline
-            rows={2}
-          />
-          <TextField
-            label="Current Medications"
-            value={formData.currentMedications || ''}
-            onChange={(e) => updateField("currentMedications", e.target.value)}
-            sx={{ width: 500, marginY: 1 }}
-            multiline
-            rows={2}
-          />
         </FormFieldWrapper>
 
         <Button

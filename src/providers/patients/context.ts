@@ -10,6 +10,7 @@ export const PatientsContext = createContext<IPatientsContext>({
   getAllPatients: () => {},
   deletePatient: (id: string) => {},
   resetPatients: () => {},
+  loading: false,
 });
 
 export const usePatientsContext = () => useContext(PatientsContext);

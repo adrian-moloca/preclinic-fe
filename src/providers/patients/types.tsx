@@ -1,5 +1,6 @@
 export type PatientsEntry = {
   _id: string;
+  userId?: string;
   profileImg: string;
   firstName: string;
   lastName: string;
@@ -26,6 +27,7 @@ export interface IPatientsContext {
   updatePatient: (entry: PatientsEntry) => void;
   deletePatient: (id: string) => void;
   resetPatients: () => void;
+  loading: boolean;
 }
 
 
