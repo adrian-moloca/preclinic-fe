@@ -13,6 +13,7 @@ export interface IScheduleContext {
   deleteSchedule: (day: string, id: number) => void;
   resetSchedules: () => void;
   currentRole: string;
+  setSchedulesForRole?: (role: string, schedules: Record<string, ScheduleEntry[]>) => void;
   setRole: (role: string) => void;
   getSchedulesForRole: (role: string) => Record<string, ScheduleEntry[]>;
   getAllRoles: () => string[];

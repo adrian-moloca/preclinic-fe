@@ -28,8 +28,8 @@ export type IDoctor = {
   consultationCharge: number;
   workingSchedule?: Record<string, any[]>;
   
-  educationInformation: {
-    educationalDegrees: string;
+  educationalInformation: {
+    educationalDegree: string;
     university: string;
     from: string;
     to: string;

@@ -26,7 +26,7 @@ import axios from 'axios';
 //     designation: 'Cardiologist',
 //     about: 'dedicated cardiologist with 18 years of experience.',
 //     consultationCharge: 0,
-//     educationalDegrees: 'Cardiology',
+//     educationalDegree: 'Cardiology',
 //     university: 'Harvard Medical School',
 //     from: '2021',
 //     to: '2025'
@@ -53,7 +53,7 @@ import axios from 'axios';
 //     designation: 'Pediatrician',
 //     about: 'Pediatrician passionate about child health.',
 //     consultationCharge: 0,
-//     educationalDegrees: 'Pediatrics',
+//     educationalDegree: 'Pediatrics',
 //     university: 'University of Bucharest',
 //     from: '2005',
 //     to: '2011'
@@ -80,7 +80,7 @@ import axios from 'axios';
 //     designation: 'Dermatologist',
 //     about: 'Dermatologist with a focus on skin disorders.',
 //     consultationCharge: 0,
-//     educationalDegrees: 'Dermatology',
+//     educationalDegree: 'Dermatology',
 //     university: 'University of Bucharest',
 //     from: '2010',
 //     to: '2015'

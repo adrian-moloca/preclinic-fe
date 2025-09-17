@@ -15,7 +15,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
 interface EducationEntry {
-  educationalDegrees: string;
+  educationalDegree: string;
   university: string;
   from: Date | null;
   to: Date | null;
@@ -32,10 +32,10 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
 }) => {
   const [educationList, setEducationList] = useState<EducationEntry[]>([
     {
-      educationalDegrees: formData.educationInformation?.educationalDegrees || '',
-      university: formData.educationInformation?.university || '',
-      from: formData.educationInformation?.from ? new Date(formData.educationInformation.from) : null,
-      to: formData.educationInformation?.to ? new Date(formData.educationInformation.to) : null
+      educationalDegree: formData.educationalInformation?.educationalDegree || '',
+      university: formData.educationalInformation?.university || '',
+      from: formData.educationalInformation?.from ? new Date(formData.educationalInformation.from) : null,
+      to: formData.educationalInformation?.to ? new Date(formData.educationalInformation.to) : null
     }
   ]);
 
@@ -44,8 +44,8 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
       const primaryEducation = educationList[0];
       setFormData(prev => ({
         ...prev,
-        educationInformation: {
-          educationalDegrees: primaryEducation.educationalDegrees,
+        educationalInformation: {
+          educationalDegree: primaryEducation.educationalDegree,
           university: primaryEducation.university,
           from: primaryEducation.from ? primaryEducation.from.getFullYear().toString() : '',
           to: primaryEducation.to ? primaryEducation.to.getFullYear().toString() : ''
@@ -64,7 +64,7 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
     setEducationList((prev) => [
       ...prev,
       { 
-        educationalDegrees: '', 
+        educationalDegree: '', 
         university: '', 
         from: null, 
         to: null 
@@ -136,9 +136,9 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
                   <TextField
                     fullWidth
                     label="Educational Degrees"
-                    value={edu.educationalDegrees}
+                    value={edu.educationalDegree}
                     onChange={(e) =>
-                      handleEducationChange(index, 'educationalDegrees', e.target.value)
+                      handleEducationChange(index, 'educationalDegree', e.target.value)
                     }
                     placeholder="e.g., MBBS, MD, PhD"
                     required={index === 0}

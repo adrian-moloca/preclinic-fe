@@ -8,6 +8,7 @@ export const AssistentsContext = createContext<IAssistentsContext>({
   updateAssistent: () => {},
   deleteAssistent: () => {},
   resetAssistents: () => {},
+  fetchAssistents: () => {},
 });
 
 export const useAssistentsContext = () => useContext(AssistentsContext);

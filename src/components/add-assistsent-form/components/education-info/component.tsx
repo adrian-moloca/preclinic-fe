@@ -27,8 +27,14 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
             <TextField
               fullWidth
               label="Educational Degrees"
-              value={formData.educationalDegrees}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, educationalDegrees: e.target.value }))}
+              value={formData.educationalInformation?.educationalDegree || ''}
+              onChange={(e) => setFormData((prev: any) => ({ 
+                ...prev, 
+                educationalInformation: {
+                  ...prev.educationalInformation,
+                  educationalDegree: e.target.value
+                }
+              }))}
               placeholder="e.g., Nursing Diploma, BSN, MSN"
               sx={{ width: 300 }}
             />
@@ -37,8 +43,14 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
             <TextField
               fullWidth
               label="University"
-              value={formData.university}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, university: e.target.value }))}
+              value={formData.educationalInformation?.university || ''}
+              onChange={(e) => setFormData((prev: any) => ({ 
+                ...prev, 
+                educationalInformation: {
+                  ...prev.educationalInformation,
+                  university: e.target.value
+                }
+              }))}
               placeholder="e.g., Johns Hopkins School of Nursing"
               sx={{ width: 300 }}
             />
@@ -47,8 +59,14 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
             <TextField
               fullWidth
               label="From Year"
-              value={formData.from}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, from: e.target.value }))}
+              value={formData.educationalInformation?.from || ''}
+              onChange={(e) => setFormData((prev: any) => ({ 
+                ...prev, 
+                educationalInformation: {
+                  ...prev.educationalInformation,
+                  from: e.target.value
+                }
+              }))}
               placeholder="e.g., 2018"
               sx={{ width: 300 }}
             />
@@ -57,8 +75,14 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
             <TextField
               fullWidth
               label="To Year"
-              value={formData.to}
-              onChange={(e) => setFormData((prev: any) => ({ ...prev, to: e.target.value }))}
+              value={formData.educationalInformation?.to || ''}
+              onChange={(e) => setFormData((prev: any) => ({ 
+                ...prev, 
+                educationalInformation: {
+                  ...prev.educationalInformation,
+                  to: e.target.value
+                }
+              }))}
               placeholder="e.g., 2022"
               sx={{ width: 300 }}
             />

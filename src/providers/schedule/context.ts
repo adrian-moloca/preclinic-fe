@@ -17,6 +17,7 @@ export interface ScheduleContextType {
   hasSchedulesForRole: (role: string) => boolean;
   copySchedulesToRole: (fromRole: string, toRole: string) => void;
   roleSchedules: Record<string, Record<string, ScheduleEntry[]>>;
+  setSchedulesForRole?: (role: string, schedules: Record<string, ScheduleEntry[]>) => void;
 }
 
 export const ScheduleContext = createContext<ScheduleContextType | undefined>(undefined);

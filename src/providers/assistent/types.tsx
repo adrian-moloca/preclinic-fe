@@ -1,12 +1,13 @@
 export type IAssistent = {
-  id: string;
+  id?: string;
+  userId?: string
   profileImg: string;
 
   firstName: string;
   lastName: string;
   phoneNumber: string;
   email: string;
-  birthDate: string; 
+  birthDate: string;
   gender: string;
   bloodGroup: string;
 
@@ -18,15 +19,27 @@ export type IAssistent = {
 
   yearsOfExperience: number;
   department: string;
-  medLicenteNumber: string;
+  medLicenseNumber: string;
   languages: string[];
   about: string;
 
-  educationalDegrees: string;
+  educationalInformation: {
+  educationalDegree: string;
+  from: string;
+  to: string;
   university: string;
-  from: string; 
-  to: string;   
-  workingSchedule?: Record<string, any[]>;
+  };
+
+  workingSchedule: [
+    {
+      day: string;
+      schedule: {
+        from: string;
+        to: string;
+        session: string;
+      }
+    }
+  ]
 };
 
 
@@ -34,9 +47,11 @@ export interface IAssistentsContext {
   assistents: IAssistent[];
   setAssistents: React.Dispatch<React.SetStateAction<IAssistent[]>>;
   addAssistent: (entry: IAssistent) => void;
+  fetchAssistents: () => void;
   updateAssistent: (entry: IAssistent) => void;
   deleteAssistent: (id: string) => void;
   resetAssistents: () => void;
+  loading?: boolean;
 }
 
 

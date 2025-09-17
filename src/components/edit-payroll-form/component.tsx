@@ -55,14 +55,14 @@ export const EditPayrollForm: FC = () => {
 
   const employeeOptions = useMemo(() => {
     const doctorOptions = doctors.map(doctor => ({
-      id: doctor.id,
+      id: doctor.id ?? '',
       name: `${doctor.firstName} ${doctor.lastName}`,
       type: 'Doctor',
       department: doctor.department
     }));
 
     const assistentOptions = assistents.map(assistant => ({
-      id: assistant.id,
+      id: assistant.id ?? '',
       name: `${assistant.firstName} ${assistant.lastName}`,
       type: 'Assistant',
       department: assistant.department

@@ -140,7 +140,7 @@ export const EditDepartmentForm: FC = () => {
   }));
 
   const assistentOptions = assistents.map(assistant => ({
-    id: assistant.id,
+    id: assistant.id ?? '',
     label: `${assistant.firstName} ${assistant.lastName}`,
     department: assistant.department,
     experience: `${assistant.yearsOfExperience} years`

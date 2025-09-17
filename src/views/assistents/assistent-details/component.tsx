@@ -47,7 +47,7 @@ export const AssistentDetails: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deleteAssistent(assistent.id);
+       deleteAssistent(assistent.id as string);
       setDeleteModalOpen(false);
       navigate('/assistents/all');
     } catch (error) {
@@ -84,21 +84,6 @@ export const AssistentDetails: FC = () => {
       </Box>
     );
   }
-
-  const formatSchedule = (workingSchedule: any) => {
-    if (!workingSchedule || Object.keys(workingSchedule).length === 0) {
-      return [];
-    }
-
-    return Object.entries(workingSchedule as Record<string, any[]>)
-      .filter(([_, schedules]) => schedules && schedules.length > 0)
-      .map(([day, schedules]) => ({
-        day,
-        sessions: (schedules as any[]).map((schedule: any) =>
-          `${schedule.session}: ${schedule.from} - ${schedule.to}`
-        )
-      }));
-  };
 
   const formatLanguages = (languages: string[]) => {
     if (!languages || languages.length === 0) return "Not specified";
@@ -274,7 +259,7 @@ export const AssistentDetails: FC = () => {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Medical License Number"
-                      secondary={assistent.medLicenteNumber || 'Not provided'}
+                      secondary={assistent.medLicenseNumber || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
@@ -313,21 +298,21 @@ export const AssistentDetails: FC = () => {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Educational Degrees"
-                      secondary={assistent.educationalDegrees || 'Not provided'}
+                      secondary={assistent.educationalInformation?.educationalDegree || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="University"
-                      secondary={assistent.university || 'Not provided'}
+                      secondary={assistent.educationalInformation?.university || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Duration"
                       secondary={
-                        assistent.from && assistent.to
-                          ? `${assistent.from} - ${assistent.to}`
+                        assistent.educationalInformation?.from && assistent.educationalInformation?.to
+                          ? `${assistent.educationalInformation.from} - ${assistent.educationalInformation.to}`
                           : 'Not provided'
                       }
                     />
@@ -346,22 +331,26 @@ export const AssistentDetails: FC = () => {
                     Working Schedule
                   </Typography>
                 </Box>
-                {assistent.workingSchedule && typeof assistent.workingSchedule === 'object' && !Array.isArray(assistent.workingSchedule) && formatSchedule(assistent.workingSchedule).length > 0 ? (
+                {assistent.workingSchedule && Array.isArray(assistent.workingSchedule) && assistent.workingSchedule.length > 0 ? (
                   <List dense>
-                    {formatSchedule(assistent.workingSchedule).map(({ day, sessions }) => (
-                      <ListItem key={day} sx={{ px: 0 }}>
-                        <ListItemText
-                          primary={day}
-                          secondary={
-                            <Box>
-                              {sessions.map((session, index) => (
-                                <Typography key={index} variant="body2" component="div">
-                                  {session}
-                                </Typography>
-                              ))}
-                            </Box>
-                          }
-                        />
+                    {assistent.workingSchedule.map((daySchedule, dayIndex) => (
+                      <ListItem key={dayIndex} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <Typography variant="subtitle2" fontWeight={600} color="primary">
+                          {daySchedule.day}
+                        </Typography>
+                        {daySchedule.schedule && Array.isArray(daySchedule.schedule) && daySchedule.schedule.length > 0 ? (
+                          <Box sx={{ pl: 2, width: '100%' }}>
+                            {daySchedule.schedule.map((timeSlot, slotIndex) => (
+                              <Typography key={slotIndex} variant="body2" color="text.secondary">
+                                {timeSlot.session}: {timeSlot.from} - {timeSlot.to}
+                              </Typography>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ pl: 2 }}>
+                            No schedule set
+                          </Typography>
+                        )}
                       </ListItem>
                     ))}
                   </List>

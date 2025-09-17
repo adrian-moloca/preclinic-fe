@@ -103,6 +103,15 @@ export const SideDrawer: FC = () => {
       ]
     },
     {
+      label: "Assistants",
+      icon: <BadgeIcon />,
+      resource: "assistants",
+      subItems: [
+        { label: "All Assistants", icon: <BadgeIcon />, route: "/assistents/all", permission: "view_assistents" },
+        { label: "Add Assistant", icon: <GroupAddIcon />, route: "/assistents/create", permission: "manage_assistents" },
+      ]
+    },
+    {
       label: "Appointments",
       icon: <CalendarMonthIcon />,
       resource: "appointments",

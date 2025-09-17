@@ -26,14 +26,23 @@ const initialFormData: Omit<IAssistent, 'id'> = {
   zipCode: '',
   yearsOfExperience: 0,
   department: '',
-  medLicenteNumber: '',
+  medLicenseNumber: '',
   languages: [],
   about: '',
-  educationalDegrees: '',
-  university: '',
-  from: '',
+  educationalInformation: {
+  educationalDegree: '',
+  from : '',
   to: '',
-  workingSchedule: {},
+  university: ''
+  },
+  workingSchedule: [{
+    day: '',
+    schedule: {
+      from: '',
+      to: '',
+      session: ''
+    }
+  }],
 };
 
 export const EditAssistentForm: FC = () => {
@@ -46,25 +55,32 @@ export const EditAssistentForm: FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const latestScheduleRef = useRef<Record<string, any[]>>({});
 
-  // Find the assistant to edit
   const assistentToEdit = useMemo(() => {
     return assistents.find(assistant => assistant.id === id);
   }, [assistents, id]);
 
-  // Pre-fill form data when component mounts or assistant data changes
   useEffect(() => {
     if (assistentToEdit) {
       const { id: _, ...assistentData } = assistentToEdit;
       setFormData(assistentData);
-      latestScheduleRef.current = assistentData.workingSchedule || {};
+      latestScheduleRef.current = Array.isArray(assistentData.workingSchedule)
+        ? assistentData.workingSchedule.reduce((acc, item) => {
+            if (item.day && item.schedule) {
+              if (Array.isArray(item.schedule)) {
+                acc[item.day] = item.schedule;
+              } else {
+                acc[item.day] = [item.schedule];
+              }
+            }
+            return acc;
+          }, {} as Record<string, any[]>)
+        : {};
       setIsLoading(false);
     } else if (assistents.length > 0) {
-      // Assistant not found and assistants are loaded
       setIsLoading(false);
     }
   }, [assistentToEdit, assistents]);
 
-  // Form validation logic
   const isFormValid = useMemo(() => {
     const requiredFields = [
       formData.firstName.trim(),
@@ -72,7 +88,7 @@ export const EditAssistentForm: FC = () => {
       formData.email.trim(),
       formData.phoneNumber.trim(),
       formData.department.trim(),
-      formData.medLicenteNumber.trim(),
+      formData.medLicenseNumber.trim(),
       formData.country.trim(),
       formData.state.trim(),
       formData.city.trim(),
@@ -95,7 +111,7 @@ export const EditAssistentForm: FC = () => {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
     if (!formData.department.trim()) newErrors.department = 'Department is required';
-    if (!formData.medLicenteNumber.trim()) newErrors.medLicenteNumber = 'Medical license number is required';
+    if (!formData.medLicenseNumber.trim()) newErrors.medLicenseNumber = 'Medical license number is required';
     if (!formData.country.trim()) newErrors.country = 'Country is required';
     if (!formData.state.trim()) newErrors.state = 'State is required';
     if (!formData.city.trim()) newErrors.city = 'City is required';
@@ -131,9 +147,19 @@ export const EditAssistentForm: FC = () => {
 
   const handleScheduleSubmit = useCallback((schedules: Record<string, any[]>) => {
     latestScheduleRef.current = schedules;
+    const workingScheduleArray =
+      Object.entries(schedules).map(([day, scheduleArr]) => ({
+        day,
+        schedule: scheduleArr 
+      }));
     setFormData(prev => ({
       ...prev,
-      workingSchedule: schedules
+      workingSchedule: workingScheduleArray.length > 0
+        ? workingScheduleArray as any
+        : [{
+            day: '',
+            schedule: [{ from: '', to: '', session: '' }] 
+          }]
     }));
   }, []);
 
@@ -141,29 +167,71 @@ export const EditAssistentForm: FC = () => {
     if (assistentToEdit) {
       const { id: _, ...assistentData } = assistentToEdit;
       setFormData(assistentData);
-      latestScheduleRef.current = assistentData.workingSchedule || {};
+      latestScheduleRef.current = Array.isArray(assistentData.workingSchedule)
+        ? assistentData.workingSchedule.reduce((acc, item) => {
+            if (item.day && item.schedule) {
+              if (Array.isArray(item.schedule)) {
+                acc[item.day] = item.schedule;
+              } else {
+                acc[item.day] = [item.schedule];
+              }
+            }
+            return acc;
+          }, {} as Record<string, any[]>)
+        : {};
     }
     setErrors({});
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (validateForm() && assistentToEdit) {
-      const finalScheduleData = latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0 
-        ? latestScheduleRef.current 
-        : formData.workingSchedule;
+ const handleSubmit = async (event: React.FormEvent) => {
+  event.preventDefault();
+  
+  if (validateForm() && assistentToEdit) {
+    const scheduleData = latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0 
+      ? latestScheduleRef.current 
+      : formData.workingSchedule;
 
-      const updatedAssistent: IAssistent = {
-        ...formData,
-        workingSchedule: finalScheduleData,
-        id: assistentToEdit.id, 
-      };
-      
-      updateAssistent(updatedAssistent);
-      navigate(`/assistents/${assistentToEdit.id}`);
+    let finalScheduleArray: { day: string; schedule: { from: string; to: string; session: string }[] }[];
+    if (scheduleData && typeof scheduleData === 'object' && !Array.isArray(scheduleData)) {
+      finalScheduleArray = Object.entries(scheduleData).map(([day, schedules]) => ({
+        day,
+        schedule: Array.isArray(schedules) 
+          ? schedules.map(({ id, ...rest }) => ({
+              ...rest,
+              session: rest.session ? rest.session.toLowerCase() : ''
+            }))
+          : []
+      }));
+    } else if (Array.isArray(scheduleData)) {
+      finalScheduleArray = scheduleData.map(item => ({
+        ...item,
+        schedule: Array.isArray(item.schedule) 
+          ? item.schedule.map(({ id, ...rest }) => ({
+              ...rest,
+              session: rest.session ? rest.session.toLowerCase() : ''
+            }))
+          : []
+      }));
+    } else {
+      finalScheduleArray = [];
     }
-  };
+
+    const updatedAssistent: IAssistent = {
+      ...formData,
+      workingSchedule: finalScheduleArray as any,
+      id: assistentToEdit.id,
+      userId: assistentToEdit.userId, // Include userId if it exists
+    };
+    
+    try {
+      await updateAssistent(updatedAssistent);
+      // Navigate to the all assistants page instead of the details page
+      navigate('/assistents/all');
+    } catch (error) {
+      console.error('Failed to update assistant:', error);
+    }
+  }
+};
 
   const handleCancel = () => {
     if (assistentToEdit) {
@@ -257,6 +325,7 @@ export const EditAssistentForm: FC = () => {
               title={`Working Hours for ${formData.firstName} ${formData.lastName}`}
               onSubmit={handleScheduleSubmit}
               hideSubmitButton={true}
+              initialSchedule={latestScheduleRef.current}
             />
           </Box>
 

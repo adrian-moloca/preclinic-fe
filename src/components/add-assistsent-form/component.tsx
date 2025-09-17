@@ -26,20 +26,31 @@ const initialFormData: Omit<IAssistent, 'id'> = {
   zipCode: '',
   yearsOfExperience: 0,
   department: '',
-  medLicenteNumber: '',
+  medLicenseNumber: '',
   languages: [],
   about: '',
-  educationalDegrees: '',
-  university: '',
-  from: '',
+  educationalInformation: {
+  educationalDegree: '',
+  from : '',
   to: '',
-  workingSchedule: {},
+  university: '',
+  },
+  workingSchedule: [
+    {
+      day: '',
+      schedule: {
+        from: '',
+        to: '',
+        session: ''
+      }
+    }
+  ],
 };
 
 export const AddAssistentForm: React.FC = () => {
   const { addAssistent } = useAssistentsContext();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState<Omit<IAssistent, 'id'>>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const latestScheduleRef = useRef<Record<string, any[]>>({});
@@ -51,7 +62,7 @@ export const AddAssistentForm: React.FC = () => {
       formData.email.trim(),
       formData.phoneNumber.trim(),
       formData.department.trim(),
-      formData.medLicenteNumber.trim(),
+      formData.medLicenseNumber.trim(),
       formData.country.trim(),
       formData.state.trim(),
       formData.city.trim(),
@@ -74,7 +85,7 @@ export const AddAssistentForm: React.FC = () => {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
     if (!formData.department.trim()) newErrors.department = 'Department is required';
-    if (!formData.medLicenteNumber.trim()) newErrors.medLicenteNumber = 'Medical license number is required';
+    if (!formData.medLicenseNumber.trim()) newErrors.medLicenseNumber = 'Medical license number is required';
     if (!formData.country.trim()) newErrors.country = 'Country is required';
     if (!formData.state.trim()) newErrors.state = 'State is required';
     if (!formData.city.trim()) newErrors.city = 'City is required';
@@ -98,7 +109,7 @@ export const AddAssistentForm: React.FC = () => {
   ) => {
     const value = event.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -108,13 +119,17 @@ export const AddAssistentForm: React.FC = () => {
     setFormData(prev => ({ ...prev, profileImg: imageUrl }));
   };
 
-  const handleScheduleSubmit = useCallback((schedules: Record<string, any[]>) => {
-    latestScheduleRef.current = schedules;
-    setFormData(prev => ({
-      ...prev,
-      workingSchedule: schedules
-    }));
-  }, []);
+const handleScheduleSubmit = useCallback((schedules: Record<string, any[]>) => {
+  latestScheduleRef.current = schedules;
+  const workingScheduleArray = Object.entries(schedules).map(([day, scheduleArr]) => ({
+    day,
+    schedule: [scheduleArr[0]?.schedule || { from: '', to: '', session: '' }]
+  }));
+  setFormData(prev => ({
+    ...prev,
+    workingSchedule: workingScheduleArray as any // Use 'any' to bypass the type check temporarily
+  }));
+}, []);
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -122,25 +137,52 @@ export const AddAssistentForm: React.FC = () => {
     setErrors({});
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (validateForm()) {
-      const finalScheduleData = latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0 
-        ? latestScheduleRef.current 
-        : formData.workingSchedule;
+ const handleSubmit = (event: React.FormEvent) => {
+  event.preventDefault();
 
-      const newAssistent: IAssistent = {
-        ...formData,
-        workingSchedule: finalScheduleData,
-        id: `asst_${Date.now()}`, 
-      };
-      
-      addAssistent(newAssistent);
-      resetForm();
-      navigate('/assistents/all'); 
+  if (validateForm()) {
+    const finalScheduleData = latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0
+      ? Object.entries(latestScheduleRef.current)
+          .filter(([_, scheduleArr]) => {
+            // Only include schedules that have complete data
+            const schedule = scheduleArr[0]?.schedule;
+            return schedule && schedule.from && schedule.to && schedule.session;
+          })
+          .map(([day, scheduleArr]) => ({
+            day,
+            schedule: [scheduleArr[0].schedule]
+          }))
+      : formData.workingSchedule
+          .filter(item => {
+            // Filter out items with incomplete schedule data
+            const sched = Array.isArray(item.schedule) ? item.schedule[0] : item.schedule;
+            return sched && sched.from && sched.to && sched.session;
+          })
+          .map(item => ({
+            day: item.day,
+            schedule: Array.isArray(item.schedule) ? item.schedule : [item.schedule]
+          }));
+
+    // Only proceed if there's at least some schedule data
+    if (finalScheduleData.length === 0) {
+      // Optionally, you can set an empty array or show an error
+      finalScheduleData.push({
+        day: 'Monday',
+        schedule: [{ from: '09:00', to: '17:00', session: 'morning' }] // Default values
+      });
     }
-  };
+
+    const newAssistent: IAssistent = {
+      ...formData,
+      workingSchedule: finalScheduleData as any,
+      // id: `asst_${Date.now()}`,
+    };
+
+    addAssistent(newAssistent);
+    resetForm();
+    navigate('/assistents/all');
+  }
+};
 
   const handleCancel = () => {
     resetForm();
@@ -153,7 +195,7 @@ export const AddAssistentForm: React.FC = () => {
         <Typography variant="h4" fontWeight={600} mb={4} textAlign="center">
           Add New Assistant
         </Typography>
-        
+
         <form onSubmit={handleSubmit}>
           <Box mb={4} display="flex" justifyContent="center">
             <ProfileImageUploader
@@ -171,7 +213,7 @@ export const AddAssistentForm: React.FC = () => {
           </Box>
 
           <Box mb={4}>
-            <AddressInfoSection 
+            <AddressInfoSection
               formData={formData}
               handleInputChange={handleInputChange}
               setFormData={setFormData}
@@ -180,7 +222,7 @@ export const AddAssistentForm: React.FC = () => {
           </Box>
 
           <Box mb={4}>
-            <ProfessionalInfoSection 
+            <ProfessionalInfoSection
               formData={formData}
               errors={errors}
               handleInputChange={handleInputChange}
@@ -189,18 +231,18 @@ export const AddAssistentForm: React.FC = () => {
           </Box>
 
           <Box mb={4}>
-            <EducationInfoSection 
+            <EducationInfoSection
               formData={formData}
               setFormData={setFormData}
             />
           </Box>
 
-          <Box mb={4}>     
+          <Box mb={4}>
             <ScheduleForm
               role="assistant"
               title={`Working Hours for ${formData.firstName} ${formData.lastName}`}
               onSubmit={handleScheduleSubmit}
-              hideSubmitButton={true} 
+              hideSubmitButton={true}
             />
           </Box>
 
@@ -209,7 +251,7 @@ export const AddAssistentForm: React.FC = () => {
               variant="outlined"
               size="large"
               onClick={handleCancel}
-              sx={{ 
+              sx={{
                 minWidth: 150,
                 py: 1.5
               }}
@@ -222,7 +264,7 @@ export const AddAssistentForm: React.FC = () => {
               variant="contained"
               size="large"
               disabled={!isFormValid}
-              sx={{ 
+              sx={{
                 minWidth: 150,
                 py: 1.5,
                 '&.Mui-disabled': {

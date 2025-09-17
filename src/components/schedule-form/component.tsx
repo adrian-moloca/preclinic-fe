@@ -39,13 +39,15 @@ interface ScheduleFormProps {
   title?: string;
   onSubmit?: (schedules: Record<string, ScheduleEntry[]>) => void;
   hideSubmitButton?: boolean;
+  initialSchedule?: Record<string, ScheduleEntry[]>;
 }
 
 export const ScheduleForm: React.FC<ScheduleFormProps> = ({
   role,
   title,
   onSubmit,
-  hideSubmitButton = false
+  hideSubmitButton = false,
+  initialSchedule
 }) => {
   const { 
     weeklySchedules, 
@@ -55,10 +57,12 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
     setRole,
     currentRole,
     getSchedulesForRole,
-    roleSchedules
+    roleSchedules,
+    setSchedulesForRole
   } = useScheduleContext();
   
   const [selectedDay, setSelectedDay] = useState<string>('Monday');
+  const [isInitialized, setIsInitialized] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isEditing = location.state?.isEditing || false;
@@ -68,6 +72,26 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
       setRole(role);
     }
   }, [role, setRole]);
+
+  useEffect(() => {
+  if (initialSchedule && !isInitialized && role) {
+    Object.entries(initialSchedule).forEach(([day, schedules]) => {
+      schedules.forEach(schedule => {
+        const scheduleWithId = {
+          ...schedule,
+          id: schedule.id || Date.now() + Math.random(),
+          session: schedule.session && typeof schedule.session === 'string'
+            ? schedule.session.charAt(0).toUpperCase() + schedule.session.slice(1).toLowerCase()
+            : ''
+        };
+        if (setSchedulesForRole) {
+          setSchedulesForRole(role, { [day]: [scheduleWithId] });
+        }
+      });
+    });
+    setIsInitialized(true);
+  }
+}, [initialSchedule, isInitialized, role, setSchedulesForRole]);
 
   const targetRole = role || currentRole;
   const currentRoleSchedules = targetRole ? getSchedulesForRole(targetRole) : weeklySchedules;

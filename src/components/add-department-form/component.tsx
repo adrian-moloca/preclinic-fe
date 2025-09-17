@@ -112,7 +112,7 @@ export const AddDepartmentForm: FC = () => {
 
   // Prepare assistant options for autocomplete
   const assistentOptions = assistents.map(assistant => ({
-    id: assistant.id,
+    id: assistant.id ?? '',
     label: `${assistant.firstName} ${assistant.lastName}`,
     department: assistant.department,
     experience: `${assistant.yearsOfExperience} years`

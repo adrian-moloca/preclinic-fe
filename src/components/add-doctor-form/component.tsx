@@ -38,8 +38,8 @@ export const AddDoctorForm: React.FC = () => {
     appointmentType: '',
     appointmentDuration: 30,
     consultationCharge: 0,
-    educationInformation: {
-      educationalDegrees: '',
+    educationalInformation: {
+      educationalDegree: '',
       university: '',
       from: '',
       to: '',
@@ -161,8 +161,8 @@ export const AddDoctorForm: React.FC = () => {
         appointmentType: '',
         appointmentDuration: 30,
         consultationCharge: 0,
-        educationInformation: {
-          educationalDegrees: '',
+        educationalInformation: {
+          educationalDegree: '',
           university: '',
           from: '',
           to: '',
@@ -199,8 +199,8 @@ export const AddDoctorForm: React.FC = () => {
       appointmentType: '',
       appointmentDuration: 30,
       consultationCharge: 0,
-      educationInformation: {
-        educationalDegrees: '',
+      educationalInformation: {
+        educationalDegree: '',
         university: '',
         from: '',
         to: '',

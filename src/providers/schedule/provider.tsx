@@ -133,6 +133,13 @@ export const ScheduleProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }));
   }, [roleSchedules]);
 
+  const setSchedulesForRole = useCallback((role: string, schedules: Record<string, ScheduleEntry[]>) => {
+    setRoleSchedules(prev => ({
+      ...prev,
+      [role]: schedules
+    }));
+  }, []);
+
   return (
     <ScheduleContext.Provider
       value={{
@@ -145,6 +152,7 @@ export const ScheduleProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }));
           }
         },
+        setSchedulesForRole, 
         
         currentRole,
         setRole,
