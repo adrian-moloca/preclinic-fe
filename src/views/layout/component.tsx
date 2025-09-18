@@ -1,29 +1,29 @@
 import { Box, useTheme } from "@mui/material";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { Outlet } from "react-router-dom";
+// import { useEffect } from "react";
 import SideDrawer from "../../components/side-menu";
 import Header from "../../components/header";
-import { useAuthContext } from "../../providers/auth/context";
+// import { useAuthContext } from "../../providers/auth/context";
 
 export const Layout = () => {
   const theme = useTheme();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { getMe, logout } = useAuthContext();
+  // const location = useLocation();
+  // const navigate = useNavigate();
+  // const { getMe, logout } = useAuthContext();
 
   // Call getMe on every route change and handle authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      const user = await getMe();
-      // If getMe returns null, user is not authenticated
-      if (!user) {
-        logout(); // Clear any remaining auth state
-        navigate('/sign-in', { replace: true });
-      }
-    };
+  // useEffect(() => {
+  //   const checkAuth = async () => {
+  //     const user = await getMe();
+  //     // If getMe returns null, user is not authenticated
+  //     if (!user) {
+  //       logout(); // Clear any remaining auth state
+  //       navigate('/sign-in', { replace: true });
+  //     }
+  //   };
     
-    checkAuth();
-  }, [location.pathname, getMe, logout, navigate]);
+  //   checkAuth();
+  // }, [location.pathname, getMe, logout, navigate]);
 
   return (
     <Box 
