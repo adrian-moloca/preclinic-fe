@@ -107,24 +107,33 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const getMe = useCallback(async (): Promise<User | null> => {
-    try {
-      const response = await axios.get<User | ApiResponse<User>>('/api/auth/me');
-      const userData = extractUserFromResponse(response);
-      if (!userData) return userRef.current;
-      
-      const completeUserData: User = {
-        ...userData,
-        id: userData.id || `user-${Date.now()}`,
-        role: userData.role || 'doctor_owner' as UserRole
-      };
-      
-      setUser(completeUserData);
-      saveUserToStorage(completeUserData);
-      return completeUserData;
-    } catch {
-      return userRef.current;
+  try {
+    const response = await axios.get<User | ApiResponse<User>>('/api/auth/me');
+    const userData = extractUserFromResponse(response);
+    if (!userData) {
+      // No user data means not authenticated
+      clearUserFromStorage(); // Clear localStorage
+      setUser(null);
+      return null;
     }
-  }, [saveUserToStorage, extractUserFromResponse]);
+    const completeUserData: User = {
+      ...userData,
+      role: userData.role || 'doctor_owner' as UserRole
+    };
+    setUser(completeUserData);
+    saveUserToStorage(completeUserData);
+    return completeUserData;
+  } catch (error: any) {
+    // If the request fails (401, 403, etc.), clear authentication
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      clearUserFromStorage(); // Clear localStorage
+      setUser(null);
+      return null;
+    }
+    // For other errors, return current user
+    return userRef.current;
+  }
+}, [saveUserToStorage, extractUserFromResponse, clearUserFromStorage]);
 
   useEffect(() => {
     if (isInitialized) return;
