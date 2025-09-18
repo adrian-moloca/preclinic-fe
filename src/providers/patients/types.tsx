@@ -28,6 +28,7 @@ export interface IPatientsContext {
   deletePatient: (id: string) => void;
   resetPatients: () => void;
   loading: boolean;
+  hasLoaded: boolean;
 }
 
 

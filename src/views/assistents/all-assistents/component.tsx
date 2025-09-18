@@ -24,7 +24,7 @@ import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllAssistents: FC = () => {
-  const { assistents = [], deleteAssistent, fetchAssistents, loading } = useAssistentsContext();
+  const { assistents = [], deleteAssistent, fetchAssistents, loading, hasLoaded } = useAssistentsContext();
   const [filteredAssistents, setFilteredAssistents] = useState<IAssistent[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -38,6 +38,13 @@ export const AllAssistents: FC = () => {
   console.log("Fetch assistants function: ", fetchAssistents);
   console.log("Assistants from state: ", assistents);
 
+  // Fetch assistents when component mounts if not already loaded
+  useEffect(() => {
+    if (!hasLoaded) {
+      fetchAssistents();
+    }
+  }, [hasLoaded, fetchAssistents]);
+
   useEffect(() => {
     // Ensure assistents is always an array
     const safeAssistents = Array.isArray(assistents) ? assistents : [];
@@ -47,7 +54,7 @@ export const AllAssistents: FC = () => {
   }, [assistents]);
 
   const handleRefresh = async () => {
-    await fetchAssistents();
+     fetchAssistents(); // Force refresh
   };
 
   const handleSearch = (query: string) => {

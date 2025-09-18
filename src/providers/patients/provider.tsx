@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useState, useCallback, useEffect } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
 import { PatientsEntry } from './types';
 import { PatientsContext } from './context';
 import axios from 'axios';
@@ -6,6 +6,8 @@ import axios from 'axios';
 export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [patients, setPatients] = useState<PatientsEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isFetchingRef = useRef(false);
 
   // Transform API response to match PatientsEntry interface
   const transformPatientData = (apiPatient: any): PatientsEntry => {
@@ -55,8 +57,15 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   };
 
-  const getAllPatients = useCallback(async () => {
+  const getAllPatients = useCallback(async (force: boolean = false) => {
+    // Prevent duplicate fetches unless forced
+    if ((hasLoaded && !force) || isFetchingRef.current) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
+    
     try {
       const response = await axios.get('/api/patient/getAll');
       const data = response.data;
@@ -77,6 +86,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       
       console.log('Transformed patients:', transformedData); // Debug log
       setPatients(transformedData);
+      setHasLoaded(true);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error:", error.response?.data || error.message);
@@ -86,8 +96,9 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setPatients([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, []);
+  }, [hasLoaded]);
 
   const addPatient = async (newEntry: Omit<PatientsEntry, '_id'>) => {
     try {
@@ -144,7 +155,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       if (response.status === 200) {
         // Refresh the entire list to ensure consistency
-        await getAllPatients();
+        await getAllPatients(true); // Force refresh
         return response.data._id || _id;
       } else {
         console.error("Unexpected response:", response);
@@ -185,12 +196,13 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const resetPatients = useCallback(() => {
     setPatients([]);
+    setHasLoaded(false);
   }, []);
 
-  // Automatically fetch patients when the provider mounts
-  useEffect(() => {
-    getAllPatients();
-  }, [getAllPatients]);
+  // REMOVED automatic useEffect - data will be fetched when component needs it
+  // useEffect(() => {
+  //   getAllPatients();
+  // }, [getAllPatients]);
 
   return (
     <PatientsContext.Provider
@@ -203,6 +215,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         deletePatient,
         resetPatients,
         loading,
+        hasLoaded,
       }}
     >
       {children}

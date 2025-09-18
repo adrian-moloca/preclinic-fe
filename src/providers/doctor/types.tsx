@@ -47,6 +47,7 @@ export interface IDoctorsContext {
   resetDoctors: () => void;
   fetchDoctors: () => void;
   loading: boolean;
+  hasLoaded: boolean;
 }
 
 

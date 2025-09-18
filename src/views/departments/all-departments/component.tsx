@@ -15,6 +15,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import BusinessIcon from "@mui/icons-material/Business";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
@@ -23,7 +24,7 @@ import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllDepartments: FC = () => {
-  const { departments, deleteDepartment } = useDepartmentsContext();
+  const { departments, deleteDepartment, fetchDepartments, hasLoaded } = useDepartmentsContext();
   const [filteredDepartments, setFilteredDepartments] = useState<IDepartments[]>(departments);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -34,9 +35,20 @@ export const AllDepartments: FC = () => {
 
   const { addRecentItem } = useRecentItems();
 
+  // Fetch departments when component mounts if not already loaded
+  useEffect(() => {
+    if (!hasLoaded) {
+      fetchDepartments();
+    }
+  }, [hasLoaded, fetchDepartments]);
+
   useEffect(() => {
     setFilteredDepartments(departments);
   }, [departments]);
+
+  const handleRefresh = async () => {
+    await fetchDepartments(); // Force refresh
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -269,9 +281,14 @@ export const AllDepartments: FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" mb={2}>
-        All Departments ({filteredDepartments.length})
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">
+          All Departments ({filteredDepartments.length})
+        </Typography>
+        <IconButton onClick={handleRefresh} color="primary">
+          <RefreshIcon />
+        </IconButton>
+      </Box>
       <Box sx={{ mb: 2 }}>
         <SearchBar onSearch={handleSearch} placeholder="Search departments..." />
       </Box>

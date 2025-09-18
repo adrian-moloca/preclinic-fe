@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useState, useCallback, useEffect } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
 import { IDoctor } from './types';
 import { DoctorsContext } from './context';
 import axios from 'axios';
@@ -6,6 +6,8 @@ import axios from 'axios';
 export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [doctors, setDoctors] = useState<IDoctor[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isFetchingRef = useRef(false);
 
   // Transform API response to match IDoctor interface
   const transformDoctorData = (apiDoctor: any): IDoctor => {
@@ -39,8 +41,15 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   };
 
-  const fetchDoctors = useCallback(async () => {
+  const fetchDoctors = useCallback(async (force: boolean = false) => {
+    // Prevent duplicate fetches unless forced
+    if ((hasLoaded && !force) || isFetchingRef.current) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
+    
     try {
       const response = await axios.get('/api/doctor/getAll');
       const data = response.data;
@@ -58,13 +67,15 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
       
       setDoctors(transformedData);
+      setHasLoaded(true);
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
       setDoctors([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, []);
+  }, [hasLoaded]);
 
   const addDoctor = async (newDoctor: IDoctor) => {
     try {
@@ -118,7 +129,7 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const response = await axios.put(`/api/doctor/patch/${userId || id}`, dataToSend);
       
       // After successful update, refresh the entire list to ensure consistency
-      await fetchDoctors();
+      await fetchDoctors(true); // Force refresh
       
       // Return the ID so the component can use it
       const updatedId = response.data._id || id;
@@ -148,17 +159,20 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const resetDoctors = useCallback(() => {
     setDoctors([]);
+    setHasLoaded(false);
   }, []);
 
-  useEffect(() => {
-    fetchDoctors();
-  }, [fetchDoctors]);
+  // REMOVED automatic useEffect - data will be fetched when component needs it
+  // useEffect(() => {
+  //   fetchDoctors();
+  // }, [fetchDoctors]);
 
   return (
     <DoctorsContext.Provider
       value={{
         doctors,
         loading,
+        hasLoaded,
         setDoctors,
         addDoctor,
         updateDoctor,

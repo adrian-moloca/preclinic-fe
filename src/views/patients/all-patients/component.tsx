@@ -15,6 +15,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
@@ -23,8 +24,7 @@ import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllPatients: FC = () => {
-  const { patients, deletePatient, getAllPatients } = usePatientsContext();
-  const [loading, setLoading] = useState(true);
+  const { patients, deletePatient, getAllPatients, loading, hasLoaded } = usePatientsContext();
   const [error, setError] = useState<string | null>(null);
   const allPatients = useMemo(() => Object.values(patients).flat(), [patients]);
   const [filteredPatients, setFilteredPatients] = useState<PatientsEntry[]>(allPatients);
@@ -37,29 +37,36 @@ export const AllPatients: FC = () => {
   
   const { addRecentItem } = useRecentItems();
 
-  // Fetch patients when component mounts
+  // Fetch patients when component mounts if not already loaded
   useEffect(() => {
-    const fetchPatients = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        await getAllPatients();
-      } catch (err) {
-        console.error('Error fetching patients:', err);
-        setError('Failed to load patients. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPatients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - only run once on mount
+    if (!hasLoaded) {
+      const fetchPatients = async () => {
+        setError(null);
+        try {
+          await getAllPatients();
+        } catch (err) {
+          console.error('Error fetching patients:', err);
+          setError('Failed to load patients. Please try again.');
+        }
+      };
+      fetchPatients();
+    }
+  }, [hasLoaded, getAllPatients]);
 
   // Update filtered patients when patients data changes
   useEffect(() => {
     setFilteredPatients(allPatients);
   }, [allPatients]);
+
+  const handleRefresh = async () => {
+    setError(null);
+    try {
+       getAllPatients(); // Force refresh
+    } catch (err) {
+      console.error('Error refreshing patients:', err);
+      setError('Failed to refresh patients. Please try again.');
+    }
+  };
 
   const handleDeleteClick = () => {
     if (selectedPatient) {
@@ -73,12 +80,12 @@ export const AllPatients: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deletePatient(selectedPatient._id);
+       deletePatient(selectedPatient._id);
       setDeleteModalOpen(false);
       setSelectedPatient(null);
       setAnchorEl(null);
       // Refresh patients list after deletion
-      await getAllPatients();
+       getAllPatients();
     } catch (error) {
       console.error('Error deleting patient:', error);
     } finally {
@@ -96,7 +103,7 @@ export const AllPatients: FC = () => {
     try {
       await Promise.all(selectedIds.map(id => deletePatient(id)));
       // Refresh patients list after deletion
-      await getAllPatients();
+       getAllPatients();
     } catch (error) {
       console.error('Error deleting patients:', error);
     }
@@ -303,9 +310,14 @@ export const AllPatients: FC = () => {
 
   return (
     <Box p={3} sx={{ overflowX: "auto" }}>
-      <Typography variant="h4" mb={2}>
-        All Patients ({filteredPatients.length})
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">
+          All Patients ({filteredPatients.length})
+        </Typography>
+        <IconButton onClick={handleRefresh} color="primary">
+          <RefreshIcon />
+        </IconButton>
+      </Box>
       <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-start" }}>
         <SearchBar onSearch={handleSearch} />
       </Box>

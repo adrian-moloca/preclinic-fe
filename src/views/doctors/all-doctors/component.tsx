@@ -16,13 +16,14 @@ import InfoIcon from '@mui/icons-material/Info';
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from "@mui/icons-material/Refresh";
 import DeleteModal from "../../../components/delete-modal";
 import SearchBar from "../../../components/search-bar";
 import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllDoctors: FC = () => {
-    const { doctors, deleteDoctor } = useDoctorsContext();
+    const { doctors, deleteDoctor, fetchDoctors, hasLoaded } = useDoctorsContext();
     const navigate = useNavigate();
     const [selectedDoctor, setSelectedDoctor] = useState<IDoctor | null>(null);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -33,9 +34,20 @@ export const AllDoctors: FC = () => {
 
     const { addRecentItem } = useRecentItems();
 
+    // Fetch doctors when component mounts if not already loaded
+    useEffect(() => {
+        if (!hasLoaded) {
+            fetchDoctors();
+        }
+    }, [hasLoaded, fetchDoctors]);
+
     useEffect(() => {
         setFilteredDoctors(doctors);
     }, [doctors]);
+
+    const handleRefresh = async () => {
+         fetchDoctors(); // Force refresh
+    };
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
@@ -207,9 +219,14 @@ export const AllDoctors: FC = () => {
 
     return (
         <Box p={3}>
-            <Typography variant="h4" mb={2}>
-                All Doctors ({filteredDoctors.length})
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h4">
+                    All Doctors ({filteredDoctors.length})
+                </Typography>
+                <IconButton onClick={handleRefresh} color="primary">
+                    <RefreshIcon />
+                </IconButton>
+            </Box>
             <Box sx={{ mb: 2 }}>
                 <SearchBar onSearch={handleSearch} />
             </Box>

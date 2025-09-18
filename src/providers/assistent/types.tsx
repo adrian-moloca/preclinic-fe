@@ -52,6 +52,7 @@ export interface IAssistentsContext {
   deleteAssistent: (id: string) => void;
   resetAssistents: () => void;
   loading?: boolean;
+  hasLoaded: boolean;
 }
 
 

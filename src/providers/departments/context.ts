@@ -11,6 +11,7 @@ export const DepartmentsContext = createContext<IDepartmentsContext>({
   fetchDepartments: async () => {},
   loading: false,
   error: null,
+  hasLoaded: false,
 });
 
 export const useDepartmentsContext = () => useContext(DepartmentsContext);

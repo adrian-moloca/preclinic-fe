@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
 import { IAssistent } from './types';
 import { AssistentsContext } from './context';
 import axios from 'axios';
@@ -6,6 +6,8 @@ import axios from 'axios';
 export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [assistents, setAssistents] = useState<IAssistent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isFetchingRef = useRef(false);
 
   // Transform API response to match IAssistent interface
   const transformAssistentData = (apiAssistent: any): IAssistent => {
@@ -40,8 +42,15 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     };
   };
 
-  const fetchAssistents = useCallback(async () => {
+  const fetchAssistents = useCallback(async (force: boolean = false) => {
+    // Prevent duplicate fetches unless forced
+    if ((hasLoaded && !force) || isFetchingRef.current) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
+    
     try {
       const response = await axios.get('/api/assistant/getAll');
       const data = response.data;
@@ -59,13 +68,15 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       setAssistents(transformedData);
+      setHasLoaded(true);
     } catch (error) {
       console.error("Failed to fetch assistents:", error);
       setAssistents([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, []);
+  }, [hasLoaded]);
 
   const addAssistent = async (newAssistent: IAssistent) => {
     try {
@@ -77,48 +88,50 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-const updateAssistent = async (updatedAssistent: IAssistent) => {
-  try {
-    const { id, userId, ...dataToSend } = updatedAssistent;
-    
-    const response = await axios.put(`/api/assistant/patch/${userId || id}`, dataToSend);
-    
-    // After successful update, refresh the entire list to ensure consistency
-    await fetchAssistents();
-    
-    // Navigate using the assistant ID from the response
-    const updatedId = response.data._id || id;
-    return updatedId; // Return the ID so the component can use it
-  } catch (error) {
-    console.error("Failed to update assistent:", error);
-    throw error;
-  }
-};
-
-const deleteAssistent = async (id: string) => {
-  try {
-    const assistentToDelete = assistents.find(a => a.id === id);
-    
-    if (!assistentToDelete || !assistentToDelete.userId) {
-      console.error("Assistant or userId not found");
-      return;
+  const updateAssistent = async (updatedAssistent: IAssistent) => {
+    try {
+      const { id, userId, ...dataToSend } = updatedAssistent;
+      
+      const response = await axios.put(`/api/assistant/patch/${userId || id}`, dataToSend);
+      
+      // After successful update, refresh the entire list to ensure consistency
+      await fetchAssistents(true);
+      
+      // Navigate using the assistant ID from the response
+      const updatedId = response.data._id || id;
+      return updatedId; // Return the ID so the component can use it
+    } catch (error) {
+      console.error("Failed to update assistent:", error);
+      throw error;
     }
-    
-    await axios.delete(`/api/assistant/delete/${assistentToDelete.userId}`);
-    
-    setAssistents(prev => prev.filter(assistent => assistent.id !== id));
-  } catch (error) {
-    console.error("Failed to delete assistent:", error);
-  }
-};
+  };
+
+  const deleteAssistent = async (id: string) => {
+    try {
+      const assistentToDelete = assistents.find(a => a.id === id);
+      
+      if (!assistentToDelete || !assistentToDelete.userId) {
+        console.error("Assistant or userId not found");
+        return;
+      }
+      
+      await axios.delete(`/api/assistant/delete/${assistentToDelete.userId}`);
+      
+      setAssistents(prev => prev.filter(assistent => assistent.id !== id));
+    } catch (error) {
+      console.error("Failed to delete assistent:", error);
+    }
+  };
 
   const resetAssistents = useCallback(() => {
     setAssistents([]);
+    setHasLoaded(false);
   }, []);
 
-  useEffect(() => {
-    fetchAssistents();
-  }, [fetchAssistents]);
+  // REMOVED automatic useEffect - data will be fetched when component needs it
+  // useEffect(() => {
+  //   fetchAssistents();
+  // }, [fetchAssistents]);
 
   return (
     <AssistentsContext.Provider
@@ -131,6 +144,7 @@ const deleteAssistent = async (id: string) => {
         resetAssistents,
         fetchAssistents,
         loading,
+        hasLoaded,
       }}
     >
       {children}

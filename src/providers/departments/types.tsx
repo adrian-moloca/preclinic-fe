@@ -17,6 +17,7 @@ export interface IDepartmentsContext {
     deleteDepartment: (id: string) => void;
     resetDepartments: () => void;
     loading: boolean;
+    hasLoaded: boolean;
     error?: string | null;
     fetchDepartments: () => Promise<void>;
 };
