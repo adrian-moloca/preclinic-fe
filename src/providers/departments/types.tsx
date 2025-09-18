@@ -1,8 +1,9 @@
 export interface IDepartments {
-    id: string;
+    id?: string;
     name: string;
     description: string;
-    createdAt: string;
+    createdAt?: string;
+    updatedAt?: string;
     status: string;
     doctors: string[];
     assistants: string[];
@@ -15,4 +16,7 @@ export interface IDepartmentsContext {
     updateDepartment: (id: string, updatedDepartment: IDepartments) => void;
     deleteDepartment: (id: string) => void;
     resetDepartments: () => void;
+    loading: boolean;
+    error?: string | null;
+    fetchDepartments: () => Promise<void>;
 };

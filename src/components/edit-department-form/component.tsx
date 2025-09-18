@@ -3,7 +3,6 @@ import { Box, Paper, Typography } from "@mui/material";
 import { FC } from "react";
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDepartmentsContext } from '../../providers/departments/context';
-import { IDepartments } from '../../providers/departments/types';
 import { useDoctorsContext } from '../../providers/doctor/context';
 import { useAssistentsContext } from '../../providers/assistent/context';
 import DepartmentBasicInfo from '../add-department-form/components/basic-informations';
@@ -37,8 +36,14 @@ export const EditDepartmentForm: FC = () => {
 
   useEffect(() => {
     if (departmentToEdit) {
-      const { id: _, createdAt, ...departmentData } = departmentToEdit;
-      setFormData(departmentData);
+      // Only extract editable fields
+      setFormData({
+        name: departmentToEdit.name,
+        description: departmentToEdit.description,
+        status: departmentToEdit.status,
+        doctors: departmentToEdit.doctors || [],
+        assistants: departmentToEdit.assistants || [],
+      });
       setIsLoading(false);
     } else if (departments.length > 0) {
       setIsLoading(false);
@@ -95,23 +100,31 @@ export const EditDepartmentForm: FC = () => {
 
   const resetForm = () => {
     if (departmentToEdit) {
-      const { id: _, createdAt, ...departmentData } = departmentToEdit;
-      setFormData(departmentData);
+      setFormData({
+        name: departmentToEdit.name,
+        description: departmentToEdit.description,
+        status: departmentToEdit.status,
+        doctors: departmentToEdit.doctors || [],
+        assistants: departmentToEdit.assistants || [],
+      });
     }
     setErrors({});
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     if (validateForm() && departmentToEdit) {
-      const updatedDepartment: IDepartments = {
-        ...formData,
-        id: departmentToEdit.id, 
-        createdAt: departmentToEdit.createdAt, 
+      // Only send the editable fields, not id, createdAt, or updatedAt
+      const updatePayload = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status,
+        doctors: formData.doctors,
+        assistants: formData.assistants,
       };
       
-      updateDepartment(departmentToEdit.id, updatedDepartment);
+      updateDepartment(departmentToEdit.id!, updatePayload);
       navigate(`/departments/${departmentToEdit.id}`); 
     }
   };

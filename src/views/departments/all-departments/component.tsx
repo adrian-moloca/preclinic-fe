@@ -58,7 +58,7 @@ export const AllDepartments: FC = () => {
   const handleRowClick = (department: IDepartments) => {
     // NEW: Add to recent items
     addRecentItem({
-      id: department.id,
+      id: department.id ?? '',
       type: 'department',
       title: department.name,
       subtitle: department.description || '',
@@ -103,7 +103,7 @@ export const AllDepartments: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deleteDepartment(selectedDepartment.id);
+       deleteDepartment(selectedDepartment.id!);
       setDeleteModalOpen(false);
       setSelectedDepartment(null);
     } catch (error) {
@@ -221,7 +221,7 @@ export const AllDepartments: FC = () => {
       sortable: false,
       render: (_: unknown, row: IDepartments) => {
         const favoriteItem = {
-          id: row.id,
+          id: row.id ?? '', // Ensure id is always a string
           type: 'department' as const,
           title: row.name,
           subtitle: row.description || '',
@@ -240,7 +240,7 @@ export const AllDepartments: FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 addRecentItem({
-                  id: row.id,
+                  id: row.id ?? '',
                   type: 'department',
                   title: row.name,
                   subtitle: row.description || '',

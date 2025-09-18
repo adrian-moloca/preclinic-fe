@@ -50,11 +50,14 @@ export const DepartmentInfoCard: React.FC<DepartmentInfoCardProps> = ({
           <ListItem sx={{ px: 0 }}>
             <ListItemText
               primary="Created Date"
-              secondary={new Date(department.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              secondary={department.createdAt
+                ? new Date(department.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })
+                : 'N/A'
+              }
             />
           </ListItem>
           <ListItem sx={{ px: 0 }}>

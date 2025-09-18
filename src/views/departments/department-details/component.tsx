@@ -29,7 +29,7 @@ export const DepartmentDetails: FC = () => {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!department) return;
+        if (!department || typeof department.id !== 'string') return;
 
         setIsDeleting(true);
         try {

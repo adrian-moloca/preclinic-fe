@@ -121,7 +121,12 @@ export const AddServiceForm: FC = () => {
     navigate('/services/all');
   };
 
-  const activeDepartments = departments.filter(dept => dept.status === 'active');
+  const activeDepartments = departments
+    .filter(dept => dept.status === 'active' && typeof dept.id === 'string' && dept.id !== undefined)
+    .map(dept => ({
+      ...dept,
+      id: dept.id as string
+    }));
 
   // Updated to work with ProductWithStock objects
   const productOptions = productsWithStock

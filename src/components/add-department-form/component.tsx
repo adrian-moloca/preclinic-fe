@@ -3,7 +3,7 @@ import { Box, Paper, Typography } from "@mui/material";
 import { FC } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useDepartmentsContext } from '../../providers/departments/context';
-import { IDepartments } from '../../providers/departments/types';
+// import { IDepartments } from '../../providers/departments/types';
 import { useDoctorsContext } from '../../providers/doctor/context';
 import { useAssistentsContext } from '../../providers/assistent/context';
 import DepartmentBasicInfo from './components/basic-informations';
@@ -76,17 +76,16 @@ export const AddDepartmentForm: FC = () => {
     setFormData(prev => ({ ...prev, assistants: newValue.map(assistant => assistant.id) }));
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     if (validateForm()) {
-      const newDepartment: IDepartments = {
+      const newDepartment = {
         ...formData,
-        id: `dept_${Date.now()}`,
-        createdAt: new Date().toISOString(),
+        // createdAt: new Date().toISOString(),
       };
       
-      addDepartment(newDepartment);
+       addDepartment(newDepartment);
       
       // Reset form
       setFormData(initialFormData);

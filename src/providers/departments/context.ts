@@ -8,6 +8,9 @@ export const DepartmentsContext = createContext<IDepartmentsContext>({
   updateDepartment: () => {},
   deleteDepartment: () => {},
   resetDepartments: () => {},
+  fetchDepartments: async () => {},
+  loading: false,
+  error: null,
 });
 
 export const useDepartmentsContext = () => useContext(DepartmentsContext);

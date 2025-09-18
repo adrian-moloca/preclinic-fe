@@ -38,7 +38,7 @@ export const DepartmentHeader: React.FC<DepartmentHeaderProps> = ({
             icon={<GroupIcon />}
           />
           <Chip 
-            label={`Created ${new Date(department.createdAt).toLocaleDateString()}`} 
+            label={`Created ${department.createdAt ? new Date(department.createdAt).toLocaleDateString() : 'N/A'}`} 
             variant="outlined" 
             size="small" 
             icon={<CalendarTodayIcon />}
