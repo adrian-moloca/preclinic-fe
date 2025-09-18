@@ -49,7 +49,7 @@ export const DoctorDetails: FC = () => {
 
     setIsDeleting(true);
     try {
-      await deleteDoctor(doctor.id);
+      await deleteDoctor(doctor.id!);
       setDeleteModalOpen(false);
       navigate('/doctors/all');
     } catch (error) {
@@ -88,10 +88,25 @@ export const DoctorDetails: FC = () => {
   }
 
   const formatSchedule = (workingSchedule: any) => {
-    if (!workingSchedule || Object.keys(workingSchedule).length === 0) {
+    if (!workingSchedule || 
+        (Array.isArray(workingSchedule) && workingSchedule.length === 0) ||
+        (!Array.isArray(workingSchedule) && Object.keys(workingSchedule).length === 0)) {
       return [];
     }
 
+    // Handle array format (from backend)
+    if (Array.isArray(workingSchedule)) {
+      return workingSchedule
+        .filter(item => item.day && item.schedule && item.schedule.length > 0)
+        .map(item => ({
+          day: item.day,
+          sessions: item.schedule.map((schedule: any) =>
+            `${schedule.session}: ${schedule.from} - ${schedule.to}`
+          )
+        }));
+    }
+
+    // Handle object format (legacy)
     return Object.entries(workingSchedule as Record<string, any[]>)
       .filter(([_, schedules]) => schedules && schedules.length > 0)
       .map(([day, schedules]) => ({
@@ -160,7 +175,7 @@ export const DoctorDetails: FC = () => {
             </Typography>
             <Box display="flex" gap={1} flexWrap="wrap">
               <Chip label={doctor.department} color="primary" size="small" />
-              {doctor.yearsOfExperience > 0 && (
+              {Number(doctor.yearsOfExperience) > 0 && (
                 <Chip label={`${doctor.yearsOfExperience} years exp.`} variant="outlined" size="small" />
               )}
               {doctor.gender && (
@@ -276,7 +291,7 @@ export const DoctorDetails: FC = () => {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Medical License Number"
-                      secondary={doctor.medLicenteNumber || 'Not provided'}
+                      secondary={doctor.medLicenseNumber || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
@@ -315,21 +330,21 @@ export const DoctorDetails: FC = () => {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Educational Degrees"
-                      secondary={doctor.educationalInformation?.educationalDegree || 'Not provided'}
+                      secondary={(doctor.educationalInformation && doctor.educationalInformation[0]?.educationalDegree) || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="University"
-                      secondary={doctor.educationalInformation?.university || 'Not provided'}
+                      secondary={(doctor.educationalInformation && doctor.educationalInformation[0]?.university) || 'Not provided'}
                     />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemText
                       primary="Duration"
                       secondary={
-                        doctor.educationalInformation?.from && doctor.educationalInformation?.to
-                          ? `${doctor.educationalInformation.from} - ${doctor.educationalInformation.to}`
+                        doctor.educationalInformation && doctor.educationalInformation[0]?.from && doctor.educationalInformation[0]?.to
+                          ? `${doctor.educationalInformation[0].from} - ${doctor.educationalInformation[0].to}`
                           : 'Not provided'
                       }
                     />
@@ -381,7 +396,7 @@ export const DoctorDetails: FC = () => {
                     Working Schedule
                   </Typography>
                 </Box>
-                {doctor.workingSchedule && typeof doctor.workingSchedule === 'object' && !Array.isArray(doctor.workingSchedule) && formatSchedule(doctor.workingSchedule).length > 0 ? (
+                {doctor.workingSchedule && formatSchedule(doctor.workingSchedule).length > 0 ? (
                   <List dense>
                     {formatSchedule(doctor.workingSchedule).map(({ day, sessions }) => (
                       <ListItem key={day} sx={{ px: 0 }}>
@@ -389,7 +404,7 @@ export const DoctorDetails: FC = () => {
                           primary={day}
                           secondary={
                             <Box>
-                              {sessions.map((session, index) => (
+                              {sessions.map((session: string, index: number) => (
                                 <Typography key={index} variant="body2" component="div">
                                   {session}
                                 </Typography>

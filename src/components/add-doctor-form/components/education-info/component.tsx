@@ -30,29 +30,53 @@ export const EducationInfoSection: React.FC<EducationInfoSectionProps> = ({
   formData,
   setFormData
 }) => {
-  const [educationList, setEducationList] = useState<EducationEntry[]>([
-    {
-      educationalDegree: formData.educationalInformation?.educationalDegree || '',
-      university: formData.educationalInformation?.university || '',
-      from: formData.educationalInformation?.from ? new Date(formData.educationalInformation.from) : null,
-      to: formData.educationalInformation?.to ? new Date(formData.educationalInformation.to) : null
-    }
-  ]);
-
-  useEffect(() => {
-    if (educationList.length > 0) {
-      const primaryEducation = educationList[0];
-      setFormData(prev => ({
-        ...prev,
-        educationalInformation: {
-          educationalDegree: primaryEducation.educationalDegree,
-          university: primaryEducation.university,
-          from: primaryEducation.from ? primaryEducation.from.getFullYear().toString() : '',
-          to: primaryEducation.to ? primaryEducation.to.getFullYear().toString() : ''
-        }
+  const [educationList, setEducationList] = useState<EducationEntry[]>(() => {
+    if (formData.educationalInformation && formData.educationalInformation.length > 0) {
+      return formData.educationalInformation.map(edu => ({
+        educationalDegree: edu.educationalDegree || '',
+        university: edu.university || '',
+        from: edu.from ? new Date(edu.from) : null,
+        to: edu.to ? new Date(edu.to) : null
       }));
     }
-  }, [educationList, setFormData]);
+    return [{
+      educationalDegree: '',
+      university: '',
+      from: null,
+      to: null
+    }];
+  });
+
+  // Only update formData when educationList actually changes (not on initial mount)
+  const [isInitialMount, setIsInitialMount] = useState(true);
+
+  useEffect(() => {
+    if (isInitialMount) {
+      setIsInitialMount(false);
+      return;
+    }
+    
+    // Only update if there's actual data to save
+    setFormData(prev => ({
+      ...prev,
+      educationalInformation: (
+        educationList.length === 1
+          ? [{
+              educationalDegree: educationList[0].educationalDegree || '',
+              university: educationList[0].university || '',
+              from: educationList[0].from ? educationList[0].from.getFullYear().toString() : '',
+              to: educationList[0].to ? educationList[0].to.getFullYear().toString() : ''
+            }]
+          : educationList.map(edu => ({
+              educationalDegree: edu.educationalDegree || '',
+              university: edu.university || '',
+              from: edu.from ? edu.from.getFullYear().toString() : '',
+              to: edu.to ? edu.to.getFullYear().toString() : ''
+            }))
+      ) as typeof prev.educationalInformation
+    }));
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [educationList]); // Remove setFormData from deps to avoid infinite loop
 
   const handleEducationChange = (index: number, field: keyof EducationEntry, value: any) => {
     const updatedList = [...educationList];

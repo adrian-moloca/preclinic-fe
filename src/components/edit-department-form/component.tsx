@@ -133,7 +133,7 @@ export const EditDepartmentForm: FC = () => {
   }
 
   const doctorOptions = doctors.map(doctor => ({
-    id: doctor.id,
+    id: doctor.id ?? '',
     label: `Dr. ${doctor.firstName} ${doctor.lastName}`,
     department: doctor.department,
     specialty: doctor.designation || 'General'

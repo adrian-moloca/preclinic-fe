@@ -98,7 +98,7 @@ export const SideDrawer: FC = () => {
       icon: <LocalHospitalIcon />,
       resource: "doctors",
       subItems: [
-        { label: "All Doctors", icon: <LocalHospitalIcon />, route: "/doctors/all-doctors", permission: "view_doctors" },
+        { label: "All Doctors", icon: <LocalHospitalIcon />, route: "/doctors/all", permission: "view_doctors" },
         { label: "Add Doctor", icon: <BadgeIcon />, route: "/doctors/create", permission: "manage_doctors" },
       ]
     },

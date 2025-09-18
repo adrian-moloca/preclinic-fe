@@ -8,6 +8,8 @@ export const DoctorsContext = createContext<IDoctorsContext>({
   updateDoctor: () => {},
   deleteDoctor: () => {},
   resetDoctors: () => {},
+  fetchDoctors: () => {},
+  loading: false
 });
 
 export const useDoctorsContext = () => useContext(DoctorsContext);

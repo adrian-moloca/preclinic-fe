@@ -1,12 +1,13 @@
 export type IDoctor = {
-  id: string;
+  id?: string;
+  userId?: string;
   profileImg: string;
 
   firstName: string;
   lastName: string;
   phoneNumber: string;
   email: string;
-  birthDate: string; 
+  birthDate: string;
   gender: string;
   bloodGroup: string;
 
@@ -16,25 +17,25 @@ export type IDoctor = {
   address: string;
   zipCode: string;
 
-  yearsOfExperience: number;
+  yearsOfExperience: string;
   department: string;
   designation: string;
-  medLicenteNumber: string;
+  medLicenseNumber: string;
   languages: string[];
   about: string;
 
-  appointmentType?: string; 
-  appointmentDuration?: number; 
+  appointmentType?: string;
+  appointmentDuration?: number;
   consultationCharge: number;
-  workingSchedule?: Record<string, any[]>;
-  
-  educationalInformation: {
-    educationalDegree: string;
-    university: string;
-    from: string;
-    to: string;
-  };
-}; 
+  workingSchedule: { day: string; schedule: { from: string; to: string; session: string; } }[];
+
+educationalInformation: {
+  educationalDegree: string;
+  from: string;
+  to: string;
+  university: string;
+}[];
+};
 
 
 export interface IDoctorsContext {
@@ -44,6 +45,8 @@ export interface IDoctorsContext {
   updateDoctor: (entry: IDoctor) => void;
   deleteDoctor: (id: string) => void;
   resetDoctors: () => void;
+  fetchDoctors: () => void;
+  loading: boolean;
 }
 
 

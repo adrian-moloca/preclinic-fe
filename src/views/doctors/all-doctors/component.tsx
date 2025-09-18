@@ -1,10 +1,10 @@
-import { 
-    Box, 
-    Typography, 
-    Avatar, 
-    IconButton, 
-    Menu, 
-    MenuItem, 
+import {
+    Box,
+    Typography,
+    Avatar,
+    IconButton,
+    Menu,
+    MenuItem,
     Chip,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
@@ -57,7 +57,7 @@ export const AllDoctors: FC = () => {
 
     const handleRowClick = (doctor: IDoctor) => {
         addRecentItem({
-            id: doctor.id,
+            id: doctor.id ?? '',
             type: 'doctor',
             title: `Dr. ${doctor.firstName} ${doctor.lastName}`,
             subtitle: doctor.email || '',
@@ -67,7 +67,7 @@ export const AllDoctors: FC = () => {
                 phone: doctor.phoneNumber,
             },
         });
-        
+
         navigate(`/doctors/${doctor.id}`);
     };
 
@@ -101,7 +101,7 @@ export const AllDoctors: FC = () => {
 
         setIsDeleting(true);
         try {
-            await deleteDoctor(selectedDoctor.id);
+            await deleteDoctor(selectedDoctor.id!);
             setDeleteModalOpen(false);
             setSelectedDoctor(null);
         } catch (error) {
@@ -131,15 +131,12 @@ export const AllDoctors: FC = () => {
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>
                             Dr. {row.firstName} {row.lastName}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            ID: {row.id}
-                        </Typography>
                     </Box>
                 </Box>
             ),
         },
         {
-            id: 'specialization',
+            id: 'department', // Changed from 'specialization' to 'department'
             label: 'Specialization',
             minWidth: 150,
             render: (value: string) => (
@@ -164,7 +161,7 @@ export const AllDoctors: FC = () => {
             sortable: false,
             render: (_: unknown, row: IDoctor) => {
                 const favoriteItem = {
-                    id: row.id,
+                    id: row.id ?? '',
                     type: 'doctor' as const,
                     title: `Dr. ${row.firstName} ${row.lastName}`,
                     subtitle: row.email || '',
@@ -182,7 +179,7 @@ export const AllDoctors: FC = () => {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 addRecentItem({
-                                    id: row.id,
+                                    id: row.id ?? '',
                                     type: 'doctor',
                                     title: `Dr. ${row.firstName} ${row.lastName}`,
                                     subtitle: row.email || '',

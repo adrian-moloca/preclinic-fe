@@ -91,10 +91,10 @@ export const ProfessionalInfoSection: React.FC<ProfessionalInfoSectionProps> = (
                         <TextField
                             fullWidth
                             label="Medical License Number"
-                            value={formData.medLicenteNumber}
-                            onChange={handleInputChange('medLicenteNumber')}
-                            error={!!errors.medLicenteNumber}
-                            helperText={errors.medLicenteNumber}
+                            value={formData.medLicenseNumber}
+                            onChange={handleInputChange('medLicenseNumber')}
+                            error={!!errors.medLicenseNumber}
+                            helperText={errors.medLicenseNumber}
                             required
                             sx={{ width: 300 }}
                         />

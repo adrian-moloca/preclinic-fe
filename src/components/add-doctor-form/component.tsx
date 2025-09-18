@@ -29,22 +29,24 @@ export const AddDoctorForm: React.FC = () => {
     city: '',
     address: '',
     zipCode: '',
-    yearsOfExperience: 0,
+    yearsOfExperience: '',
     department: '',
     designation: '',
-    medLicenteNumber: '',
+    medLicenseNumber: '',
     languages: [],
     about: '',
     appointmentType: '',
     appointmentDuration: 30,
     consultationCharge: 0,
-    educationalInformation: {
+    educationalInformation: [ 
+    {
       educationalDegree: '',
       university: '',
       from: '',
       to: '',
-    },
-    workingSchedule: {},
+    }
+  ],
+    workingSchedule: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,9 +69,16 @@ export const AddDoctorForm: React.FC = () => {
 
   const handleScheduleSubmit = useCallback((schedules: Record<string, any[]>) => {
     latestScheduleRef.current = schedules;
+    // Convert schedules object to array
+    const scheduleArray = Object.entries(schedules).map(([day, sessions]) =>
+      sessions.map((session: any) => ({
+        day,
+        schedule: session
+      }))
+    ).flat();
     setFormData(prev => ({
       ...prev,
-      workingSchedule: schedules
+      workingSchedule: scheduleArray
     }));
   }, []);
 
@@ -80,7 +89,7 @@ export const AddDoctorForm: React.FC = () => {
       formData.email.trim(),
       formData.phoneNumber.trim(),
       formData.department.trim(),
-      formData.medLicenteNumber.trim(),
+      formData.medLicenseNumber.trim(),
       formData.country.trim(),
       formData.state.trim(),
       formData.city.trim(),
@@ -103,7 +112,7 @@ export const AddDoctorForm: React.FC = () => {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required';
     if (!formData.department.trim()) newErrors.department = 'Department is required';
-    if (!formData.medLicenteNumber.trim()) newErrors.medLicenteNumber = 'Medical license number is required';
+    if (!formData.medLicenseNumber.trim()) newErrors.medLicenteNumber = 'Medical license number is required';
     if (!formData.country.trim()) newErrors.country = 'Country is required';
     if (!formData.state.trim()) newErrors.state = 'State is required';
     if (!formData.city.trim()) newErrors.city = 'City is required';
@@ -123,57 +132,77 @@ export const AddDoctorForm: React.FC = () => {
   };
 
   const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  event.preventDefault();
+  
+  if (validateForm()) {
+    let finalScheduleData: any[] = [];
     
-    if (validateForm()) {
-      const finalScheduleData = latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0 
-        ? latestScheduleRef.current 
-        : formData.workingSchedule;
+    if (latestScheduleRef.current && Object.keys(latestScheduleRef.current).length > 0) {
+      // Convert from object format to array format
+      finalScheduleData = Object.entries(latestScheduleRef.current).map(([day, sessions]) => ({
+        day,
+        schedule: Array.isArray(sessions) 
+          ? sessions.map((session: any) => ({
+              from: session.from || '',
+              to: session.to || '',
+              session: session.session ? session.session.toLowerCase() : ''
+            }))
+          : []
+      }));
+    } else if (Array.isArray(formData.workingSchedule)) {
+      // If formData.workingSchedule is already an array, ensure schedule is an array
+      finalScheduleData = formData.workingSchedule.map((item: any) => ({
+        day: item.day || '',
+        schedule: Array.isArray(item.schedule) ? item.schedule : []
+      }));
+    }
 
-      const newDoctor: IDoctor = {
-        ...formData,
-        workingSchedule: finalScheduleData,
-        id: `doc_${Date.now()}`, 
-      };
-      
-      addDoctor(newDoctor);
-      
-      setFormData({
-        profileImg: '',
-        firstName: '',
-        lastName: '',
-        phoneNumber: '',
-        email: '',
-        birthDate: '',
-        gender: '',
-        bloodGroup: '',
-        country: '',
-        state: '',
-        city: '',
-        address: '',
-        zipCode: '',
-        yearsOfExperience: 0,
-        department: '',
-        designation: '',
-        medLicenteNumber: '',
-        languages: [],
-        about: '',
-        appointmentType: '',
-        appointmentDuration: 30,
-        consultationCharge: 0,
-        educationalInformation: {
+    const newDoctor = {
+      ...formData,
+      workingSchedule: finalScheduleData,
+      // Removed id field - let backend generate it
+    };
+    
+    addDoctor(newDoctor as IDoctor);
+    
+    setFormData({
+      profileImg: '',
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
+      email: '',
+      birthDate: '',
+      gender: '',
+      bloodGroup: '',
+      country: '',
+      state: '',
+      city: '',
+      address: '',
+      zipCode: '',
+      yearsOfExperience: '',
+      department: '',
+      designation: '',
+      medLicenseNumber: '',
+      languages: [],
+      about: '',
+      appointmentType: '',
+      appointmentDuration: 30,
+      consultationCharge: 0,
+      educationalInformation: [ 
+        {
           educationalDegree: '',
           university: '',
           from: '',
           to: '',
-        },
-        workingSchedule: {},
-      });
-      latestScheduleRef.current = {};
-      setErrors({});
-    }
-    navigate('/doctors/all'); 
-  };
+        }
+      ],
+      workingSchedule: [],
+    });
+    latestScheduleRef.current = {};
+    setErrors({});
+    navigate('/doctors/all');
+  }
+};
 
   const handleCancel = () => {
     setFormData({
@@ -190,22 +219,24 @@ export const AddDoctorForm: React.FC = () => {
       city: '',
       address: '',
       zipCode: '',
-      yearsOfExperience: 0,
+      yearsOfExperience: '',
       department: '',
       designation: '',
-      medLicenteNumber: '',
+      medLicenseNumber: '',
       languages: [],
       about: '',
       appointmentType: '',
       appointmentDuration: 30,
       consultationCharge: 0,
-      educationalInformation: {
+      educationalInformation: [
+      {
         educationalDegree: '',
         university: '',
         from: '',
         to: '',
-      },
-      workingSchedule: {},
+      }
+    ],
+      workingSchedule: [],
     });
     latestScheduleRef.current = {};
     setErrors({});

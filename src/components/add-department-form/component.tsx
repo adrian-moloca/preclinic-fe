@@ -104,7 +104,7 @@ export const AddDepartmentForm: FC = () => {
 
   // Prepare doctor options for autocomplete
   const doctorOptions = doctors.map(doctor => ({
-    id: doctor.id,
+    id: doctor.id ?? '',
     label: `Dr. ${doctor.firstName} ${doctor.lastName}`,
     department: doctor.department,
     specialty: doctor.designation || 'General'
