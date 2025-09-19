@@ -8,7 +8,6 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
-import { FormFieldWrapper } from "../create-patient-form/style";
 import { useAppointmentsContext } from "../../providers/appointments";
 import { usePatientsContext } from "../../providers/patients";
 import { IDepartments, useDepartmentsContext } from "../../providers/departments";
@@ -361,7 +360,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     }
 
     return (
-        <Box>
+        <Box display="flex" justifyContent="center" width="100%">
             <FormWrapper {...wrapperProps}>
                 {!embedded && (
                     <Typography variant="h4" textAlign="center" mb={3}>
@@ -369,8 +368,8 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                     </Typography>
                 )}
 
-                <Box>
-                    <FormFieldWrapper>
+                <Box display="flex" flexDirection="column" alignItems="center">
+                    <Box>
                         <TextField
                             select
                             label="Patient"
@@ -547,27 +546,27 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             rows={3}
                             required
                         />
-                    </FormFieldWrapper>
-                </Box>
+                    </Box>
 
-                <Box display="flex" justifyContent="center" gap={2} mt={3}>
-                    {embedded && (
+                    <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                        {embedded && (
+                            <Button
+                                variant="outlined"
+                                onClick={handleCancel}
+                                sx={{ width: 300 }}
+                            >
+                                Cancel
+                            </Button>
+                        )}
                         <Button
-                            variant="outlined"
-                            onClick={handleCancel}
+                            variant="contained"
+                            onClick={handleSubmit}
+                            disabled={!isFormValid}
                             sx={{ width: 300 }}
                         >
-                            Cancel
+                            Create Appointment
                         </Button>
-                    )}
-                    <Button
-                        variant="contained"
-                        onClick={handleSubmit}
-                        disabled={!isFormValid}
-                        sx={{ width: 300 }}
-                    >
-                        Create Appointment
-                    </Button>
+                    </Box>
                 </Box>
             </FormWrapper>
         </Box>
