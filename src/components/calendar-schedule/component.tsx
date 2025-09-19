@@ -725,7 +725,7 @@ Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit
           bgcolor: 'primary.main',
           color: 'primary.contrastText'
         }}>
-          <Typography variant="h6">
+          <Typography variant="h6" component="div">
             Create Appointment - {appointmentFormDate && format(new Date(appointmentFormDate), 'MMM d, yyyy')}
           </Typography>
           <IconButton

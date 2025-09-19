@@ -117,7 +117,7 @@ export const SideDrawer: FC = () => {
       resource: "appointments",
       subItems: [
         { label: "All Appointments", icon: <CalendarMonthIcon />, route: "/appointments/all", permission: "view_appointments" },
-        { label: "Online Appointments", icon: <VideoCallIcon />, route: "/appointments/online", permission: "view_appointments" },
+        { label: "Online Appointments", icon: <VideoCallIcon />, route: "/appointments/online-appointments", permission: "view_appointments" },
       ]
     },
     {

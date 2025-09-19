@@ -5,9 +5,10 @@ import {
     Menu,
     MenuItem,
     Tooltip,
-    Typography
+    Typography,
+    CircularProgress
 } from "@mui/material";
-import { FC, useMemo, useState } from "react";
+import { FC, useMemo, useState, useEffect } from "react";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -21,14 +22,34 @@ import DeleteModal from "../../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../../components/table/component";
 
 export const AllOnlineAppointments: FC = () => {
-    const { appointments, deleteAppointment } = useAppointmentsContext();
-    const { patients } = usePatientsContext();
+    const { appointments, deleteAppointment, fetchAppointments, loading } = useAppointmentsContext();
+    const { patients, getAllPatients } = usePatientsContext();
     const [searchQuery, setSearchQuery] = useState("");
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentsEntry | null>(null);
     const navigate = useNavigate();
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    // Fetch appointments and patients when component mounts
+    useEffect(() => {
+        const initializeData = async () => {
+            try {
+                await Promise.all([
+                    fetchAppointments(true), // Force refresh
+                    getAllPatients ? getAllPatients() : Promise.resolve()
+                ]);
+                setIsInitialized(true);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                setIsInitialized(true);
+            }
+        };
+        
+        initializeData();
+        //eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleDeleteClick = () => {
         if (selectedAppointment) {
@@ -38,11 +59,14 @@ export const AllOnlineAppointments: FC = () => {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!selectedAppointment || typeof selectedAppointment.id !== 'string') return;
+        // Handle both id and _id formats
+        const appointmentId = selectedAppointment?.id || selectedAppointment?.id;
+        if (!selectedAppointment || !appointmentId) return;
 
         setIsDeleting(true);
         try {
-            await deleteAppointment(selectedAppointment.id);
+            await deleteAppointment(appointmentId);
+            await fetchAppointments(true); // Refresh after delete
             setDeleteModalOpen(false);
             setSelectedAppointment(null);
             setAnchorEl(null);
@@ -62,16 +86,18 @@ export const AllOnlineAppointments: FC = () => {
     const handleDeleteMultiple = async (selectedIds: string[]) => {
         try {
             await Promise.all(selectedIds.map(id => deleteAppointment(id)));
+            await fetchAppointments(true); // Refresh after delete
         } catch (error) {
             console.error('Error deleting appointments:', error);
         }
     };
 
-    const handleMoreInfoClick = (appointment: AppointmentsEntry) => {
-        navigate(`/appointments/online-appointments/manage/${appointment.id}`);
+    const handleMoreInfoClick = (appointment: any) => {
+        const appointmentId = appointment._id || appointment.id;
+        navigate(`/appointments/online-appointments/manage/${appointmentId}`);
     };
 
-    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, appointment: AppointmentsEntry) => {
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, appointment: any) => {
         event.stopPropagation();
         setAnchorEl(event.currentTarget);
         setSelectedAppointment(appointment);
@@ -86,13 +112,15 @@ export const AllOnlineAppointments: FC = () => {
 
     const handleEditAppointment = () => {
         if (selectedAppointment) {
-            navigate(`/appointments/edit/${selectedAppointment.id}`);
+            const appointmentId = selectedAppointment.id || selectedAppointment.id;
+            navigate(`/appointments/edit/${appointmentId}`);
             handleMenuClose();
         }
     };
 
     const handleRowClick = (appointmentData: any) => {
-        navigate(`/appointments/online-appointments/manage/${appointmentData.appointment.id}`);
+        const appointmentId = appointmentData.appointment._id || appointmentData.appointment.id;
+        navigate(`/appointments/online-appointments/manage/${appointmentId}`);
     };
 
     const handleSearch = (query: string) => {
@@ -101,19 +129,43 @@ export const AllOnlineAppointments: FC = () => {
 
     // Get online appointments with patient data
     const onlineAppointmentsWithPatients = useMemo(() => {
+        if (!appointments || !Array.isArray(appointments)) {
+            return [];
+        }
+
         const onlineAppointments = appointments.filter(
-            (appointment: AppointmentsEntry) => appointment.appointmentType === "Online"
+            (appointment: any) => {
+                // Handle different field names from backend
+                const type = appointment.appointmentType || 
+                           appointment.appointment_type || 
+                           appointment.type;
+                return type === "Online";
+            }
         );
 
-        return onlineAppointments.map(appointment => {
-            const patientId = appointment.patientId || appointment.patients?.[0];
-            const patient = patients.find((p: any) =>
-                String(p.id).trim() === String(patientId).trim()
-            );
+        return onlineAppointments.map((appointment: any) => {
+            // Handle backend ID format
+            const appointmentId = appointment._id || appointment.id;
+            
+            // Handle different patient ID formats
+            const patientId = appointment.patientId || 
+                            appointment.patient_id ||
+                            appointment.patient ||
+                            appointment.patients?.[0];
+            
+            // Find patient with flexible ID matching
+            const patient = patients.find((p: any) => {
+                const pId = p._id || p.id;
+                return String(pId).trim() === String(patientId).trim();
+            });
 
             return {
-                id: appointment.id, // Add ID for table selection
-                appointment,
+                id: appointmentId, // For table selection
+                appointment: {
+                    ...appointment,
+                    id: appointmentId, // Normalize ID field
+                    _id: appointmentId  // Keep both for compatibility
+                },
                 patient
             };
         }).filter(item => item.patient);
@@ -169,7 +221,7 @@ export const AllOnlineAppointments: FC = () => {
                                 {patient.firstName} {patient.lastName}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                ID: {patient.id}
+                                ID: {patient._id || patient.id}
                             </Typography>
                         </Box>
                     </Box>
@@ -254,6 +306,15 @@ export const AllOnlineAppointments: FC = () => {
         },
     ];
 
+    // Show loading state on initial load
+    if (!isInitialized && loading) {
+        return (
+            <Box p={3} display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                <CircularProgress />
+            </Box>
+        );
+    }
+
     return (
         <Box p={3} sx={{ overflowX: "auto" }}>
             <Typography variant="h4" mb={2}>
@@ -294,7 +355,14 @@ export const AllOnlineAppointments: FC = () => {
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 title="Delete Online Appointment"
-                itemName={selectedAppointment ? `${getPatientName({ appointment: selectedAppointment, patient: patients.find((p: any) => String(p.id).trim() === String(selectedAppointment.patientId || selectedAppointment.patients?.[0]).trim()) })}'s online appointment` : undefined}
+                itemName={selectedAppointment ? `${getPatientName({ 
+                    appointment: selectedAppointment, 
+                    patient: patients.find((p: any) => {
+                        const pId = p._id || p.id;
+                        const patientId = selectedAppointment.patientId || selectedAppointment.patientId || selectedAppointment.patients?.[0];
+                        return String(pId).trim() === String(patientId).trim();
+                    })
+                })}'s online appointment` : undefined}
                 message={selectedAppointment ? `Are you sure you want to delete this online appointment? This action cannot be undone.` : undefined}
                 isDeleting={isDeleting}
             />
