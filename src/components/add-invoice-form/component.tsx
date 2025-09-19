@@ -213,8 +213,8 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
     const filteredAppointments = useMemo(() => {
         if (!appointmentFilter.trim()) return patientAppointments;
         return patientAppointments.filter(app =>
-            app.id.toLowerCase().includes(appointmentFilter.toLowerCase()) ||
-            app.reason?.toLowerCase().includes(appointmentFilter.toLowerCase())
+            (app.id && app.id.toLowerCase().includes(appointmentFilter.toLowerCase())) ||
+            (app.reason && app.reason.toLowerCase().includes(appointmentFilter.toLowerCase()))
         );
     }, [patientAppointments, appointmentFilter]);
 

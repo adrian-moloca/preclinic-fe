@@ -84,7 +84,20 @@ export const AppointmentDetails: FC = () => {
         return aptId === searchId;
       });
       
-      setAppointment(foundAppointment || null);
+      if (foundAppointment && typeof foundAppointment.id === "string") {
+        setAppointment({
+          id: foundAppointment.id,
+          patientId: foundAppointment.patientId ?? "",
+          appointmentType: foundAppointment.appointmentType ?? "",
+          type: foundAppointment.type ?? "",
+          date: foundAppointment.date ?? "",
+          time: foundAppointment.time ?? "",
+          reason: foundAppointment.reason ?? "",
+          status: foundAppointment.status ?? "",
+        });
+      } else {
+        setAppointment(null);
+      }
       
       if (foundAppointment?.patientId) {
         let patientsArray = patients;
@@ -140,7 +153,7 @@ export const AppointmentDetails: FC = () => {
   };
 
   const handleEditAppointment = () => {
-    navigate(`/appointments/${appointmentId}/edit`);
+    navigate(`/appointments/edit/${appointmentId}`);
   };
 
   const formatDate = (dateString: string) => {

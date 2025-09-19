@@ -38,7 +38,7 @@ export const AllOnlineAppointments: FC = () => {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!selectedAppointment) return;
+        if (!selectedAppointment || typeof selectedAppointment.id !== 'string') return;
 
         setIsDeleting(true);
         try {

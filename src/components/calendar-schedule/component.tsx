@@ -19,7 +19,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton
+  IconButton,
+  CircularProgress
 } from "@mui/material";
 import {
   Keyboard as KeyboardIcon,
@@ -38,9 +39,24 @@ import CalendarShortcuts from "./components/calendar-shortcuts";
 import CreateAppointmentForm from "../create-appointment-form";
 
 export const ScheduleCalendar: React.FC = () => {
-  const { appointments } = useAppointmentsContext();
-  const { patients } = usePatientsContext();
-  const { doctors } = useDoctorsContext();
+  const { 
+    appointments, 
+    fetchAppointments, 
+    loading: appointmentsLoading,
+    // hasLoaded: appointmentsHasLoaded 
+  } = useAppointmentsContext();
+  const { 
+    patients, 
+    getAllPatients,
+    // loading: patientsLoading,
+    // hasLoaded: patientsHasLoaded
+  } = usePatientsContext();
+  const { 
+    doctors,
+    fetchDoctors,
+    // loading: doctorsLoading,
+    hasLoaded: doctorsHasLoaded
+  } = useDoctorsContext();
   const navigate = useNavigate();
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -52,6 +68,7 @@ export const ScheduleCalendar: React.FC = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -60,6 +77,37 @@ export const ScheduleCalendar: React.FC = () => {
 
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [appointmentFormDate, setAppointmentFormDate] = useState<string>("");
+
+  // Force fetch data when component mounts, regardless of hasLoaded status
+  useEffect(() => {
+    const initializeData = async () => {
+      console.log('ScheduleCalendar: Initializing data fetch...');
+      
+      try {
+        // Always fetch appointments when calendar loads
+        const appointmentsPromise = fetchAppointments(true); // Force refresh
+        console.log('Fetching appointments...');
+        
+        // Fetch patients if needed or force refresh
+        const patientsPromise = getAllPatients ? getAllPatients() : Promise.resolve();
+        console.log('Fetching patients...');
+        
+        // Fetch doctors if needed
+        const doctorsPromise = (!doctorsHasLoaded && fetchDoctors) ? fetchDoctors() : Promise.resolve();
+        console.log('Fetching doctors...');
+        
+        await Promise.all([appointmentsPromise, patientsPromise, doctorsPromise]);
+        console.log('All data fetched successfully');
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing calendar data:', error);
+        setIsInitialized(true); // Set as initialized even on error to prevent infinite retries
+      }
+    };
+    
+    initializeData();
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     const saved = localStorage.getItem("enhanced-calendar-events");
@@ -75,6 +123,39 @@ export const ScheduleCalendar: React.FC = () => {
   useEffect(() => {
     localStorage.setItem("enhanced-calendar-events", JSON.stringify(customEvents));
   }, [customEvents]);
+
+  // Normalize patients data to always get an array
+  const normalizedPatientsData = useMemo(() => {
+    if (!patients) {
+      console.log('No patients data available');
+      return [];
+    }
+
+    let patientsArray = [];
+
+    // If it's already an array, use it directly
+    if (Array.isArray(patients)) {
+      patientsArray = patients;
+    }
+    // If it's an object, check for common response structures
+    else if (typeof patients === 'object') {
+      // Check if the first value is an array (like in CreateAppointmentForm)
+      const values = Object.values(patients);
+      if (values.length > 0 && Array.isArray(values[0])) {
+        patientsArray = values[0] as any[];
+      } else {
+        // Otherwise, flatten all values
+        patientsArray = Object.values(patients).flat();
+      }
+    }
+
+    console.log(`Normalized ${patientsArray.length} patients`);
+    if (patientsArray.length > 0) {
+      console.log('Sample patient structure:', patientsArray[0]);
+    }
+    
+    return patientsArray;
+  }, [patients]);
 
   const normalizeDoctorsData = useMemo(() => {
     if (!doctors) return [];
@@ -147,16 +228,57 @@ export const ScheduleCalendar: React.FC = () => {
   }, [colorBy, orderedDoctorIds, orderedDepartments]);
 
   const appointmentEvents = useMemo(() => {
-    if (!appointments || !Array.isArray(appointments)) return [];
+    if (!appointments || !Array.isArray(appointments)) {
+      console.log('No appointments available');
+      return [];
+    }
+
+    if (normalizedPatientsData.length === 0) {
+      console.log('No patients data available yet');
+      // Don't return empty - show appointments even without patient names initially
+    }
+
+    console.log(`Processing ${appointments.length} appointments with ${normalizedPatientsData.length} patients`);
 
     return appointments.map((appointment: any) => {
-      const patient = patients?.find?.((p: any) => p.id === appointment.patientId);
-      const patientName = patient
-        ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
-        : 'Unknown Patient';
+      // Try to find the patient
+      let patient = null;
+      let patientName = 'Loading...';
+
+      if (normalizedPatientsData.length > 0) {
+        patient = normalizedPatientsData.find((p: any) => {
+          // Try multiple ID field combinations
+          const patientId = p._id || p.id;
+          const appointmentPatientId = appointment.patientId;
+          
+          if (!patientId || !appointmentPatientId) return false;
+          
+          // Direct comparison
+          if (patientId === appointmentPatientId) return true;
+          
+          // String comparison (in case one is object)
+          if (String(patientId) === String(appointmentPatientId)) return true;
+          
+          // Case insensitive comparison
+          if (String(patientId).toLowerCase() === String(appointmentPatientId).toLowerCase()) return true;
+          
+          return false;
+        });
+
+        if (patient) {
+          patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unnamed Patient';
+        } else {
+          console.warn(`Patient not found for appointment:`, {
+            appointmentId: appointment.id,
+            patientIdSearched: appointment.patientId,
+            samplePatientIds: normalizedPatientsData.slice(0, 3).map((p: any) => ({ _id: p._id, id: p.id }))
+          });
+          patientName = 'Patient Not Found';
+        }
+      }
 
       const startDateTime = new Date(`${appointment.date}T${appointment.time}`);
-      const endDateTime = new Date(startDateTime.getTime() + (appointment.duration || 30) * 60000);
+      const endDateTime = new Date(startDateTime.getTime() + (parseInt(appointment.duration) || 30) * 60000);
 
       const eventColor = getAppointmentColor(appointment);
 
@@ -191,7 +313,7 @@ export const ScheduleCalendar: React.FC = () => {
         }
       };
     });
-  }, [appointments, patients, getAppointmentColor, refreshKey, colorBy]);
+  }, [appointments, normalizedPatientsData, getAppointmentColor, refreshKey, colorBy]);
 
   useEffect(() => {
     setEvents([...appointmentEvents, ...customEvents]);
@@ -284,9 +406,11 @@ export const ScheduleCalendar: React.FC = () => {
     navigate(`/appointments/${appointmentId}`);
   };
 
-  const handleAppointmentFormSave = () => {
+  const handleAppointmentFormSave = async () => {
     setShowAppointmentForm(false);
     setAppointmentFormDate("");
+    // Refresh appointments after saving
+    await fetchAppointments(true);
   };
 
   const handleAppointmentFormCancel = () => {
@@ -343,6 +467,15 @@ export const ScheduleCalendar: React.FC = () => {
     { value: 'department', label: 'By Department' }
   ];
 
+  // Show loading state only on initial load
+  if (!isInitialized && appointmentsLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ height: '100vh', width: '100%', marginTop: "10px" }}>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -388,7 +521,9 @@ export const ScheduleCalendar: React.FC = () => {
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={1}>
           {colorBy === 'doctor' && orderedDoctorIds.map((doctorId, index) => {
-            const doctor = normalizeDoctorsData.find((d: any) => d.id === doctorId);
+            const doctor = normalizeDoctorsData.find((d: any) => 
+              (d._id && d._id === doctorId) || (d.id && d.id === doctorId)
+            );
             const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
               ? `Dr. ${(doctor as any).firstName} ${(doctor as any).lastName}`
               : `Doctor ${doctorId}`;
@@ -502,7 +637,9 @@ export const ScheduleCalendar: React.FC = () => {
               eventDidMount={(info) => {
                 const props = info.event.extendedProps;
                 if (props.type === 'appointment') {
-                  const doctor = normalizeDoctorsData.find((d: any) => d.id === props.doctorId);
+                  const doctor = normalizeDoctorsData.find((d: any) => 
+                    (d._id && d._id === props.doctorId) || (d.id && d.id === props.doctorId)
+                  );
                   const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
                     ? `Dr. ${(doctor as any).firstName} ${(doctor as any).lastName}`
                     : 'Unassigned';
@@ -517,10 +654,8 @@ Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit
                   `.trim();
                   info.el.title = tooltip;
 
-                  const expectedColor = props.expectedColor;
-                  const actualColor = info.event.backgroundColor;
-
-                  console.log(`🎨 EventDidMount: ${info.event.id} | Expected: ${expectedColor} | Actual: ${actualColor} | Mode: ${props.colorMode}`);
+                  // const expectedColor = props.expectedColor;
+                  // const actualColor = info.event.backgroundColor;
 
                   if (info.event.backgroundColor) {
                     info.el.style.backgroundColor = info.event.backgroundColor;

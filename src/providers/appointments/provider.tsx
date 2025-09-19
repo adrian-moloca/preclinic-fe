@@ -1,113 +1,108 @@
-import React, { FC, ReactNode, useState } from 'react';
+import React, { FC, ReactNode, useCallback, useState, useRef } from 'react';
 import axios from 'axios';
 import { AppointmentsContext } from './context';
 import { AppointmentsEntry } from './types';
 
-// export const MOCK_APPOINTMENTS: AppointmentsEntry[] = [
-//   {
-//     id: 'a1',
-//     patients: ['1'],
-//     patientId: '1',
-//     appointmentType: 'In-person',
-//     type: 'consultation',
-//     date: '2025-08-15',
-//     time: '09:00',
-//     reason: 'Routine checkup',
-//     status: 'scheduled',
-//     department: { id: 'd1', name: 'Cardiology' } as IDepartments,
-//     doctorId: 'd1', // Make sure this matches doctor IDs
-//     duration: 30,
-//   },
-//   {
-//     id: 'a2',
-//     patients: ['2'],
-//     patientId: '2',
-//     appointmentType: 'Online',
-//     type: 'follow-up',
-//     date: '2025-08-16',
-//     time: '14:30',
-//     reason: 'Asthma follow-up',
-//     status: 'confirmed',
-//     department: { id: 'd2', name: 'Pediatrics' } as IDepartments,
-//     doctorId: 'd2', // Make sure this matches doctor IDs
-//     duration: 20,
-//   },
-//   {
-//     id: 'a3',
-//     patients: ['3'],
-//     patientId: '3',
-//     appointmentType: 'In-person',
-//     type: 'consultation',
-//     date: '2025-08-17',
-//     time: '11:15',
-//     reason: 'Medication review',
-//     status: 'completed',
-//     department: { id: 'd3', name: 'Dermatology' } as IDepartments,
-//     doctorId: 'd3', // Make sure this matches doctor IDs
-//     duration: 45,
-//   },
-//   // Add more appointments with different doctors
-//   {
-//     id: 'a4',
-//     patients: ['1'],
-//     patientId: '1',
-//     appointmentType: 'In-person',
-//     type: 'emergency',
-//     date: '2025-08-20',
-//     time: '10:00',
-//     reason: 'Chest pain evaluation',
-//     status: 'scheduled',
-//     department: { id: 'd1', name: 'Cardiology' } as IDepartments,
-//     doctorId: 'd1',
-//     duration: 60,
-//   },
-//   {
-//     id: 'a5',
-//     patients: ['2'],
-//     patientId: '2',
-//     appointmentType: 'Online',
-//     type: 'follow-up',
-//     date: '2025-08-21',
-//     time: '15:00',
-//     reason: 'Blood test results',
-//     status: 'scheduled',
-//     department: { id: 'd2', name: 'Pediatrics' } as IDepartments,
-//     doctorId: 'd2', // Same doctor as first appointment - should have same color
-//     duration: 15,
-//   }
-// ];
-
 export const AppointmentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [appointments, setAppointments] = useState<AppointmentsEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const isFetchingRef = useRef(false);
+
+  // Transform API response to match AppointmentsEntry interface if needed
+  const transformAppointmentData = (apiAppointment: any): AppointmentsEntry => {
+    return {
+      id: apiAppointment._id || apiAppointment.id,
+      patientId: apiAppointment.patientId,
+      doctorId: apiAppointment.doctorId,
+      date: apiAppointment.date,
+      time: apiAppointment.time,
+      reason: apiAppointment.reason,
+      status: apiAppointment.status,
+      type: apiAppointment.type,
+      department: apiAppointment.department,
+      duration: apiAppointment.duration,
+      // Add any other fields from your AppointmentsEntry type
+      ...apiAppointment
+    };
+  };
+
+  const fetchAppointments = useCallback(async (force: boolean = false) => {
+    // Prevent duplicate fetches unless forced
+    if ((hasLoaded && !force) || isFetchingRef.current) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    setLoading(true);
+    
+    try {
+      const response = await axios.get('/api/appointment/getAll');
+      const data = response.data;
+      console.log("All the appointments from the provider: ", data)
+      
+      let transformedData: AppointmentsEntry[] = [];
+      
+      if (Array.isArray(data)) {
+        transformedData = data.map(transformAppointmentData);
+      } else if (data && Array.isArray(data.appointments)) {
+        transformedData = data.appointments.map(transformAppointmentData);
+      } else if (data && Array.isArray(data.data)) {
+        transformedData = data.data.map(transformAppointmentData);
+      } else {
+        console.error("Unexpected API response format:", data);
+      }
+      
+      setAppointments(transformedData);
+      setHasLoaded(true);
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+      setAppointments([]);
+      setHasLoaded(true); // Mark as loaded even on error to prevent infinite retries
+    } finally {
+      setLoading(false);
+      isFetchingRef.current = false;
+    }
+  }, [hasLoaded]);
 
   const addAppointment = async (newAppointment: AppointmentsEntry) => {
     try {
-      const response = await axios.post<AppointmentsEntry>('/appointment', newAppointment);
-      setAppointments(prev => [...prev, response.data]);
+      const response = await axios.post<AppointmentsEntry>('/api/appointment/create', newAppointment);
+      const transformedAppointment = transformAppointmentData(response.data);
+      setAppointments(prev => [...prev, transformedAppointment]);
+      return transformedAppointment;
     } catch (error) {
       console.error("Failed to add appointment:", error);
+      throw error;
     }
   };
 
   const updateAppointment = async (updatedAppointment: AppointmentsEntry) => {
     try {
-      const response = await axios.put<AppointmentsEntry>(`/appointment/${updatedAppointment.id}`, updatedAppointment);
+      const response = await axios.put<AppointmentsEntry>(
+        `/api/appointment/patch/${updatedAppointment.id}`, 
+        updatedAppointment
+      );
+      const transformedAppointment = transformAppointmentData(response.data);
       setAppointments(prev => 
         prev.map(appointment => 
-          appointment.id === updatedAppointment.id ? response.data : appointment
+          appointment.id === updatedAppointment.id ? transformedAppointment : appointment
         )
       );
+      return transformedAppointment;
     } catch (error) {
       console.error("Failed to update appointment:", error);
+      throw error;
     }
   };
 
   const deleteAppointment = async (id: string) => {
     try {
-      await axios.delete(`/appointment/${id}`);
+      await axios.delete(`/api/appointment/delete/${id}`);
       setAppointments(prev => prev.filter(appointment => appointment.id !== id));
     } catch (error) {
       console.error("Failed to delete appointment:", error);
+      throw error;
     }
   };
 
@@ -115,13 +110,22 @@ export const AppointmentsProvider: FC<{ children: ReactNode }> = ({ children }) 
     return appointments.find(appointment => appointment.id === id);
   };
 
+  const resetAppointments = useCallback(() => {
+    setAppointments([]);
+    setHasLoaded(false);
+  }, []);
+
   return (
     <AppointmentsContext.Provider value={{
       appointments,
+      loading,
+      hasLoaded,
+      fetchAppointments,
       addAppointment,
       updateAppointment,
       deleteAppointment,
       getAppointmentById,
+      resetAppointments,
     }}>
       {children}
     </AppointmentsContext.Provider>

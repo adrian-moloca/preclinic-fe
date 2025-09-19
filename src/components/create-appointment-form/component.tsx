@@ -5,26 +5,41 @@ import {
     TextField,
     Avatar,
     Typography,
+    CircularProgress,
 } from "@mui/material";
 import { FC, useState, useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { FormFieldWrapper } from "../create-patient-form/style";
 import { useAppointmentsContext } from "../../providers/appointments";
 import { usePatientsContext } from "../../providers/patients";
 import { IDepartments, useDepartmentsContext } from "../../providers/departments";
+import { useAuthContext } from "../../providers/auth";
+import { useAssistentsContext } from "../../providers/assistent";
 import { useNavigate } from "react-router-dom";
 import { PaperFormWrapper } from "../create-leaves-form/style";
+import { useDoctorsContext } from "../../providers/doctor/context";
 
 interface Patient {
     id: string;
+    _id?: string;
     profileImg?: string;
     firstName: string;
     lastName: string;
 }
 
-interface Appointment {
+interface Doctor {
     id: string;
+    _id?: string;
+    userId?: string;
+    profileImg?: string;
+    firstName: string;
+    lastName: string;
+    department: string;
+}
+
+interface Appointment {
+    id?: string;
     patientId: string;
+    doctorId: string;
     appointmentType: string;
     type: string;
     date: string;
@@ -73,9 +88,65 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     embedded = false
 }) => {
     const { addAppointment } = useAppointmentsContext();
-    const { patients } = usePatientsContext();
-    const { departments } = useDepartmentsContext();
+    const { user } = useAuthContext();
+    const { 
+        patients, 
+        getAllPatients, 
+        loading: patientsLoading,
+        hasLoaded: patientsHasLoaded 
+    } = usePatientsContext();
+    const { 
+        departments, 
+        fetchDepartments, 
+        loading: departmentsLoading,
+        hasLoaded: departmentsHasLoaded 
+    } = useDepartmentsContext();
+    const {
+        doctors,
+        fetchDoctors,
+        loading: doctorsLoading,
+        hasLoaded: doctorsHasLoaded
+    } = useDoctorsContext();
+    const {
+        assistents,
+        fetchAssistents,
+        hasLoaded: assistentsHasLoaded
+    } = useAssistentsContext();
     const navigate = useNavigate();
+
+    // Get user role and info
+    const userRole = user?.role;
+    const userId = user?.id || user?.id;
+
+    // Fetch data when component mounts
+    useEffect(() => {
+        const fetchData = async () => {
+            const promises = [];
+            
+            if (!patientsHasLoaded) {
+                promises.push(getAllPatients());
+            }
+            
+            if (!departmentsHasLoaded) {
+                promises.push(fetchDepartments());
+            }
+
+            if (!doctorsHasLoaded) {
+                promises.push(fetchDoctors());
+            }
+
+            if (!assistentsHasLoaded && userRole === 'assistant') {
+                promises.push(fetchAssistents());
+            }
+            
+            if (promises.length > 0) {
+                await Promise.all(promises);
+            }
+        };
+        
+        fetchData();
+    }, [patientsHasLoaded, departmentsHasLoaded, doctorsHasLoaded, assistentsHasLoaded, 
+        getAllPatients, fetchDepartments, fetchDoctors, fetchAssistents, userRole]);
 
     const patientsArray: Patient[] = Array.isArray(patients)
         ? (patients as unknown as Patient[])
@@ -89,19 +160,66 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
             ? (Object.values(departments)[0] as IDepartments[])
             : [];
 
-    const generateId = () => uuidv4();
+    const doctorsArray: Doctor[] = Array.isArray(doctors)
+        ? (doctors as unknown as Doctor[])
+        : [];
+
+    // Get current user's department if they are doctor or assistant
+    const getCurrentUserDepartment = () => {
+        if (userRole === 'doctor') {
+            const currentDoctor = doctorsArray.find(d => d.userId === userId || d.id === userId);
+            if (currentDoctor?.department) {
+                return departmentsArray.find(dept => dept.id === currentDoctor.department || dept.name === currentDoctor.department);
+            }
+        } else if (userRole === 'assistant') {
+            const currentAssistant = assistents.find(a => a.userId === userId || a.id === userId);
+            if (currentAssistant?.department) {
+                return departmentsArray.find(dept => dept.id === currentAssistant.department || dept.name === currentAssistant.department);
+            }
+        }
+        return undefined;
+    };
+
+    // Get current doctor's ID if user is a doctor
+    const getCurrentDoctorId = () => {
+        if (userRole === 'doctor') {
+            const currentDoctor = doctorsArray.find(d => d.userId === userId || d.id === userId);
+            return currentDoctor?.id || currentDoctor?._id || '';
+        }
+        return '';
+    };
 
     const [appointment, setAppointment] = useState<Appointment>({
-        id: generateId(),
         patientId: "",
+        doctorId: userRole === 'doctor' ? getCurrentDoctorId() : "",
         appointmentType: "",
         type: "",
         date: defaultDate || "", 
         time: defaultTime || "", 
         reason: "",
         status: "scheduled",
-        department: undefined,
+        department: (userRole === 'doctor' || userRole === 'assistant') ? getCurrentUserDepartment() : undefined,
     });
+
+    // Update department and doctorId when user data is loaded
+    useEffect(() => {
+        if (userRole === 'doctor') {
+            const doctorId = getCurrentDoctorId();
+            const department = getCurrentUserDepartment();
+            setAppointment(prev => ({ 
+                ...prev, 
+                doctorId,
+                department 
+            }));
+        } else if (userRole === 'assistant') {
+            const department = getCurrentUserDepartment();
+            setAppointment(prev => ({ 
+                ...prev, 
+                department 
+            }));
+        }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [doctorsArray, assistents, userRole, userId]);
 
     useEffect(() => {
         if (defaultDate) {
@@ -114,6 +232,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
 
     const [errors, setErrors] = useState({
         patientId: false,
+        doctorId: false,
         appointmentType: false,
         type: false,
         date: false,
@@ -122,6 +241,16 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         status: false,
         department: false,
     });
+
+    // Filter doctors by department
+    const getFilteredDoctors = () => {
+        if (!appointment.department) return [];
+        
+        return doctorsArray.filter(doctor => 
+            doctor.department === appointment.department?.id || 
+            doctor.department === appointment.department?.name
+        );
+    };
 
     const handleChange = (field: keyof Appointment, value: any) => {
         setAppointment((prev) => ({
@@ -138,11 +267,16 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     const handleDepartmentChange = (departmentId: string) => {
         const selectedDepartment = departmentsArray.find(dep => dep.id === departmentId);
         handleChange("department", selectedDepartment || undefined);
+        // Reset doctor selection when department changes (for owner_doctor role)
+        if (userRole === 'doctor_owner') {
+            handleChange("doctorId", "");
+        }
     };
 
     const handleSubmit = () => {
         const newErrors = {
             patientId: appointment.patientId === "",
+            doctorId: appointment.doctorId === "",
             appointmentType: appointment.appointmentType === "",
             type: appointment.type === "",
             date: appointment.date === "",
@@ -160,27 +294,36 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         }
 
         if (appointment.department) {
-            addAppointment({
-                ...appointment,
-                patients: [appointment.patientId],
+            // Create appointment data without id field
+            const appointmentData = {
+                patientId: appointment.patientId,
+                // patients: [appointment.patientId],
+                doctorId: appointment.doctorId,
+                appointmentType: appointment.appointmentType,
+                type: appointment.type,
+                date: appointment.date,
+                time: appointment.time,
+                reason: appointment.reason,
                 status: appointment.status || "scheduled",
                 department: appointment.department,
-            });
+            };
+            
+            addAppointment(appointmentData as any);
         }
 
         if (embedded && onSave) {
             onSave();
         } else {
             setAppointment({
-                id: generateId(),
                 patientId: "",
+                doctorId: userRole === 'doctor' ? getCurrentDoctorId() : "",
                 appointmentType: "",
                 type: "",
                 date: defaultDate || "",
                 time: defaultTime || "",
                 reason: "",
                 status: "scheduled",
-                department: undefined,
+                department: (userRole === 'doctor' || userRole === 'assistant') ? getCurrentUserDepartment() : undefined,
             });
             navigate("/appointments/all");
         }
@@ -196,6 +339,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
 
     const isFormValid =
         appointment.patientId !== "" &&
+        appointment.doctorId !== "" &&
         appointment.appointmentType !== "" &&
         appointment.type !== "" &&
         appointment.date !== "" &&
@@ -206,6 +350,15 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
 
     const FormWrapper = embedded ? Box : PaperFormWrapper;
     const wrapperProps = embedded ? {} : { elevation: 3 };
+
+    // Loading state
+    if (patientsLoading || departmentsLoading || doctorsLoading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     return (
         <Box>
@@ -230,7 +383,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             required
                         >
                             {patientsArray.map((patient) => (
-                                <MenuItem key={patient.id} value={patient.id}>
+                                <MenuItem key={patient._id || patient.id} value={patient._id || patient.id}>
                                     <Box display="flex" alignItems="center">
                                         <Avatar
                                             src={patient.profileImg}
@@ -246,23 +399,61 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             ))}
                         </TextField>
 
-                        <TextField
-                            select
-                            label="Department"
-                            value={appointment.department?.id || ""}
-                            onChange={(e) => handleDepartmentChange(e.target.value)}
-                            error={errors.department}
-                            helperText={errors.department && "Department is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            required
-                        >
-                            {departmentsArray.map((department) => (
-                                <MenuItem key={department.id} value={department.id}>
-                                    {department.name}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        {/* Show department selector only for doctor_owner */}
+                        {userRole === 'doctor_owner' && (
+                            <TextField
+                                select
+                                label="Department"
+                                value={appointment.department?.id || ""}
+                                onChange={(e) => handleDepartmentChange(e.target.value)}
+                                error={errors.department}
+                                helperText={errors.department && "Department is required"}
+                                fullWidth
+                                sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
+                                required
+                            >
+                                {departmentsArray.map((department) => (
+                                    <MenuItem key={department.id} value={department.id}>
+                                        {department.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+
+                        {/* Show doctor selector for doctor_owner and assistant roles */}
+                        {(userRole === 'doctor_owner' || userRole === 'assistant') && (
+                            <TextField
+                                select
+                                label="Doctor"
+                                value={appointment.doctorId}
+                                onChange={(e) => handleChange("doctorId", e.target.value)}
+                                error={errors.doctorId}
+                                helperText={errors.doctorId && "Doctor is required"}
+                                fullWidth
+                                sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
+                                required
+                                disabled={userRole === 'doctor_owner' && !appointment.department}
+                            >
+                                {(userRole === 'doctor_owner' ? getFilteredDoctors() : 
+                                  doctorsArray.filter(d => d.department === getCurrentUserDepartment()?.id || 
+                                                          d.department === getCurrentUserDepartment()?.name))
+                                    .map((doctor) => (
+                                    <MenuItem key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
+                                        <Box display="flex" alignItems="center">
+                                            <Avatar
+                                                src={doctor.profileImg}
+                                                sx={{ width: 30, height: 30, mr: 2 }}
+                                            >
+                                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
+                                            </Avatar>
+                                            <Typography>
+                                                Dr. {doctor.firstName} {doctor.lastName}
+                                            </Typography>
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
 
                         <TextField
                             select

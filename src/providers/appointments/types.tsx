@@ -1,7 +1,7 @@
 import { IDepartments } from "../departments";
 
 export interface AppointmentsEntry {
-  id: string;
+  id?: string;
   patients: string[];
   patientId: string; 
   appointmentType: string;
@@ -21,4 +21,8 @@ export interface IAppointmentsContext {
   updateAppointment: (appointment: AppointmentsEntry) => void;
   deleteAppointment: (id: string) => void;
   getAppointmentById: (id: string) => AppointmentsEntry | undefined;
+  loading: boolean;
+  fetchAppointments: (force?: boolean) => Promise<void>;
+  hasLoaded: boolean;
+  resetAppointments: () => void;
 }

@@ -6,6 +6,7 @@ import {
     MenuItem,
     Typography,
     Chip,
+    CircularProgress,
 } from "@mui/material";
 import { FC, useMemo, useState, useEffect, useCallback } from "react";
 import { useAppointmentsContext } from "../../../providers/appointments";
@@ -15,6 +16,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import InfoIcon from "@mui/icons-material/Info";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "../../../components/search-bar";
 import DeleteModal from "../../../components/delete-modal";
@@ -23,24 +25,78 @@ import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
 
 export const AllAppointments: FC = () => {
-    const { appointments, deleteAppointment } = useAppointmentsContext();
+    const { 
+        appointments, 
+        deleteAppointment, 
+        fetchAppointments, 
+        loading: appointmentsLoading,
+        hasLoaded: appointmentsHasLoaded 
+    } = useAppointmentsContext();
+    const { 
+        patients, 
+        getAllPatients, 
+        hasLoaded: patientsHasLoaded 
+    } = usePatientsContext();
+    
     const allAppointments = useMemo(() => Object.values(appointments).flat(), [appointments]);
     const [filteredAppointments, setFilteredAppointments] = useState<AppointmentsEntry[]>(allAppointments);
     const [searchQuery, setSearchQuery] = useState("");
-    const { patients } = usePatientsContext();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentsEntry | null>(null);
     const navigate = useNavigate();
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const { addRecentItem } = useRecentItems();
 
     const allPatients = Object.values(patients || {}).flat();
 
+    // Fetch appointments and patients when component mounts if not already loaded
+    useEffect(() => {
+        const fetchData = async () => {
+            setError(null);
+            try {
+                // Fetch both appointments and patients as we need patient data for display
+                const promises = [];
+                
+                if (!appointmentsHasLoaded) {
+                    promises.push(fetchAppointments());
+                }
+                
+                if (!patientsHasLoaded) {
+                    promises.push(getAllPatients());
+                }
+                
+                if (promises.length > 0) {
+                    await Promise.all(promises);
+                }
+            } catch (err) {
+                console.error('Error fetching data:', err);
+                setError('Failed to load appointments. Please try again.');
+            }
+        };
+
+        fetchData();
+    }, [appointmentsHasLoaded, patientsHasLoaded, fetchAppointments, getAllPatients]);
+
     useEffect(() => {
         setFilteredAppointments(allAppointments);
     }, [allAppointments]);
+
+    const handleRefresh = async () => {
+        setError(null);
+        try {
+            // Force refresh both appointments and patients
+            await Promise.all([
+                fetchAppointments(true),
+                getAllPatients()
+            ]);
+        } catch (err) {
+            console.error('Error refreshing data:', err);
+            setError('Failed to refresh appointments. Please try again.');
+        }
+    };
 
     const getPatientName = useCallback((patientId: string) => {
         const patient = allPatients.find(p => p._id === patientId);
@@ -74,7 +130,7 @@ export const AllAppointments: FC = () => {
         
         // NEW: Add to recent items
         addRecentItem({
-            id: appointment.id,
+            id: appointment.id ?? '',
             type: 'appointment',
             title: `Appointment with ${patientName}`,
             subtitle: `${appointment.date} at ${appointment.time}`,
@@ -119,9 +175,11 @@ export const AllAppointments: FC = () => {
 
         setIsDeleting(true);
         try {
-            await deleteAppointment(selectedAppointment.id);
+            await deleteAppointment(selectedAppointment.id!);
             setDeleteModalOpen(false);
             setSelectedAppointment(null);
+            // Refresh appointments list after deletion
+            await fetchAppointments(true);
         } catch (error) {
             console.error('Error deleting appointment:', error);
         } finally {
@@ -213,7 +271,7 @@ export const AllAppointments: FC = () => {
             render: (_: unknown, row: AppointmentsEntry) => {
                 const patientName = getPatientName(row.patientId);
                 const favoriteItem = {
-                    id: row.id,
+                    id: row.id ?? '',
                     type: 'appointment' as const,
                     title: `Appointment with ${patientName}`,
                     subtitle: `${row.date} at ${row.time}`,
@@ -232,7 +290,7 @@ export const AllAppointments: FC = () => {
                             onClick={(e) => {
                                 e.stopPropagation();
                                 addRecentItem({
-                                    id: row.id,
+                                    id: row.id ?? '',
                                     type: 'appointment',
                                     title: `Appointment with ${patientName}`,
                                     subtitle: `${row.date} at ${row.time}`,
@@ -259,11 +317,40 @@ export const AllAppointments: FC = () => {
         },
     ];
 
+    // Show loading spinner while fetching data
+    if (appointmentsLoading) {
+        return (
+            <Box p={3} display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    // Show error message if fetch failed
+    if (error) {
+        return (
+            <Box p={3}>
+                <Typography color="error" variant="h6">{error}</Typography>
+                <Box mt={2}>
+                    <IconButton onClick={handleRefresh} color="primary">
+                        <RefreshIcon />
+                    </IconButton>
+                    <Typography variant="caption">Click to retry</Typography>
+                </Box>
+            </Box>
+        );
+    }
+
     return (
         <Box p={3}>
-            <Typography variant="h4" mb={2}>
-                All Appointments ({filteredAppointments.length})
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h4">
+                    All Appointments ({filteredAppointments.length})
+                </Typography>
+                <IconButton onClick={handleRefresh} color="primary">
+                    <RefreshIcon />
+                </IconButton>
+            </Box>
             <Box sx={{ mb: 2 }}>
                 <SearchBar onSearch={handleSearch} />
             </Box>

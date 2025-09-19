@@ -8,7 +8,11 @@ export const AppointmentsContext = createContext<IAppointmentsContext>({
   deleteAppointment: () => { },
   getAppointmentById: function (id: string): AppointmentsEntry | undefined {
     throw new Error('Function not implemented.');
-  }
+  },
+  loading: false,
+  fetchAppointments: async () => { },
+  hasLoaded: false,
+  resetAppointments: () => { },
 });
 
 export const useAppointmentsContext = () => useContext(AppointmentsContext);

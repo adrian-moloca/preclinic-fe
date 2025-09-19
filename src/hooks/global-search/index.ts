@@ -107,7 +107,7 @@ export const useGlobalSearch = () => {
 
             if (searchFields.some(field => field?.includes(normalizedQuery))) {
               results.push({
-                id: appointment.id,
+                id: appointment.id ?? '',
                 type: 'appointment',
                 title: `Appointment - ${patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : 'Unknown Patient'}`,
                 subtitle: `${appointment.date} at ${appointment.time}`,

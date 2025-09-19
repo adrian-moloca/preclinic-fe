@@ -177,7 +177,7 @@ export const TelemedicineDashboard: FC = () => {
                             <Button
                               variant="contained"
                               size="small"
-                              onClick={() => handleStartCall(appointment.id)}
+                              onClick={() => handleStartCall(appointment.id ?? '')}
                               disabled={isInitializingCall}
                               startIcon={<VideoCall />}
                             >
