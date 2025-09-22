@@ -23,13 +23,45 @@ interface ApiResponse<T = any> {
 }
 
 const USER_STORAGE_KEY = 'preclinic_user';
+const SESSION_USER_KEY = 'preclinic_session_user';
+const USER_CHANGE_EVENT = 'preclinic_user_changed';
+const USER_LOGOUT_EVENT = 'preclinic_user_logout';
+
+// Session Manager for tracking user changes
+class SessionManager {
+  private static currentSessionUser: string | null = null;
+
+  static initSession(userId: string) {
+    this.currentSessionUser = userId;
+    sessionStorage.setItem(SESSION_USER_KEY, userId);
+  }
+
+  static getCurrentSessionUser(): string | null {
+    if (!this.currentSessionUser) {
+      this.currentSessionUser = sessionStorage.getItem(SESSION_USER_KEY);
+    }
+    return this.currentSessionUser;
+  }
+
+  static hasUserChanged(newUserId: string): boolean {
+    const currentUser = this.getCurrentSessionUser();
+    return currentUser !== null && currentUser !== newUserId;
+  }
+
+  static clearSession() {
+    this.currentSessionUser = null;
+    sessionStorage.removeItem(SESSION_USER_KEY);
+  }
+}
 
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [previousUserId, setPreviousUserId] = useState<string | null>(null);
 
   const userRef = useRef<User | null>(null);
+  const clinicResetCallbackRef = useRef<(() => void) | null>(null);
 
   const [permissionConfig, setPermissionConfig] = useState<PermissionConfig>({
     rolePermissions: DEFAULT_ROLE_PERMISSIONS,
@@ -40,6 +72,47 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     userRef.current = user;
   }, [user]);
 
+  // Emit user change event for other components to listen
+  const emitUserChangeEvent = useCallback((eventType: string, userId?: string) => {
+    const event = new CustomEvent(eventType, { 
+      detail: { 
+        userId,
+        timestamp: Date.now() 
+      } 
+    });
+    window.dispatchEvent(event);
+  }, []);
+
+  // Clear all user-specific data from localStorage
+  const clearUserSpecificData = useCallback(() => {
+    try {
+      // Clear clinic-related data
+      localStorage.removeItem('selectedClinic');
+      
+      // Clear any cached user-specific data
+      const keysToCheck = Object.keys(localStorage);
+      keysToCheck.forEach(key => {
+        // Remove any keys that might contain user-specific data
+        if (key.includes('clinic_') || key.includes('user_') || key.includes('cache_')) {
+          const data = localStorage.getItem(key);
+          if (data) {
+            try {
+              const parsed = JSON.parse(data);
+              // Check if this data has a userId field
+              if (parsed.userId || parsed.ownerId) {
+                localStorage.removeItem(key);
+              }
+            } catch {
+              // Not JSON, skip
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error clearing user-specific data:', error);
+    }
+  }, []);
+
   const saveUserToStorage = useCallback((userData: User) => {
     try {
       const userToSave = {
@@ -48,7 +121,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       };
       
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
+      
+      // Track this user in session
+      SessionManager.initSession(userToSave.id);
+      
     } catch (error) {
+      console.error('Error saving user to storage:', error);
     }
   }, []);
 
@@ -70,12 +148,20 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         userData.role = 'doctor_owner';
       }
       
+      // Check if this is a different user than the session user
+      if (SessionManager.hasUserChanged(userData.id)) {
+        console.warn('Detected user change in storage, clearing user-specific data');
+        clearUserSpecificData();
+        emitUserChangeEvent(USER_CHANGE_EVENT, userData.id);
+      }
+      
       return userData;
       
     } catch (error) {
+      console.error('Error loading user from storage:', error);
       return null;
     }
-  }, []);
+  }, [clearUserSpecificData, emitUserChangeEvent]);
 
   const clearUserFromStorage = useCallback(() => {
     try {
@@ -83,9 +169,19 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
+      
+      // Clear all user-specific data
+      clearUserSpecificData();
+      
+      // Clear session
+      SessionManager.clearSession();
+      
+      // Emit logout event
+      emitUserChangeEvent(USER_LOGOUT_EVENT);
     } catch (error) {
+      console.error('Error clearing user from storage:', error);
     }
-  }, []);
+  }, [clearUserSpecificData, emitUserChangeEvent]);
 
   const extractUserFromResponse = useCallback((response: AxiosResponse<User | ApiResponse<User>>): User | null => {
     try {
@@ -107,33 +203,40 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const getMe = useCallback(async (): Promise<User | null> => {
-  try {
-    const response = await axios.get<User | ApiResponse<User>>('/api/auth/me');
-    const userData = extractUserFromResponse(response);
-    if (!userData) {
-      // No user data means not authenticated
-      clearUserFromStorage(); // Clear localStorage
-      setUser(null);
-      return null;
+    try {
+      const response = await axios.get<User | ApiResponse<User>>('/api/auth/me');
+      const userData = extractUserFromResponse(response);
+      if (!userData) {
+        clearUserFromStorage();
+        setUser(null);
+        return null;
+      }
+      
+      const completeUserData: User = {
+        ...userData,
+        role: userData.role || 'doctor_owner' as UserRole
+      };
+      
+      // Check for user change
+      if (previousUserId && previousUserId !== completeUserData.id) {
+        clearUserSpecificData();
+        emitUserChangeEvent(USER_CHANGE_EVENT, completeUserData.id);
+      }
+      
+      setUser(completeUserData);
+      saveUserToStorage(completeUserData);
+      setPreviousUserId(completeUserData.id);
+      
+      return completeUserData;
+    } catch (error: any) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        clearUserFromStorage();
+        setUser(null);
+        return null;
+      }
+      return userRef.current;
     }
-    const completeUserData: User = {
-      ...userData,
-      role: userData.role || 'doctor_owner' as UserRole
-    };
-    setUser(completeUserData);
-    saveUserToStorage(completeUserData);
-    return completeUserData;
-  } catch (error: any) {
-    // If the request fails (401, 403, etc.), clear authentication
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      clearUserFromStorage(); // Clear localStorage
-      setUser(null);
-      return null;
-    }
-    // For other errors, return current user
-    return userRef.current;
-  }
-}, [saveUserToStorage, extractUserFromResponse, clearUserFromStorage]);
+  }, [saveUserToStorage, extractUserFromResponse, clearUserFromStorage, previousUserId, clearUserSpecificData, emitUserChangeEvent]);
 
   useEffect(() => {
     if (isInitialized) return;
@@ -144,27 +247,29 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       try {
         const storedUser = loadUserFromStorage();
         if (storedUser) {
-          // Check if email is verified
           if (storedUser.emailVerified === false) {
-            // Don't auto-login unverified users
             clearUserFromStorage();
             setUser(null);
           } else {
-            // Set the stored user first
-            setUser(storedUser);
+            // Check for user change before setting
+            if (previousUserId && previousUserId !== storedUser.id) {
+              clearUserSpecificData();
+              emitUserChangeEvent(USER_CHANGE_EVENT, storedUser.id);
+            }
             
-            // Then try to validate with the server
+            setUser(storedUser);
+            setPreviousUserId(storedUser.id);
+            SessionManager.initSession(storedUser.id);
+            
             try {
               const validatedUser = await getMe();
               if (!validatedUser) {
-                // If validation fails, clear everything
                 clearUserFromStorage();
                 setUser(null);
+                setPreviousUserId(null);
               }
             } catch (error) {
               console.error('Failed to validate user session:', error);
-              // On error, keep the stored user (don't clear on network errors)
-              // This prevents logout on temporary network issues
             }
           }
         }
@@ -178,34 +283,42 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     
     initializeAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Keep this empty - run only once
+  }, []);
 
- const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; verificationLink?: string }> => {
-  try {
-    const response = await axios.post<User | ApiResponse<User>>('/api/auth/signup', data);
-    const newUser = extractUserFromResponse(response);
-    
-    let verificationLink: string | undefined = undefined;
-    if (response.data && typeof response.data === 'object' && 'verificationLink' in response.data) {
-      verificationLink = (response.data as ApiResponse<User>).verificationLink;
-    } else if (response.data && typeof response.data === 'object' && 'confirmationUrl' in response.data) {
-      verificationLink = (response.data as ApiResponse<User>).confirmationUrl;
+  const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; verificationLink?: string }> => {
+    try {
+      const response = await axios.post<User | ApiResponse<User>>('/api/auth/signup', data);
+      const newUser = extractUserFromResponse(response);
+      
+      let verificationLink: string | undefined = undefined;
+      if (response.data && typeof response.data === 'object' && 'verificationLink' in response.data) {
+        verificationLink = (response.data as ApiResponse<User>).verificationLink;
+      } else if (response.data && typeof response.data === 'object' && 'confirmationUrl' in response.data) {
+        verificationLink = (response.data as ApiResponse<User>).confirmationUrl;
+      }
+      
+      if (!newUser) return { success: false };
+      
+      return { 
+        success: true, 
+        verificationLink 
+      };
+    } catch {
+      return { success: false };
     }
-    
-    if (!newUser) return { success: false };
-    
-    return { 
-      success: true, 
-      verificationLink 
-    };
-  } catch {
-    return { success: false };
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
+      // Check if switching users
+      const currentSessionUser = SessionManager.getCurrentSessionUser();
+      
+      // Clear any existing user data before login
+      if (currentSessionUser) {
+        clearUserSpecificData();
+      }
+      
       let response: AxiosResponse<User | ApiResponse<User>> | null = null;
       
       try {
@@ -245,8 +358,17 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
           role: userData.role || 'doctor_owner' as UserRole
         };
         
+        // Check for user change and emit event
+        if (currentSessionUser && currentSessionUser !== completeUserData.id) {
+          emitUserChangeEvent(USER_CHANGE_EVENT, completeUserData.id);
+        }
+        
+        // Initialize new session
+        SessionManager.initSession(completeUserData.id);
+        
         setUser(completeUserData);
         saveUserToStorage(completeUserData);
+        setPreviousUserId(completeUserData.id);
         
         return true;
       }
@@ -264,23 +386,48 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
           role: mockUser.role || 'doctor_owner' as UserRole
         };
         
+        // Initialize session for mock user
+        SessionManager.initSession(completeUserData.id);
+        
         setUser(completeUserData);
         saveUserToStorage(completeUserData);
+        setPreviousUserId(completeUserData.id);
         return true;
       }
       
       return false;
     }
-  }, [saveUserToStorage, extractUserFromResponse]);
+  }, [saveUserToStorage, extractUserFromResponse, clearUserSpecificData, emitUserChangeEvent]);
 
   const logout = useCallback(async () => {
     try {
       await axios.post('/api/auth/logout');
-    } catch {}
+    } catch {
+      // Continue with logout even if API call fails
+    }
+    
+    // Emit logout event before clearing data
+    emitUserChangeEvent(USER_LOGOUT_EVENT);
     
     setUser(null);
+    setPreviousUserId(null);
     clearUserFromStorage();
-  }, [clearUserFromStorage]);
+    SessionManager.clearSession();
+  }, [clearUserFromStorage, emitUserChangeEvent]);
+
+  // Method to register clinic reset callback
+  const registerClinicReset = useCallback((callback: () => void) => {
+    clinicResetCallbackRef.current = callback;
+  }, []);
+
+  // Watch for user changes and call clinic reset if registered
+  useEffect(() => {
+    if (user && previousUserId && user.id !== previousUserId) {
+      if (clinicResetCallbackRef.current) {
+        clinicResetCallbackRef.current();
+      }
+    }
+  }, [user, previousUserId]);
 
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user) return false;
@@ -351,43 +498,6 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     return [...MOCK_USERS];
   }, []);
 
-//   useEffect(() => {
-//   if (isInitialized) return;
-  
-//   const initializeAuth = async () => {
-//     setLoading(true);
-    
-//     try {
-//       const storedUser = loadUserFromStorage();
-//       if (storedUser && storedUser.emailVerified !== false) {
-//         try {
-//           const validatedUser = await getMe();
-//           if (!validatedUser) {
-//             clearUserFromStorage();
-//             setUser(null);
-//           }
-//         } catch (error) {
-//           clearUserFromStorage();
-//           setUser(null);
-//         }
-//       } else if (storedUser && storedUser.emailVerified === false) {
-//         clearUserFromStorage();
-//         setUser(null);
-//       }
-//     } catch (error) {
-//       clearUserFromStorage();
-//       setUser(null);
-//     } finally {
-//       setLoading(false);
-//       setIsInitialized(true);
-//     }
-//   };
-  
-//   initializeAuth();
-//   // eslint-disable-next-line react-hooks/exhaustive-deps
-// }, []);
-
-
   if (!isInitialized) {
     return (
       <div style={{
@@ -420,6 +530,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       getAllUsers,
       permissionConfig,
       loading,
+      registerClinicReset, // Add this to the context type
     }}>
       {children}
     </AuthContext.Provider>

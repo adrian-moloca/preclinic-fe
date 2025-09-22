@@ -54,7 +54,7 @@ export const BusinessHoursStep: FC<BusinessHoursStepProps> = ({ formData, onChan
         </Box>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2} sx={{ display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
         {days.map((day) => (
           <Grid key={day}>
             <Box

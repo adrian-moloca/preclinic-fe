@@ -14,6 +14,7 @@ export const ClinicContext = createContext<ClinicContextType>({
   selectClinic: () => {},
   getUserClinics: () => [],
   resetClinics: () => {},
+  
 });
 
 export const useClinicContext = () => {

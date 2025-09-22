@@ -18,7 +18,6 @@ export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
       try {
         const parsed = JSON.parse(stored);
         setProfiles(parsed);
-        console.log('Loaded profiles from localStorage:', parsed);
       } catch (error) {
         console.warn('Failed to parse profiles from localStorage:', error);
         setProfiles({});
@@ -29,11 +28,9 @@ export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
   // Save profiles to localStorage whenever profiles change
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profiles));
-    console.log('Saved profiles to localStorage:', profiles);
   }, [profiles]);
 
   const addProfile = useCallback((profile: Profile) => {
-    console.log('Adding profile:', profile);
     setProfiles(prev => ({
       ...prev,
       [profile.id]: profile
@@ -41,7 +38,6 @@ export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
   }, []);
 
   const updateProfile = useCallback((id: string, updatedData: Partial<Profile>) => {
-    console.log('Updating profile:', id, updatedData);
     setProfiles(prev => ({
       ...prev,
       [id]: {
@@ -53,7 +49,6 @@ export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
   }, []);
 
   const deleteProfile = useCallback((id: string) => {
-    console.log('Deleting profile:', id);
     setProfiles(prev => {
       const newProfiles = { ...prev };
       delete newProfiles[id];
@@ -62,7 +57,6 @@ export const ProfileProvider: FC<ProfileProviderProps> = ({ children }) => {
   }, []);
 
   const resetProfiles = useCallback(() => {
-    console.log('Resetting all profiles');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     setProfiles({});
   }, []);

@@ -147,10 +147,6 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         role: 'patient' as const
       };
 
-      console.log('Updating patient with userId:', userId); // Debug log
-      console.log('Body being sent:', patientData); // Debug log
-
-      // userId is sent in the URL, not in the body
       const response = await axios.put(`/api/patient/patch/${userId}`, patientData);
 
       if (response.status === 200) {
@@ -198,11 +194,6 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPatients([]);
     setHasLoaded(false);
   }, []);
-
-  // REMOVED automatic useEffect - data will be fetched when component needs it
-  // useEffect(() => {
-  //   getAllPatients();
-  // }, [getAllPatients]);
 
   return (
     <PatientsContext.Provider

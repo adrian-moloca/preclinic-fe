@@ -74,4 +74,5 @@ export interface AuthContextType {
   getAllUsers: () => User[];
   permissionConfig: PermissionConfig;
   loading: boolean;
+  registerClinicReset?: (callback: () => void) => void; // Add this line
 }

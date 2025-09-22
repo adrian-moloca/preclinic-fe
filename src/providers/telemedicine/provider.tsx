@@ -68,16 +68,6 @@ export const TelemedicineProvider: FC<{ children: ReactNode }> = ({ children }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    console.log('🔄 Call state changed:', {
-      hasCurrentCall: !!currentCall,
-      callId: currentCall?.id,
-      callStatus: currentCall?.status,
-      hasLocalStream: !!localStream,
-      isInitializing: isInitializingCall
-    });
-  }, [currentCall, localStream, isInitializingCall]);
-
   const getAppointmentDirectly = useCallback((appointmentId: string) => {
     try {
       const storedAppointments = localStorage.getItem('appointments');

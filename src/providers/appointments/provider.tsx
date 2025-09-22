@@ -39,7 +39,6 @@ export const AppointmentsProvider: FC<{ children: ReactNode }> = ({ children }) 
     try {
       const response = await axios.get('/api/appointment/getAll');
       const data = response.data;
-      console.log("All the appointments from the provider: ", data)
       
       let transformedData: AppointmentsEntry[] = [];
       

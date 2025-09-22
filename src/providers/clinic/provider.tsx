@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { FC, ReactNode, useState, useCallback } from 'react';
 import { ClinicContext } from './context';
 import { Clinic, CreateClinicData, defaultClinicSettings, defaultBusinessHours } from './types';
 import axios from 'axios';
@@ -15,7 +15,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [, setInitialized] = useState(false);
 
   const getCurrentUser = () => {
     const currentUser = localStorage.getItem('currentUser') 
@@ -45,161 +45,16 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
     setInitialized(false);
   }, []);
 
-  const getMyClinic = useCallback(async (): Promise<Clinic | null> => {
+  const getMyClinic = async (): Promise<Clinic | null> => {
     try {
       const user = getCurrentUser();
-      if (!user) {
-        console.error('No authenticated user found');
-        return null;
-      }
-      
-      const ownerIds = [user.tempId, user.backendId, user.id, user._id].filter(Boolean);
-      
-      for (const ownerId of ownerIds) {
-        const endpoints = [
-          `/api/clinic/owner/${ownerId}`,
-          `/api/clinic/user/${ownerId}`,
-          '/api/clinic/my-clinic',
-          '/api/clinic'
-        ];
-        
-        for (const endpoint of endpoints) {
-          try {
-            const response = await axios.get(endpoint, { 
-              params: endpoint === '/api/clinic' ? { ownerId } : undefined 
-            });
-            
-            if (response.data) {
-              const clinic = response.data?.data || response.data?.clinic || response.data;
-              if (clinic && (Array.isArray(clinic) ? clinic[0] : clinic)) {
-                const foundClinic = Array.isArray(clinic) ? clinic[0] : clinic;
-                if (!foundClinic.settings) {
-                  foundClinic.settings = defaultClinicSettings;
-                }
-                return foundClinic;
-              }
-            }
-          } catch (err) {
-            console.log(`Endpoint ${endpoint} failed, trying next...`);
-          }
-        }
-      }
-      
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const clinics = JSON.parse(stored);
-        return clinics.find((c: Clinic) => 
-          ownerIds.includes(c.ownerId)
-        ) || null;
-      }
-      
-      return null;
+      const response = await axios.get(`/api/clinic/${user._id}`);
+      return response.data;
     } catch (error) {
       console.error('Failed to fetch my clinic:', error);
       return null;
     }
-  }, []);
-
-  useEffect(() => {
-    if (initialized) return;
-    
-    const fetchUserClinics = async () => {
-      const user = getCurrentUser();
-      
-      if (user) {
-        try {
-          setLoading(true);
-          
-          const storedClinics = localStorage.getItem(LOCAL_STORAGE_KEY);
-          const storedSelectedClinic = localStorage.getItem(SELECTED_CLINIC_KEY);
-          
-          if (storedClinics) {
-            try {
-              const parsedClinics = JSON.parse(storedClinics);
-              setClinics(parsedClinics);
-              
-              if (storedSelectedClinic) {
-                const parsedSelected = JSON.parse(storedSelectedClinic);
-                setSelectedClinic(parsedSelected);
-              }
-            } catch (e) {
-              console.warn('Failed to parse stored clinics:', e);
-            }
-          }
-          
-          // try {
-          //   const response = await axios.get('/api/clinic/user-clinics');
-          //   const userClinics = response.data;
-            
-          //   if (userClinics && userClinics.length > 0) {
-          //     const clinicsWithSettings = userClinics.map((clinic: Clinic) => ({
-          //       ...clinic,
-          //       settings: clinic.settings || defaultClinicSettings
-          //     }));
-              
-          //     setClinics(clinicsWithSettings);
-          //     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinicsWithSettings));
-              
-          //     if (clinicsWithSettings.length > 0 && !selectedClinic) {
-          //       setSelectedClinic(clinicsWithSettings[0]);
-          //       localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(clinicsWithSettings[0]));
-          //     }
-          //   } else {
-          //     const myClinic = await getMyClinic();
-          //     if (myClinic) {
-          //       setClinics([myClinic]);
-          //       setSelectedClinic(myClinic);
-          //       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([myClinic]));
-          //       localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(myClinic));
-          //     }
-          //   }
-          // } catch (apiError) {
-          //   console.log('API fetch failed, using localStorage data');
-          // }
-          
-          setLoading(false);
-          setInitialized(true);
-        } catch (error) {
-          console.warn('Failed to load clinics:', error);
-          logoutCleanup();
-          setLoading(false);
-        }
-      } else {
-        logoutCleanup();
-      }
-    };
-    
-    fetchUserClinics();
-  }, [initialized, logoutCleanup, getMyClinic, selectedClinic]);
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'currentUser' || e.key === 'preclinic_user' || e.key === 'user') {
-        if (!e.newValue) {
-          logoutCleanup();
-        } else if (e.newValue && e.oldValue && e.newValue !== e.oldValue) {
-          window.location.reload();
-        }
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [logoutCleanup]);
-
-  useEffect(() => {
-    if (clinics.length > 0) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clinics));
-    }
-  }, [clinics]);
-
-  useEffect(() => {
-    if (selectedClinic) {
-      localStorage.setItem(SELECTED_CLINIC_KEY, JSON.stringify(selectedClinic));
-    } else {
-      localStorage.removeItem(SELECTED_CLINIC_KEY);
-    }
-  }, [selectedClinic]);
+  }
 
   const createClinic = useCallback(async (clinicData: CreateClinicData): Promise<Clinic> => {
     try {
@@ -454,10 +309,11 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
     });
   }, [clinics]);
 
+  
   const resetClinics = useCallback(() => {
     logoutCleanup();
   }, [logoutCleanup]);
-
+  
   return (
     <ClinicContext.Provider value={{
       clinics,
