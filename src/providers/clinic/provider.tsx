@@ -106,7 +106,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         // Verify ownership
         if (possibleUserIds.includes(parsedClinic.ownerId)) {
           // Find the clinic in allClinics to get the most up-to-date version
-          const currentClinic = allClinics.find(c => c.id === parsedClinic.id);
+          const currentClinic = allClinics.find(c => (c as any)._id === (parsedClinic as any)._id);
           if (currentClinic) {
             console.log('Setting selected clinic:', currentClinic);
             setSelectedClinic(currentClinic);
@@ -317,7 +317,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const currentClinic = allClinics.find(c => c.id === id);
+      const currentClinic = allClinics.find(c => (c as any)._id === id);
       
       if (currentClinic && user) {
         const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
@@ -326,9 +326,9 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         }
       }
       
-      const { settings, businessHours, ...dataForApi } = updatedData;
+      const { settings, businessHours, id: removedId, ...dataForApi } = updatedData;
       
-      let updatePayload: any = { id, ...dataForApi };
+      let updatePayload: any = { ...dataForApi };
       
       if (businessHours && currentClinic) {
         const currentBusinessHoursStr = JSON.stringify(currentClinic.businessHours);
@@ -356,8 +356,8 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       }
       
       console.log('Sending update to API:', updatePayload);
-      
-      const response = await axios.put<Clinic>('/api/clinic/patch', updatePayload);
+
+      const response = await axios.patch<Clinic>(`/api/clinic/patch/${id}`, updatePayload);
       let updatedClinic = response.data;
       
       if (settings) {
@@ -366,9 +366,9 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         updatedClinic.settings = defaultClinicSettings;
       }
       
-      setAllClinics(prev => prev.map(c => c.id === id ? updatedClinic : c));
+      setAllClinics(prev => prev.map(c => (c as any)._id === id ? updatedClinic : c));
       
-      if (selectedClinic?.id === id) {
+      if ((selectedClinic as any)?._id === id) {
         setSelectedClinic(updatedClinic);
         if (user) {
           const userSelectedKey = `${SELECTED_CLINIC_KEY}_${user.id}`;
@@ -397,7 +397,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const clinicToDelete = allClinics.find(c => c.id === id);
+      const clinicToDelete = allClinics.find(c => (c as any)._id === id);
       if (clinicToDelete && user) {
         const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
         if (!possibleUserIds.includes(clinicToDelete.ownerId)) {
@@ -408,9 +408,9 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       const response = await axios.delete('/api/clinic/delete', { data: { id } });
       
       if (response.status === 200 || response.status === 204) {
-        setAllClinics(prev => prev.filter(c => c.id !== id));
+        setAllClinics(prev => prev.filter(c => (c as any)._id !== id));
 
-        if (selectedClinic?.id === id) {
+        if ((selectedClinic as any)?._id === id) {
           setSelectedClinic(null);
           if (user) {
             const userSelectedKey = `${SELECTED_CLINIC_KEY}_${user.id}`;
@@ -434,7 +434,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
 
   const selectClinic = useCallback((clinicId: string) => {
     const clinic = allClinics.find(c => {
-      if (c.id !== clinicId) return false;
+      if ((c as any)._id !== clinicId) return false;
       if (user) {
         const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
         return possibleUserIds.includes(c.ownerId);

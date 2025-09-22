@@ -58,6 +58,7 @@ export const CreateClinicWizard: FC<CreateClinicWizardProps> = ({
         phone: existingClinic.phone || '',
         website: existingClinic.website || '',
         address: existingClinic.address || '',
+        country: existingClinic.country || '',
         city: existingClinic.city || '',
         state: existingClinic.state || '',
         zipCode: existingClinic.zipCode || '',
@@ -87,6 +88,7 @@ export const CreateClinicWizard: FC<CreateClinicWizardProps> = ({
       phone: '',
       website: '',
       address: '',
+      country: '',
       city: '',
       state: '',
       zipCode: '',
@@ -121,6 +123,7 @@ export const CreateClinicWizard: FC<CreateClinicWizardProps> = ({
         phone: existingClinic.phone || '',
         website: existingClinic.website || '',
         address: existingClinic.address || '',
+        country: existingClinic.country || '',
         city: existingClinic.city || '',
         state: existingClinic.state || '',
         zipCode: existingClinic.zipCode || '',
@@ -199,7 +202,7 @@ export const CreateClinicWizard: FC<CreateClinicWizardProps> = ({
       
       if (editMode && existingClinic) {
         // Update existing clinic
-        await updateClinic(existingClinic.id, formData);
+        await updateClinic((existingClinic as any)._id, formData);
         navigate('/settings');
       } else {
         // Create new clinic

@@ -8,6 +8,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
 } from '@mui/material';
 import { LocationOn as LocationIcon } from '@mui/icons-material';
 import { City, Country, State } from 'country-state-city';
@@ -20,9 +21,24 @@ interface ContactStepProps {
 
 export const ContactStep: FC<ContactStepProps> = ({ formData, onChange, errors }) => {
   const countries = Country.getAllCountries();
-  const selectedCountry = countries.find((c) => c.name === formData.country);
+  
+  const getLocationValue = (value: any): string => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value.name) return value.name;
+    if (typeof value === 'object' && value.label) return value.label;
+    if (typeof value === 'object' && value.value) return value.value;
+    return '';
+  };
+  
+  const countryValue = getLocationValue(formData.country);
+  const stateValue = getLocationValue(formData.state);
+  const cityValue = getLocationValue(formData.city);
+  
+  const selectedCountry = countries.find((c) => c.name === countryValue);
   const states = selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : [];
-  const selectedState = states.find((s) => s.name === formData.state);
+  
+  const selectedState = states.find((s) => s.name === stateValue);
   const cities = selectedState && selectedCountry
     ? City.getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode)
     : [];
@@ -43,11 +59,11 @@ export const ContactStep: FC<ContactStepProps> = ({ formData, onChange, errors }
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required error={!!errors.country}>
             <InputLabel id="country-label">Country</InputLabel>
             <Select
               labelId="country-label"
-              value={formData.country || ''}
+              value={countryValue}
               label="Country"
               onChange={(e) => {
                 onChange('country', e.target.value);
@@ -61,18 +77,22 @@ export const ContactStep: FC<ContactStepProps> = ({ formData, onChange, errors }
                 </MenuItem>
               ))}
             </Select>
+            {errors.country && (
+              <FormHelperText error>{errors.country}</FormHelperText>
+            )}
           </FormControl>
-          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+          
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required error={!!errors.state}>
             <InputLabel id="state-label">State</InputLabel>
             <Select
               labelId="state-label"
-              value={formData.state || ''}
+              value={stateValue}
               label="State"
               onChange={(e) => {
                 onChange('state', e.target.value);
                 onChange('city', '');
               }}
-              disabled={!formData.country}
+              disabled={!countryValue}
             >
               {states.map((s) => (
                 <MenuItem key={s.isoCode} value={s.name}>
@@ -80,19 +100,23 @@ export const ContactStep: FC<ContactStepProps> = ({ formData, onChange, errors }
                 </MenuItem>
               ))}
             </Select>
+            {errors.state && (
+              <FormHelperText error>{errors.state}</FormHelperText>
+            )}
           </FormControl>
         </Box>
+        
         <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required>
+          <FormControl fullWidth sx={{ width: 500, marginY: 1 }} required error={!!errors.city}>
             <InputLabel id="city-label">City</InputLabel>
             <Select
               labelId="city-label"
-              value={formData.city || ''}
+              value={cityValue}
               label="City"
               onChange={(e) => {
                 onChange('city', e.target.value);
               }}
-              disabled={!formData.state}
+              disabled={!stateValue}
             >
               {cities.map((c) => (
                 <MenuItem key={c.name} value={c.name}>
@@ -100,7 +124,11 @@ export const ContactStep: FC<ContactStepProps> = ({ formData, onChange, errors }
                 </MenuItem>
               ))}
             </Select>
+            {errors.city && (
+              <FormHelperText error>{errors.city}</FormHelperText>
+            )}
           </FormControl>
+          
           <TextField
             label="ZIP Code"
             placeholder="ZIP"
