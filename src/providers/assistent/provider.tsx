@@ -1,15 +1,16 @@
-import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { IAssistent } from './types';
 import { AssistentsContext } from './context';
 import axios from 'axios';
+import { useClinicContext } from '../clinic/context';
 
 export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [assistents, setAssistents] = useState<IAssistent[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isFetchingRef = useRef(false);
+  const { selectedClinic } = useClinicContext();
 
-  // Transform API response to match IAssistent interface
   const transformAssistentData = (apiAssistent: any): IAssistent => {
     return {
       id: apiAssistent._id,
@@ -43,7 +44,6 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const fetchAssistents = useCallback(async (force: boolean = false) => {
-    // Prevent duplicate fetches unless forced
     if ((hasLoaded && !force) || isFetchingRef.current) {
       return;
     }
@@ -52,7 +52,16 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     
     try {
-      const response = await axios.get('/api/assistant/getAll');
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.warn('No clinic selected or clinic has no _id');
+        setAssistents([]);
+        setHasLoaded(true);
+        return;
+      }
+      
+      const response = await axios.get(`/api/assistant/getAllByClinic/${clinicId}`);
       const data = response.data;
       
       let transformedData: IAssistent[] = [];
@@ -72,19 +81,36 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error("Failed to fetch assistents:", error);
       setAssistents([]);
+      setHasLoaded(true);
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [hasLoaded]);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, selectedClinic]);
 
   const addAssistent = async (newAssistent: IAssistent) => {
     try {
-      const response = await axios.post('/api/assistant/create', newAssistent);
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.error('No clinic selected, cannot create assistant');
+        throw new Error('No clinic selected');
+      }
+
+      const assistentData = {
+        ...newAssistent,
+        clinic: clinicId, 
+      };
+
+      console.log('Creating assistant with data:', assistentData);
+      
+      const response = await axios.post('/api/assistant/create', assistentData);
       const transformedAssistent = transformAssistentData(response.data);
       setAssistents(prev => [...prev, transformedAssistent]);
     } catch (error) {
       console.error("Failed to add assistent:", error);
+      throw error; 
     }
   };
 
@@ -92,14 +118,26 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { id, userId, ...dataToSend } = updatedAssistent;
       
-      const response = await axios.put(`/api/assistant/patch/${userId || id}`, dataToSend);
+      const clinicId = selectedClinic?._id;
       
-      // After successful update, refresh the entire list to ensure consistency
+      if (!clinicId) {
+        console.error('No clinic selected, cannot update assistant');
+        throw new Error('No clinic selected');
+      }
+
+      const updateData = {
+        ...dataToSend,
+        clinic: clinicId,
+      };
+
+      console.log('Updating assistant with data:', updateData);
+      
+      const response = await axios.put(`/api/assistant/patch/${userId || id}`, updateData);
+      
       await fetchAssistents(true);
       
-      // Navigate using the assistant ID from the response
       const updatedId = response.data._id || id;
-      return updatedId; // Return the ID so the component can use it
+      return updatedId;
     } catch (error) {
       console.error("Failed to update assistent:", error);
       throw error;
@@ -128,10 +166,19 @@ export const AssistentsProvider: FC<{ children: ReactNode }> = ({ children }) =>
     setHasLoaded(false);
   }, []);
 
-  // REMOVED automatic useEffect - data will be fetched when component needs it
-  // useEffect(() => {
-  //   fetchAssistents();
-  // }, [fetchAssistents]);
+  useEffect(() => {
+    setAssistents([]);
+    setHasLoaded(false);
+    
+    if (selectedClinic?._id) {
+      const timer = setTimeout(() => {
+        fetchAssistents(true);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClinic?._id]);
 
   return (
     <AssistentsContext.Provider

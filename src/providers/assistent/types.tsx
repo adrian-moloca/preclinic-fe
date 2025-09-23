@@ -1,6 +1,7 @@
 export type IAssistent = {
   id?: string;
   userId?: string
+  clinic?: string;
   profileImg: string;
 
   firstName: string;
