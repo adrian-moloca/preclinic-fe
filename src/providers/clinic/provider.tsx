@@ -326,7 +326,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         }
       }
       
-      const { settings, businessHours, id: removedId, ...dataForApi } = updatedData;
+      const { settings, businessHours, _id: removedId, ...dataForApi } = updatedData;
       
       let updatePayload: any = { ...dataForApi };
       

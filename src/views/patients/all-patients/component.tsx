@@ -37,13 +37,12 @@ export const AllPatients: FC = () => {
   
   const { addRecentItem } = useRecentItems();
 
-  // Fetch patients when component mounts if not already loaded
   useEffect(() => {
     if (!hasLoaded) {
       const fetchPatients = async () => {
         setError(null);
         try {
-          await getAllPatients();
+           getAllPatients();
         } catch (err) {
           console.error('Error fetching patients:', err);
           setError('Failed to load patients. Please try again.');
@@ -53,7 +52,6 @@ export const AllPatients: FC = () => {
     }
   }, [hasLoaded, getAllPatients]);
 
-  // Update filtered patients when patients data changes
   useEffect(() => {
     setFilteredPatients(allPatients);
   }, [allPatients]);
@@ -61,7 +59,7 @@ export const AllPatients: FC = () => {
   const handleRefresh = async () => {
     setError(null);
     try {
-       getAllPatients(); // Force refresh
+       getAllPatients();
     } catch (err) {
       console.error('Error refreshing patients:', err);
       setError('Failed to refresh patients. Please try again.');
@@ -84,7 +82,6 @@ export const AllPatients: FC = () => {
       setDeleteModalOpen(false);
       setSelectedPatient(null);
       setAnchorEl(null);
-      // Refresh patients list after deletion
        getAllPatients();
     } catch (error) {
       console.error('Error deleting patient:', error);
@@ -102,7 +99,6 @@ export const AllPatients: FC = () => {
   const handleDeleteMultiple = async (selectedIds: string[]) => {
     try {
       await Promise.all(selectedIds.map(id => deletePatient(id)));
-      // Refresh patients list after deletion
        getAllPatients();
     } catch (error) {
       console.error('Error deleting patients:', error);

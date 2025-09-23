@@ -1,6 +1,7 @@
-import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { PatientsEntry } from './types';
 import { PatientsContext } from './context';
+import { useClinicContext } from '../clinic/context';
 import axios from 'axios';
 
 export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
@@ -8,36 +9,28 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isFetchingRef = useRef(false);
+  
+  const { selectedClinic } = useClinicContext();
 
-  // Transform API response to match PatientsEntry interface
   const transformPatientData = (apiPatient: any): PatientsEntry => {
-    // Try different possible locations for userId
-    let extractedUserId;
     
-    if (apiPatient.user && typeof apiPatient.user === 'object' && apiPatient.user._id) {
-      // user is an object with _id
-      extractedUserId = apiPatient.user._id;
-    } else if (apiPatient.user && typeof apiPatient.user === 'string') {
-      // user is directly the ID string
-      extractedUserId = apiPatient.user;
-    } else if (apiPatient.userId) {
-      // userId is a direct property
-      extractedUserId = apiPatient.userId;
-    } else if (apiPatient._userId) {
-      // Maybe it's _userId
-      extractedUserId = apiPatient._userId;
+    const patientId = apiPatient._id;
+    
+    if (!patientId) {
+      console.error('WARNING: No _id found in patient data:', apiPatient);
     }
+    
+    const extractedUserId = apiPatient.user?._id || apiPatient.userId;
     
     if (!extractedUserId) {
       console.error('WARNING: Could not extract userId from patient:', apiPatient);
     }
     
-    // Extract user data whether it's nested or flat
-    const userData = apiPatient.user || apiPatient;
+    const userData = apiPatient.user || {};
     
     return {
-      _id: apiPatient._id,
-      userId: extractedUserId, // This must have a value for updates to work
+      _id: patientId,
+      userId: extractedUserId,
       profileImg: userData.profileImg || '',
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
@@ -58,7 +51,6 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const getAllPatients = useCallback(async (force: boolean = false) => {
-    // Prevent duplicate fetches unless forced
     if ((hasLoaded && !force) || isFetchingRef.current) {
       return;
     }
@@ -67,29 +59,49 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setLoading(true);
     
     try {
-      const response = await axios.get('/api/patient/getAll');
-      const data = response.data;
+      const clinicId = selectedClinic?._id;
       
-      console.log('Raw API response:', data); // Debug log
-      
-      let transformedData: PatientsEntry[] = [];
-      
-      if (Array.isArray(data)) {
-        transformedData = data.map(transformPatientData);
-      } else if (data && Array.isArray(data.patients)) {
-        transformedData = data.patients.map(transformPatientData);
-      } else if (data && Array.isArray(data.data)) {
-        transformedData = data.data.map(transformPatientData);
-      } else {
-        console.error("Unexpected API response format:", data);
+      if (!clinicId) {
+        console.warn('No clinic selected or clinic has no _id');
+        setPatients([]);
+        return;
       }
       
-      console.log('Transformed patients:', transformedData); // Debug log
+      const response = await axios.get(`/api/patient/getAllByClinic/${clinicId}`);
+      
+      const data = response.data;
+      
+      let patientsArray: any[] = [];
+      
+      if (Array.isArray(data)) {
+        patientsArray = data;
+      } else if (data && Array.isArray(data.patients)) {
+        patientsArray = data.patients;
+      } else if (data && Array.isArray(data.data)) {
+        patientsArray = data.data;
+      } else if (data && data.result && Array.isArray(data.result)) {
+        patientsArray = data.result;
+      } else if (data && data.response && Array.isArray(data.response)) {
+        patientsArray = data.response;
+      } else {
+        console.error("Unexpected API response format:", data);
+        console.error("Response type:", typeof data);
+        console.error("Response keys:", data ? Object.keys(data) : 'null');
+      }
+      
+      const transformedData = patientsArray.map((patient, index) => {
+        console.log(`Patient ${index} raw data:`, patient);
+        const transformed = transformPatientData(patient);
+        console.log(`Patient ${index} transformed:`, transformed);
+        return transformed;
+      });
+      
       setPatients(transformedData);
       setHasLoaded(true);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error:", error.response?.data || error.message);
+        console.error("Full error response:", error.response);
       } else {
         console.error("Unexpected error:", error);
       }
@@ -98,12 +110,20 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [hasLoaded]);
+  }, [hasLoaded, selectedClinic]);
 
   const addPatient = async (newEntry: Omit<PatientsEntry, '_id'>) => {
     try {
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.error('No clinic selected, cannot create patient');
+        return;
+      }
+      
       const patientData = {
         ...newEntry,
+        clinic: clinicId,
         role: 'patient' as const
       };
       
@@ -135,22 +155,26 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         ...dataToSend 
       } = updatedEntry;
       
-      // Check if userId exists
       if (!userId) {
-        console.error('ERROR: userId is missing!');
-        console.error('Full updatedEntry:', updatedEntry);
         throw new Error('userId is required for updating patient');
+      }
+      
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.error('No clinic selected, cannot update patient');
+        return;
       }
       
       const patientData = {
         ...dataToSend,
+        clinic: clinicId,
         role: 'patient' as const
       };
 
       const response = await axios.put(`/api/patient/patch/${userId}`, patientData);
 
       if (response.status === 200) {
-        // Refresh the entire list to ensure consistency
         await getAllPatients(true); // Force refresh
         return response.data._id || _id;
       } else {
@@ -170,12 +194,16 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const patientToDelete = patients.find(p => p._id === id);
       
-      if (!patientToDelete || !patientToDelete.userId) {
-        console.error("Patient or userId not found");
+      if (!patientToDelete) {
+        console.error("Patient not found with _id:", id);
         return;
       }
       
-      // Use userId for deletion endpoint
+      if (!patientToDelete.userId) {
+        console.error("userId not found for patient:", patientToDelete);
+        return;
+      }
+      
       const response = await axios.delete(`/api/patient/delete/${patientToDelete.userId}`);
 
       if (response.status === 200 || response.status === 204) {
@@ -194,6 +222,10 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPatients([]);
     setHasLoaded(false);
   }, []);
+
+  useEffect(() => {
+    resetPatients();
+  }, [selectedClinic?._id, resetPatients]);
 
   return (
     <PatientsContext.Provider

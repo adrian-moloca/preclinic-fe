@@ -89,7 +89,7 @@ export const GeneralSettings: FC = () => {
         settings: clinicSettings,
       };
 
-      await updateClinic(selectedClinic.id, updatedClinicData);
+      await updateClinic(selectedClinic._id, updatedClinicData);
       
       setHasChanges(false);
       setSaveMessage("Settings saved successfully!");
