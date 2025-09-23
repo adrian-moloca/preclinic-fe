@@ -1,5 +1,6 @@
 export type IDoctor = {
   id?: string;
+  clinic?: string;
   userId?: string;
   profileImg: string;
 

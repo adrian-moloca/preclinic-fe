@@ -1,15 +1,16 @@
-import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { IDoctor } from './types';
 import { DoctorsContext } from './context';
 import axios from 'axios';
+import { useClinicContext } from '../clinic/context';
 
 export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [doctors, setDoctors] = useState<IDoctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const isFetchingRef = useRef(false);
+  const { selectedClinic } = useClinicContext();
 
-  // Transform API response to match IDoctor interface
   const transformDoctorData = (apiDoctor: any): IDoctor => {
     return {
       id: apiDoctor._id,
@@ -42,7 +43,6 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const fetchDoctors = useCallback(async (force: boolean = false) => {
-    // Prevent duplicate fetches unless forced
     if ((hasLoaded && !force) || isFetchingRef.current) {
       return;
     }
@@ -51,7 +51,15 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setLoading(true);
     
     try {
-      const response = await axios.get('/api/doctor/getAll');
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.warn('No clinic selected or clinic has no _id');
+        setDoctors([]);
+        return;
+      }
+      
+      const response = await axios.get(`/api/doctor/getAllByClinic/${clinicId}`);
       const data = response.data;
       
       let transformedData: IDoctor[] = [];
@@ -75,11 +83,18 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [hasLoaded]);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, selectedClinic]);
 
   const addDoctor = async (newDoctor: IDoctor) => {
     try {
-      // Filter out educational entries that have no meaningful data
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.error('No clinic selected, cannot create doctor');
+        throw new Error('No clinic selected');
+      }
+
       const validEducationalInfo = Array.isArray(newDoctor.educationalInformation) 
         ? newDoctor.educationalInformation.filter(edu => 
             edu && 
@@ -89,21 +104,24 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         : [];
 
       const doctorData: any = {
-        ...newDoctor
+        ...newDoctor,
+        clinic: clinicId,  // Add the clinic ID here
       };
 
-      // Only include educationalInformation if there's valid data
       if (validEducationalInfo.length > 0) {
         doctorData.educationalInformation = validEducationalInfo;
       } else {
         delete doctorData.educationalInformation;
       }
       
+      console.log('Creating doctor with data:', doctorData);
+      
       const response = await axios.post('/api/doctor/create', doctorData);
       const transformedDoctor = transformDoctorData(response.data);
       setDoctors(prev => [...prev, transformedDoctor]);
     } catch (error) {
       console.error("Failed to add doctor:", error);
+      throw error;  // Re-throw to handle in the form
     }
   };
 
@@ -111,7 +129,14 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const { id, userId, ...dataToSend } = updatedDoctor;
       
-      // Filter out educational entries that have no meaningful data
+      // Get the clinic ID
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.error('No clinic selected, cannot update doctor');
+        throw new Error('No clinic selected');
+      }
+
       const validEducationalInfo = Array.isArray(dataToSend.educationalInformation) 
         ? dataToSend.educationalInformation.filter(edu => 
             edu && 
@@ -126,12 +151,18 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
         delete (dataToSend as { educationalInformation?: any }).educationalInformation;
       }
       
-      const response = await axios.put(`/api/doctor/patch/${userId || id}`, dataToSend);
+      // Add clinic ID to update data as well
+      const updateData = {
+        ...dataToSend,
+        clinic: clinicId,
+      };
       
-      // After successful update, refresh the entire list to ensure consistency
-      await fetchDoctors(true); // Force refresh
+      console.log('Updating doctor with data:', updateData);
       
-      // Return the ID so the component can use it
+      const response = await axios.put(`/api/doctor/patch/${userId || id}`, updateData);
+      
+      await fetchDoctors(true);
+      
       const updatedId = response.data._id || id;
       return updatedId;
     } catch (error) {
@@ -162,10 +193,10 @@ export const DoctorsProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setHasLoaded(false);
   }, []);
 
-  // REMOVED automatic useEffect - data will be fetched when component needs it
-  // useEffect(() => {
-  //   fetchDoctors();
-  // }, [fetchDoctors]);
+  // Reset doctors when clinic changes
+  useEffect(() => {
+    resetDoctors();
+  }, [selectedClinic?._id, resetDoctors]);
 
   return (
     <DoctorsContext.Provider
