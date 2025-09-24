@@ -20,7 +20,8 @@ import {
   DialogTitle,
   DialogContent,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  useTheme
 } from "@mui/material";
 import {
   Keyboard as KeyboardIcon,
@@ -39,16 +40,16 @@ import CalendarShortcuts from "./components/calendar-shortcuts";
 import CreateAppointmentForm from "../create-appointment-form";
 
 export const ScheduleCalendar: React.FC = () => {
-  const { 
-    appointments, 
-    fetchAppointments, 
+  const {
+    appointments,
+    fetchAppointments,
     loading: appointmentsLoading,
   } = useAppointmentsContext();
-  const { 
-    patients, 
+  const {
+    patients,
     getAllPatients,
   } = usePatientsContext();
-  const { 
+  const {
     doctors,
     fetchDoctors,
     hasLoaded: doctorsHasLoaded
@@ -65,6 +66,7 @@ export const ScheduleCalendar: React.FC = () => {
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
+  const theme = useTheme();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -76,14 +78,14 @@ export const ScheduleCalendar: React.FC = () => {
 
   useEffect(() => {
     const initializeData = async () => {
-      
+
       try {
         const appointmentsPromise = fetchAppointments(true);
-        
+
         const patientsPromise = getAllPatients ? getAllPatients() : Promise.resolve();
-        
+
         const doctorsPromise = (!doctorsHasLoaded && fetchDoctors) ? fetchDoctors() : Promise.resolve();
-        
+
         await Promise.all([appointmentsPromise, patientsPromise, doctorsPromise]);
         setIsInitialized(true);
       } catch (error) {
@@ -91,10 +93,10 @@ export const ScheduleCalendar: React.FC = () => {
         setIsInitialized(true);
       }
     };
-    
+
     initializeData();
     //eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("enhanced-calendar-events");
@@ -130,7 +132,7 @@ export const ScheduleCalendar: React.FC = () => {
         patientsArray = Object.values(patients).flat();
       }
     }
-    
+
     return patientsArray;
   }, [patients]);
 
@@ -204,75 +206,99 @@ export const ScheduleCalendar: React.FC = () => {
     }
   }, [colorBy, orderedDoctorIds, orderedDepartments]);
 
- const appointmentEvents = useMemo<CalendarEvent[]>(() => {
-  if (!appointments || !Array.isArray(appointments)) return [];
-  const now = new Date();
+  const appointmentEvents = useMemo<CalendarEvent[]>(() => {
+    if (!appointments || !Array.isArray(appointments)) return [];
+    const now = new Date();
 
-  return appointments
-    .map((appointment: any) => {
-      let patient = null;
-      let patientName = 'Loading...';
+    return appointments
+      .map((appointment: any) => {
+        let patient = null;
+        let patientName = 'Loading...';
 
-      if (normalizedPatientsData.length > 0) {
-        patient = normalizedPatientsData.find((p: any) => {
-          const patientId = p._id || p.id;
-          const appointmentPatientId = appointment.patientId;
-          if (!patientId || !appointmentPatientId) return false;
-          return String(patientId).toLowerCase() === String(appointmentPatientId).toLowerCase();
-        });
+        if (normalizedPatientsData.length > 0) {
+          patient = normalizedPatientsData.find((p: any) => {
+            const patientId = p._id || p.id;
+            const appointmentPatientId = appointment.patientId;
+            if (!patientId || !appointmentPatientId) return false;
+            return String(patientId).toLowerCase() === String(appointmentPatientId).toLowerCase();
+          });
 
-        if (patient) {
-          patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unnamed Patient';
-        } else {
-          patientName = 'Patient Not Found';
+          if (patient) {
+            patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unnamed Patient';
+          } else {
+            patientName = 'Patient Not Found';
+          }
         }
-      }
 
-      const startDateTime = new Date(`${appointment.date}T${appointment.time}`);
-      const endDateTime = new Date(startDateTime.getTime() + (parseInt(appointment.duration) || 30) * 60000);
+        const startDateTime = new Date(`${appointment.date}T${appointment.time}`);
+        const endDateTime = new Date(startDateTime.getTime() + (parseInt(appointment.duration) || 30) * 60000);
 
-      // Skip expired appointments
-      if (endDateTime < now) return null;
+        if (endDateTime < now) return null;
 
-      const eventColor = getAppointmentColor(appointment);
+        const eventColor = getAppointmentColor(appointment);
 
-      let departmentName = '';
-      if (typeof appointment.department === 'string') {
-        departmentName = appointment.department;
-      } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
-        departmentName = appointment.department.name;
-      }
-
-      return {
-        id: `appointment-${appointment.id}-${refreshKey}`,
-        title: patientName,
-        start: `${appointment.date}T${appointment.time}`,
-        end: endDateTime.toISOString(),
-        color: eventColor,
-        backgroundColor: eventColor,
-        borderColor: eventColor,
-        textColor: '#ffffff',
-        resourceId: appointment.doctorId || 'unassigned',
-        extendedProps: {
-          appointmentId: appointment.id,
-          patientId: appointment.patientId,
-          doctorId: appointment.doctorId,
-          department: departmentName,
-          appointmentType: appointment.appointmentType,
-          consultationType: appointment.type,
-          type: 'appointment' as const,
-          reason: appointment.reason,
-          expectedColor: eventColor,
-          colorMode: colorBy,
+        let departmentName = '';
+        if (typeof appointment.department === 'string') {
+          departmentName = appointment.department;
+        } else if (appointment.department && typeof appointment.department === 'object' && appointment.department.name) {
+          departmentName = appointment.department.name;
         }
-      } as CalendarEvent;
-    })
-    .filter((e): e is CalendarEvent => e !== null); // remove nulls
-}, [appointments, normalizedPatientsData, getAppointmentColor, refreshKey, colorBy]);
+
+        return {
+          id: `appointment-${appointment.id}-${refreshKey}`,
+          title: patientName,
+          start: `${appointment.date}T${appointment.time}`,
+          end: endDateTime.toISOString(),
+          color: eventColor,
+          backgroundColor: eventColor,
+          borderColor: eventColor,
+          textColor: '#ffffff',
+          resourceId: appointment.doctorId || 'unassigned',
+          extendedProps: {
+            appointmentId: appointment.id,
+            patientId: appointment.patientId,
+            doctorId: appointment.doctorId,
+            department: departmentName,
+            appointmentType: appointment.appointmentType,
+            consultationType: appointment.type,
+            type: 'appointment' as const,
+            reason: appointment.reason,
+            expectedColor: eventColor,
+            colorMode: colorBy,
+          }
+        } as CalendarEvent;
+      })
+      .filter((e): e is CalendarEvent => e !== null);
+  }, [appointments, normalizedPatientsData, getAppointmentColor, refreshKey, colorBy]);
 
   useEffect(() => {
     setEvents([...appointmentEvents, ...customEvents]);
   }, [appointmentEvents, customEvents]);
+
+  useEffect(() => {
+    const styleWeekendHeaders = () => {
+      const allHeaderCells = document.querySelectorAll('.fc-col-header-cell');
+
+      allHeaderCells.forEach((cell, index) => {
+        if (cell instanceof HTMLElement) {
+          const isWeekend = index === 0 || index === allHeaderCells.length - 1;
+
+          if (isWeekend) {
+            cell.style.setProperty('background-color',
+              theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : '#f5f5f5',
+              'important'
+            );
+          } else {
+            cell.style.setProperty('background-color', 'transparent', 'important');
+          }
+        }
+      });
+    };
+
+    const timer = setTimeout(styleWeekendHeaders, 100);
+
+    return () => clearTimeout(timer);
+  }, [theme.palette.mode, refreshKey, colorBy]);
 
   const handleColorByChange = (newColorBy: 'type' | 'doctor' | 'department') => {
     setColorBy(newColorBy);
@@ -473,7 +499,7 @@ export const ScheduleCalendar: React.FC = () => {
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={1}>
           {colorBy === 'doctor' && orderedDoctorIds.map((doctorId, index) => {
-            const doctor = normalizeDoctorsData.find((d: any) => 
+            const doctor = normalizeDoctorsData.find((d: any) =>
               (d._id && d._id === doctorId) || (d.id && d.id === doctorId)
             );
             const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
@@ -589,7 +615,7 @@ export const ScheduleCalendar: React.FC = () => {
               eventDidMount={(info) => {
                 const props = info.event.extendedProps;
                 if (props.type === 'appointment') {
-                  const doctor = normalizeDoctorsData.find((d: any) => 
+                  const doctor = normalizeDoctorsData.find((d: any) =>
                     (d._id && d._id === props.doctorId) || (d.id && d.id === props.doctorId)
                   );
                   const doctorName = doctor && typeof doctor === 'object' && 'firstName' in doctor && 'lastName' in doctor
@@ -603,7 +629,7 @@ Type: ${props.consultationType || 'N/A'}
 Method: ${props.appointmentType || 'N/A'}
 ${props.reason ? `Reason: ${props.reason}` : ''}
 Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  `.trim();
+      `.trim();
                   info.el.title = tooltip;
 
                   if (info.event.backgroundColor) {
@@ -615,8 +641,50 @@ Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit
 
               dayCellDidMount={(info) => {
                 if (info.date.getDay() === 0 || info.date.getDay() === 6) {
-                  info.el.style.backgroundColor = '#fafafa';
+                  info.el.classList.add('fc-weekend-cell');
                 }
+              }}
+
+              viewDidMount={() => {
+                setTimeout(() => {
+                  const headers = document.querySelectorAll('.fc-col-header-cell');
+                  headers.forEach((cell, index) => {
+                    if (index === 0 || index === headers.length - 1) {
+                      (cell as HTMLElement).style.setProperty(
+                        'background-color',
+                        theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : '#f5f5f5',
+                        'important'
+                      );
+                    } else {
+                      (cell as HTMLElement).style.setProperty(
+                        'background-color',
+                        'transparent',
+                        'important'
+                      );
+                    }
+                  });
+                }, 10);
+              }}
+
+              datesSet={() => {
+                setTimeout(() => {
+                  const headers = document.querySelectorAll('.fc-col-header-cell');
+                  headers.forEach((cell, index) => {
+                    if (index === 0 || index === headers.length - 1) {
+                      (cell as HTMLElement).style.setProperty(
+                        'background-color',
+                        theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : '#f5f5f5',
+                        'important'
+                      );
+                    } else {
+                      (cell as HTMLElement).style.setProperty(
+                        'background-color',
+                        'transparent',
+                        'important'
+                      );
+                    }
+                  });
+                }, 10);
               }}
             />
           </Paper>
@@ -698,30 +766,112 @@ Time: ${new Date(info.event.start!).toLocaleTimeString('en-US', { hour: '2-digit
       </Dialog>
 
       <style>{`
-        .fc-event.custom-event,
-        .fc-event.appointment-event {
-          border-radius: 6px !important;
-          border: 1px solid rgba(255, 255, 255, 0.3) !important;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-          font-size: 12px !important;
-          padding: 2px 4px !important;
-        }
-        
-        .fc-event:hover {
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
-          transform: translateY(-1px) !important;
-          transition: all 0.2s ease !important;
-        }
-        
-        .fc-daygrid-day:hover {
-          background-color: rgba(63, 61, 255, 0.05) !important;
-          cursor: pointer !important;
-        }
-        
-        .fc-day-today {
-          background-color: rgba(63, 61, 255, 0.1) !important;
-        }
-      `}</style>
+  /* Event styles */
+  .fc-event.custom-event,
+  .fc-event.appointment-event {
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    font-size: 12px !important;
+    padding: 2px 4px !important;
+  }
+  
+  .fc-event:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+    transform: translateY(-1px) !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .fc-daygrid-day:hover {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'rgba(63, 61, 255, 0.08)'
+          : 'rgba(63, 61, 255, 0.05)'} !important;
+    cursor: pointer !important;
+  }
+  
+  .fc-day-today {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'rgba(63, 61, 255, 0.2)'
+          : 'rgba(63, 61, 255, 0.1)'} !important;
+  }
+  
+  /* Weekend BODY cells */
+  .fc-weekend-cell {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'rgba(0, 0, 0, 0.3)'
+          : '#f5f5f5'} !important;
+  }
+  
+  /* ALL header cells - remove white background */
+  .fc-col-header-cell {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'transparent'
+          : 'transparent'} !important;
+  }
+  
+  /* Weekend HEADER cells specifically */
+  .fc-col-header-cell.fc-day-sun,
+  .fc-col-header-cell.fc-day-sat,
+  .fc-col-header-cell:first-child,
+  .fc-col-header-cell:last-child {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'rgba(0, 0, 0, 0.3)'
+          : '#f5f5f5'} !important;
+  }
+  
+  /* Weekday HEADER cells (Mon-Fri) - fix white background */
+  .fc-col-header-cell:not(.fc-day-sun):not(.fc-day-sat):not(:first-child):not(:last-child) {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'transparent'
+          : 'transparent'} !important;
+  }
+  
+  /* Override any inline styles on weekend elements */
+  [class*="fc-day-sun"],
+  [class*="fc-day-sat"] {
+    background-color: ${theme.palette.mode === 'dark'
+          ? 'rgba(0, 0, 0, 0.3)'
+          : '#f5f5f5'} !important;
+  }
+  
+  /* Ensure child elements are transparent */
+  .fc-weekend-cell .fc-daygrid-day-frame,
+  .fc-weekend-cell .fc-daygrid-day-bg,
+  .fc-weekend-cell .fc-daygrid-day-top,
+  .fc-weekend-cell .fc-daygrid-day-bottom {
+    background-color: transparent !important;
+  }
+  
+  /* Dark mode specific adjustments */
+  ${theme.palette.mode === 'dark' ? `
+    /* Remove white from ALL header components */
+    .fc-col-header,
+    .fc-scrollgrid-sync-inner,
+    .fc-col-header-cell-cushion,
+    .fc-scrollgrid-section-header,
+    .fc-scrollgrid-sync-table {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    
+    /* Force weekday headers to be transparent */
+    .fc th:not(.fc-day-sun):not(.fc-day-sat) {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    
+    /* Borders */
+    .fc-theme-standard td,
+    .fc-theme-standard th {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Ensure text is visible */
+    .fc-col-header-cell-cushion {
+      color: rgba(255, 255, 255, 0.9);
+    }
+  ` : ''}
+`}</style>
     </Box>
   );
 };

@@ -113,11 +113,9 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     } = useAssistentsContext();
     const navigate = useNavigate();
 
-    // Get user role and info
     const userRole = user?.role;
     const userId = user?.id || user?.id;
 
-    // Fetch data when component mounts
     useEffect(() => {
         const fetchData = async () => {
             const promises = [];
@@ -163,7 +161,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         ? (doctors as unknown as Doctor[])
         : [];
 
-    // Get current user's department if they are doctor or assistant
     const getCurrentUserDepartment = () => {
         if (userRole === 'doctor') {
             const currentDoctor = doctorsArray.find(d => d.userId === userId || d.id === userId);
@@ -179,7 +176,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         return undefined;
     };
 
-    // Get current doctor's ID if user is a doctor
     const getCurrentDoctorId = () => {
         if (userRole === 'doctor') {
             const currentDoctor = doctorsArray.find(d => d.userId === userId || d.id === userId);
@@ -200,7 +196,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         department: (userRole === 'doctor' || userRole === 'assistant') ? getCurrentUserDepartment() : undefined,
     });
 
-    // Update department and doctorId when user data is loaded
     useEffect(() => {
         if (userRole === 'doctor') {
             const doctorId = getCurrentDoctorId();
@@ -241,7 +236,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         department: false,
     });
 
-    // Filter doctors by department
     const getFilteredDoctors = () => {
         if (!appointment.department) return [];
 
@@ -266,7 +260,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     const handleDepartmentChange = (departmentId: string) => {
         const selectedDepartment = departmentsArray.find(dep => dep.id === departmentId);
         handleChange("department", selectedDepartment || undefined);
-        // Reset doctor selection when department changes (for owner_doctor role)
         if (userRole === 'doctor_owner') {
             handleChange("doctorId", "");
         }
@@ -293,10 +286,8 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         }
 
         if (appointment.department) {
-            // Create appointment data without id field
             const appointmentData = {
                 patientId: appointment.patientId,
-                // patients: [appointment.patientId],
                 doctorId: appointment.doctorId,
                 appointmentType: appointment.appointmentType,
                 type: appointment.type,
@@ -350,7 +341,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     const FormWrapper = embedded ? Box : PaperFormWrapper;
     const wrapperProps = embedded ? {} : { elevation: 3 };
 
-    // Loading state
     if (patientsLoading || departmentsLoading || doctorsLoading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -398,7 +388,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             ))}
                         </TextField>
 
-                        {/* Show department selector only for doctor_owner */}
                         {userRole === 'doctor_owner' && (
                             <TextField
                                 select
@@ -419,7 +408,6 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             </TextField>
                         )}
 
-                        {/* Show doctor selector for doctor_owner and assistant roles */}
                         {(userRole === 'doctor_owner' || userRole === 'assistant') && (
                             <TextField
                                 select
