@@ -358,190 +358,179 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                     </Typography>
                 )}
 
-                <Box display="flex" flexDirection="column" alignItems="center">
-                    <Box>
+                <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                    <TextField
+                        select
+                        label="Patient"
+                        value={appointment.patientId}
+                        onChange={(e) => handleChange("patientId", e.target.value)}
+                        error={errors.patientId}
+                        helperText={errors.patientId && "Patient is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        required
+                    >
+                        {patientsArray.map((patient) => (
+                            <MenuItem key={patient._id || patient.id} value={patient._id || patient.id}>
+                                <Box display="flex" alignItems="center">
+                                    <Avatar
+                                        src={patient.profileImg}
+                                        sx={{ width: 30, height: 30, mr: 2 }}
+                                    >
+                                        {patient.firstName?.[0]}{patient.lastName?.[0]}
+                                    </Avatar>
+                                    <Typography>
+                                        {patient.firstName} {patient.lastName}
+                                    </Typography>
+                                </Box>
+                            </MenuItem>
+                        ))}
+                    </TextField>
+
+                    {userRole === 'doctor_owner' && (
                         <TextField
                             select
-                            label="Patient"
-                            value={appointment.patientId}
-                            onChange={(e) => handleChange("patientId", e.target.value)}
-                            error={errors.patientId}
-                            helperText={errors.patientId && "Patient is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
+                            label="Department"
+                            value={appointment.department?.id || ""}
+                            onChange={(e) => handleDepartmentChange(e.target.value)}
+                            error={errors.department}
+                            helperText={errors.department && "Department is required"}
+                            sx={{ width: embedded ? "100%" : 500 }}
                             required
                         >
-                            {patientsArray.map((patient) => (
-                                <MenuItem key={patient._id || patient.id} value={patient._id || patient.id}>
-                                    <Box display="flex" alignItems="center">
-                                        <Avatar
-                                            src={patient.profileImg}
-                                            sx={{ width: 30, height: 30, mr: 2 }}
-                                        >
-                                            {patient.firstName?.[0]}{patient.lastName?.[0]}
-                                        </Avatar>
-                                        <Typography>
-                                            {patient.firstName} {patient.lastName}
-                                        </Typography>
-                                    </Box>
+                            {departmentsArray.map((department) => (
+                                <MenuItem key={department.id} value={department.id}>
+                                    {department.name}
                                 </MenuItem>
                             ))}
                         </TextField>
+                    )}
 
-                        {userRole === 'doctor_owner' && (
-                            <TextField
-                                select
-                                label="Department"
-                                value={appointment.department?.id || ""}
-                                onChange={(e) => handleDepartmentChange(e.target.value)}
-                                error={errors.department}
-                                helperText={errors.department && "Department is required"}
-                                fullWidth
-                                sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                                required
-                            >
-                                {departmentsArray.map((department) => (
-                                    <MenuItem key={department.id} value={department.id}>
-                                        {department.name}
+                    {(userRole === 'doctor_owner' || userRole === 'assistant') && (
+                        <TextField
+                            select
+                            label="Doctor"
+                            value={appointment.doctorId}
+                            onChange={(e) => handleChange("doctorId", e.target.value)}
+                            error={errors.doctorId}
+                            helperText={errors.doctorId && "Doctor is required"}
+                            sx={{ width: embedded ? "100%" : 500 }}
+                            required
+                            disabled={userRole === 'doctor_owner' && !appointment.department}
+                        >
+                            {(userRole === 'doctor_owner' ? getFilteredDoctors() :
+                                doctorsArray.filter(d => d.department === getCurrentUserDepartment()?.id ||
+                                    d.department === getCurrentUserDepartment()?.name))
+                                .map((doctor) => (
+                                    <MenuItem key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
+                                        <Box display="flex" alignItems="center">
+                                            <Avatar
+                                                src={doctor.profileImg}
+                                                sx={{ width: 30, height: 30, mr: 2 }}
+                                            >
+                                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
+                                            </Avatar>
+                                            <Typography>
+                                                Dr. {doctor.firstName} {doctor.lastName}
+                                            </Typography>
+                                        </Box>
                                     </MenuItem>
                                 ))}
-                            </TextField>
-                        )}
-
-                        {(userRole === 'doctor_owner' || userRole === 'assistant') && (
-                            <TextField
-                                select
-                                label="Doctor"
-                                value={appointment.doctorId}
-                                onChange={(e) => handleChange("doctorId", e.target.value)}
-                                error={errors.doctorId}
-                                helperText={errors.doctorId && "Doctor is required"}
-                                fullWidth
-                                sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                                required
-                                disabled={userRole === 'doctor_owner' && !appointment.department}
-                            >
-                                {(userRole === 'doctor_owner' ? getFilteredDoctors() :
-                                    doctorsArray.filter(d => d.department === getCurrentUserDepartment()?.id ||
-                                        d.department === getCurrentUserDepartment()?.name))
-                                    .map((doctor) => (
-                                        <MenuItem key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
-                                            <Box display="flex" alignItems="center">
-                                                <Avatar
-                                                    src={doctor.profileImg}
-                                                    sx={{ width: 30, height: 30, mr: 2 }}
-                                                >
-                                                    {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                                                </Avatar>
-                                                <Typography>
-                                                    Dr. {doctor.firstName} {doctor.lastName}
-                                                </Typography>
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
-                            </TextField>
-                        )}
-
-                        <TextField
-                            select
-                            label="Appointment Type"
-                            value={appointment.appointmentType}
-                            onChange={(e) => handleChange("appointmentType", e.target.value)}
-                            error={errors.appointmentType}
-                            helperText={errors.appointmentType && "Appointment type is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            required
-                        >
-                            {appointmentTypes.map((type) => (
-                                <MenuItem key={type} value={type}>
-                                    {type}
-                                </MenuItem>
-                            ))}
                         </TextField>
+                    )}
 
-                        <TextField
-                            select
-                            label="Consultation Type"
-                            value={appointment.type}
-                            onChange={(e) => handleChange("type", e.target.value)}
-                            error={errors.type}
-                            helperText={errors.type && "Consultation type is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            required
-                        >
-                            {consultationTypes.map((type) => (
-                                <MenuItem key={type} value={type}>
-                                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                    <TextField
+                        select
+                        label="Appointment Type"
+                        value={appointment.appointmentType}
+                        onChange={(e) => handleChange("appointmentType", e.target.value)}
+                        error={errors.appointmentType}
+                        helperText={errors.appointmentType && "Appointment type is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        required
+                    >
+                        {appointmentTypes.map((type) => (
+                            <MenuItem key={type} value={type}>
+                                {type}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
-                        <TextField
-                            select
-                            label="Status"
-                            value={appointment.status}
-                            onChange={(e) => handleChange("status", e.target.value)}
-                            error={errors.status}
-                            helperText={errors.status && "Status is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            required
-                        >
-                            {appointmentStatuses.map((status) => (
-                                <MenuItem key={status} value={status}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                    <TextField
+                        select
+                        label="Consultation Type"
+                        value={appointment.type}
+                        onChange={(e) => handleChange("type", e.target.value)}
+                        error={errors.type}
+                        helperText={errors.type && "Consultation type is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        required
+                    >
+                        {consultationTypes.map((type) => (
+                            <MenuItem key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
-                        <TextField
-                            type="date"
-                            label="Date"
-                            value={appointment.date}
-                            onChange={(e) => handleChange("date", e.target.value)}
-                            error={errors.date}
-                            helperText={errors.date && "Date is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            InputLabelProps={{ shrink: true }}
-                            required
-                        />
+                    <TextField
+                        select
+                        label="Status"
+                        value={appointment.status}
+                        onChange={(e) => handleChange("status", e.target.value)}
+                        error={errors.status}
+                        helperText={errors.status && "Status is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        required
+                    >
+                        {appointmentStatuses.map((status) => (
+                            <MenuItem key={status} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
-                        <TextField
-                            type="time"
-                            label="Time"
-                            value={appointment.time}
-                            onChange={(e) => handleChange("time", e.target.value)}
-                            error={errors.time}
-                            helperText={errors.time && "Time is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            InputLabelProps={{ shrink: true }}
-                            required
-                        />
+                    <TextField
+                        type="date"
+                        label="Date"
+                        value={appointment.date}
+                        onChange={(e) => handleChange("date", e.target.value)}
+                        error={errors.date}
+                        helperText={errors.date && "Date is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        InputLabelProps={{ shrink: true }}
+                        required
+                    />
 
-                        <TextField
-                            label="Reason"
-                            value={appointment.reason}
-                            onChange={(e) => handleChange("reason", e.target.value)}
-                            error={errors.reason}
-                            helperText={errors.reason && "Reason is required"}
-                            fullWidth
-                            sx={{ width: embedded ? "100%" : 500, marginY: 1 }}
-                            multiline
-                            rows={3}
-                            required
-                            onKeyDown={(e) => {
-                                if (e.key === ' ' || e.key === 'Spacebar') {
-                                    e.stopPropagation();
-                                }
-                            }}
-                        />
-                    </Box>
+                    <TextField
+                        type="time"
+                        label="Time"
+                        value={appointment.time}
+                        onChange={(e) => handleChange("time", e.target.value)}
+                        error={errors.time}
+                        helperText={errors.time && "Time is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        InputLabelProps={{ shrink: true }}
+                        required
+                    />
 
-                    <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                    <TextField
+                        label="Reason"
+                        value={appointment.reason}
+                        onChange={(e) => handleChange("reason", e.target.value)}
+                        error={errors.reason}
+                        helperText={errors.reason && "Reason is required"}
+                        sx={{ width: embedded ? "100%" : 500 }}
+                        multiline
+                        rows={3}
+                        required
+                        onKeyDown={(e) => {
+                            if (e.key === ' ' || e.key === 'Spacebar') {
+                                e.stopPropagation();
+                            }
+                        }}
+                    />
+
+                    <Box display="flex" justifyContent="center" gap={2} mt={2}>
                         {embedded && (
                             <Button
                                 variant="outlined"
