@@ -204,13 +204,12 @@ export const ScheduleCalendar: React.FC = () => {
     }
   }, [colorBy, orderedDoctorIds, orderedDepartments]);
 
-  const appointmentEvents = useMemo(() => {
-    if (!appointments || !Array.isArray(appointments)) {
-      console.log('No appointments available');
-      return [];
-    }
+ const appointmentEvents = useMemo<CalendarEvent[]>(() => {
+  if (!appointments || !Array.isArray(appointments)) return [];
+  const now = new Date();
 
-    return appointments.map((appointment: any) => {
+  return appointments
+    .map((appointment: any) => {
       let patient = null;
       let patientName = 'Loading...';
 
@@ -218,32 +217,22 @@ export const ScheduleCalendar: React.FC = () => {
         patient = normalizedPatientsData.find((p: any) => {
           const patientId = p._id || p.id;
           const appointmentPatientId = appointment.patientId;
-          
           if (!patientId || !appointmentPatientId) return false;
-          
-          if (patientId === appointmentPatientId) return true;
-          
-          if (String(patientId) === String(appointmentPatientId)) return true;
-          
-          if (String(patientId).toLowerCase() === String(appointmentPatientId).toLowerCase()) return true;
-          
-          return false;
+          return String(patientId).toLowerCase() === String(appointmentPatientId).toLowerCase();
         });
 
         if (patient) {
           patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unnamed Patient';
         } else {
-          console.warn(`Patient not found for appointment:`, {
-            appointmentId: appointment.id,
-            patientIdSearched: appointment.patientId,
-            samplePatientIds: normalizedPatientsData.slice(0, 3).map((p: any) => ({ _id: p._id, id: p.id }))
-          });
           patientName = 'Patient Not Found';
         }
       }
 
       const startDateTime = new Date(`${appointment.date}T${appointment.time}`);
       const endDateTime = new Date(startDateTime.getTime() + (parseInt(appointment.duration) || 30) * 60000);
+
+      // Skip expired appointments
+      if (endDateTime < now) return null;
 
       const eventColor = getAppointmentColor(appointment);
 
@@ -276,9 +265,10 @@ export const ScheduleCalendar: React.FC = () => {
           expectedColor: eventColor,
           colorMode: colorBy,
         }
-      };
-    });
-  }, [appointments, normalizedPatientsData, getAppointmentColor, refreshKey, colorBy]);
+      } as CalendarEvent;
+    })
+    .filter((e): e is CalendarEvent => e !== null); // remove nulls
+}, [appointments, normalizedPatientsData, getAppointmentColor, refreshKey, colorBy]);
 
   useEffect(() => {
     setEvents([...appointmentEvents, ...customEvents]);
