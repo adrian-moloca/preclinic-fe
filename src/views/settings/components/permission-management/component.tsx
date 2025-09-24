@@ -90,6 +90,7 @@ export const PermissionManagement: FC = () => {
     'Payroll': ['view_payroll', 'manage_payroll'],
     'Invoices': ['view_invoices', 'manage_invoices'],
     'File Manager': ['view_files', 'manage_files'],
+    'Online Consultations': ['view_consultations'],
   };
 
   const getPermissionLabel = useCallback((permission: string) => {

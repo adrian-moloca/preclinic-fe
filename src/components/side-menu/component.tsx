@@ -146,6 +146,14 @@ export const SideDrawer: FC = () => {
         { label: "All Reviews", icon: <ReviewsIcon />, route: "/reviews/all", permission: "view_reviews" },
       ]
     },
+    {
+      label: "Online Consultations",
+      icon: <VideoCallIcon />,
+      resource: "online_consultations",
+      subItems: [
+        { label: "Telemedicine", icon: <VideoCallIcon />, route: "/telemedicine", permission: "view_consultations" },
+      ]
+    }
   ];
 
   const staffManagementItems = [

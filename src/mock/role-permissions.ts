@@ -11,6 +11,7 @@ export const ROLE_PERMISSIONS = {
     'manage_users',
     'view_reports',
     'delete_data',
+    'view_consultations',
   ],
   'doctor': [
     'view_dashboard',
@@ -21,6 +22,7 @@ export const ROLE_PERMISSIONS = {
     'request_leaves',
     'view_reviews',
     'view_settings',
+    'view_consultations',
   ],
   'assistant': [
     'view_dashboard',

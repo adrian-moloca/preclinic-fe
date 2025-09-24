@@ -110,7 +110,7 @@ export const Routing: FC = () => {
         } />
 
         <Route path="/telemedicine" element={
-          <ProtectedRoute requiredPermission="access_telemedicine">
+          <ProtectedRoute requiredPermission="view_consultations">
             <TelemedicineDashboard />
           </ProtectedRoute>
         } />
@@ -383,10 +383,6 @@ export const Routing: FC = () => {
             <PayrollDetails />
           </ProtectedRoute>
         } />
-
-        {/* Doctor and Assistant routes */}
-
-        {/* Chat routes */}
 
         {/* Prescription routes */}
         <Route path="/prescriptions/all" element={

@@ -429,15 +429,18 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user, previousUserId]);
 
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!user) return false;
-    const rolePermissions = permissionConfig.rolePermissions[user.role] || [];
-    const userSpecific = permissionConfig.userPermissions[user.id] || { granted: [], denied: [] };
-    
-    if (userSpecific.denied.includes(permission)) return false;
-    if (userSpecific.granted.includes(permission)) return true;
-    return rolePermissions.includes(permission);
-  }, [user, permissionConfig]);
+const hasPermission = useCallback((permission: string): boolean => {
+  if (!user) return false;
+  
+  if (user.role === 'doctor_owner') return true;
+  
+  const rolePermissions = permissionConfig.rolePermissions[user.role] || [];
+  const userSpecific = permissionConfig.userPermissions[user.id] || { granted: [], denied: [] };
+  
+  if (userSpecific.denied.includes(permission)) return false;
+  if (userSpecific.granted.includes(permission)) return true;
+  return rolePermissions.includes(permission);
+}, [user, permissionConfig]);
 
   const canAccess = useCallback((resource: string): boolean => {
     if (!user) return false;
@@ -461,6 +464,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       'payroll': ['view_payroll', 'manage_payroll'],
       'invoices': ['view_invoices', 'manage_invoices'],
       'chat': ['view_chat'],
+      'online_consultations': ['view_consultations'],
     };
     const requiredPermissions = resourcePermissionMap[resource] || [];
     return requiredPermissions.some(permission => hasPermission(permission));

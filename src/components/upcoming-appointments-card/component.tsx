@@ -20,12 +20,18 @@ import {
   UpcomingAppointmentsWrapper,
   UserWrapper,
 } from "./styled";
+import { useNavigate } from "react-router-dom";
 
 export const UpcomingAppointmentsCard: FC = () => {
   const [period, setPeriod] = useState("Today");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { appointments } = useAppointmentsContext();
   const { patients } = usePatientsContext();
+  const navigate = useNavigate();
+
+  const handleSubmit = () => {
+    navigate(`/telemedicine/waiting/${nextAppointment?.id}`);
+  }
 
   const handleChatOpen = () => {
     setIsChatOpen(true);
@@ -252,6 +258,7 @@ export const UpcomingAppointmentsCard: FC = () => {
         <Button
           variant="contained"
           fullWidth
+          onClick={handleSubmit}
           sx={{
             mt: 1,
             textTransform: "none",
