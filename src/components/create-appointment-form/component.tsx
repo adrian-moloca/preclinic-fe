@@ -88,17 +88,17 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
 }) => {
     const { addAppointment } = useAppointmentsContext();
     const { user } = useAuthContext();
-    const { 
-        patients, 
-        getAllPatients, 
+    const {
+        patients,
+        getAllPatients,
         loading: patientsLoading,
-        hasLoaded: patientsHasLoaded 
+        hasLoaded: patientsHasLoaded
     } = usePatientsContext();
-    const { 
-        departments, 
-        fetchDepartments, 
+    const {
+        departments,
+        fetchDepartments,
         loading: departmentsLoading,
-        hasLoaded: departmentsHasLoaded 
+        hasLoaded: departmentsHasLoaded
     } = useDepartmentsContext();
     const {
         doctors,
@@ -121,11 +121,11 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     useEffect(() => {
         const fetchData = async () => {
             const promises = [];
-            
+
             if (!patientsHasLoaded) {
                 promises.push(getAllPatients());
             }
-            
+
             if (!departmentsHasLoaded) {
                 promises.push(fetchDepartments());
             }
@@ -137,14 +137,14 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
             if (!assistentsHasLoaded && userRole === 'assistant') {
                 promises.push(fetchAssistents());
             }
-            
+
             if (promises.length > 0) {
                 await Promise.all(promises);
             }
         };
-        
+
         fetchData();
-    }, [patientsHasLoaded, departmentsHasLoaded, doctorsHasLoaded, assistentsHasLoaded, 
+    }, [patientsHasLoaded, departmentsHasLoaded, doctorsHasLoaded, assistentsHasLoaded,
         getAllPatients, fetchDepartments, fetchDoctors, fetchAssistents, userRole]);
 
     const patientsArray: Patient[] = Array.isArray(patients)
@@ -193,8 +193,8 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         doctorId: userRole === 'doctor' ? getCurrentDoctorId() : "",
         appointmentType: "",
         type: "",
-        date: defaultDate || "", 
-        time: defaultTime || "", 
+        date: defaultDate || "",
+        time: defaultTime || "",
         reason: "",
         status: "scheduled",
         department: (userRole === 'doctor' || userRole === 'assistant') ? getCurrentUserDepartment() : undefined,
@@ -205,16 +205,16 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
         if (userRole === 'doctor') {
             const doctorId = getCurrentDoctorId();
             const department = getCurrentUserDepartment();
-            setAppointment(prev => ({ 
-                ...prev, 
+            setAppointment(prev => ({
+                ...prev,
                 doctorId,
-                department 
+                department
             }));
         } else if (userRole === 'assistant') {
             const department = getCurrentUserDepartment();
-            setAppointment(prev => ({ 
-                ...prev, 
-                department 
+            setAppointment(prev => ({
+                ...prev,
+                department
             }));
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,9 +244,9 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
     // Filter doctors by department
     const getFilteredDoctors = () => {
         if (!appointment.department) return [];
-        
-        return doctorsArray.filter(doctor => 
-            doctor.department === appointment.department?.id || 
+
+        return doctorsArray.filter(doctor =>
+            doctor.department === appointment.department?.id ||
             doctor.department === appointment.department?.name
         );
     };
@@ -306,7 +306,7 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                 status: appointment.status || "scheduled",
                 department: appointment.department,
             };
-            
+
             addAppointment(appointmentData as any);
         }
 
@@ -433,24 +433,24 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                                 required
                                 disabled={userRole === 'doctor_owner' && !appointment.department}
                             >
-                                {(userRole === 'doctor_owner' ? getFilteredDoctors() : 
-                                  doctorsArray.filter(d => d.department === getCurrentUserDepartment()?.id || 
-                                                          d.department === getCurrentUserDepartment()?.name))
+                                {(userRole === 'doctor_owner' ? getFilteredDoctors() :
+                                    doctorsArray.filter(d => d.department === getCurrentUserDepartment()?.id ||
+                                        d.department === getCurrentUserDepartment()?.name))
                                     .map((doctor) => (
-                                    <MenuItem key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
-                                        <Box display="flex" alignItems="center">
-                                            <Avatar
-                                                src={doctor.profileImg}
-                                                sx={{ width: 30, height: 30, mr: 2 }}
-                                            >
-                                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                                            </Avatar>
-                                            <Typography>
-                                                Dr. {doctor.firstName} {doctor.lastName}
-                                            </Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
+                                        <MenuItem key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
+                                            <Box display="flex" alignItems="center">
+                                                <Avatar
+                                                    src={doctor.profileImg}
+                                                    sx={{ width: 30, height: 30, mr: 2 }}
+                                                >
+                                                    {doctor.firstName?.[0]}{doctor.lastName?.[0]}
+                                                </Avatar>
+                                                <Typography>
+                                                    Dr. {doctor.firstName} {doctor.lastName}
+                                                </Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
                             </TextField>
                         )}
 
@@ -545,6 +545,11 @@ export const CreateAppointmentForm: FC<CreateAppointmentFormProps> = ({
                             multiline
                             rows={3}
                             required
+                            onKeyDown={(e) => {
+                                if (e.key === ' ' || e.key === 'Spacebar') {
+                                    e.stopPropagation();
+                                }
+                            }}
                         />
                     </Box>
 

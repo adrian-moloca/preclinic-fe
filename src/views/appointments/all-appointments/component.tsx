@@ -23,21 +23,22 @@ import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
 import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
+import { PatientsEntry } from "../../../providers/patients/types";
 
 export const AllAppointments: FC = () => {
-    const { 
-        appointments, 
-        deleteAppointment, 
-        fetchAppointments, 
+    const {
+        appointments,
+        deleteAppointment,
+        fetchAppointments,
         loading: appointmentsLoading,
-        hasLoaded: appointmentsHasLoaded 
+        hasLoaded: appointmentsHasLoaded
     } = useAppointmentsContext();
-    const { 
-        patients, 
-        getAllPatients, 
-        hasLoaded: patientsHasLoaded 
+    const {
+        patients,
+        getAllPatients,
+        hasLoaded: patientsHasLoaded
     } = usePatientsContext();
-    
+
     const allAppointments = useMemo(() => Object.values(appointments).flat(), [appointments]);
     const [filteredAppointments, setFilteredAppointments] = useState<AppointmentsEntry[]>(allAppointments);
     const [searchQuery, setSearchQuery] = useState("");
@@ -50,7 +51,35 @@ export const AllAppointments: FC = () => {
 
     const { addRecentItem } = useRecentItems();
 
-    const allPatients = Object.values(patients || {}).flat();
+    const allPatients = useMemo(() => {
+        if (!patients) return [];
+
+        if (Array.isArray(patients)) {
+            return patients as PatientsEntry[];
+        }
+
+        if (typeof patients === 'object') {
+            const values = Object.values(patients);
+            if (values.length > 0 && Array.isArray(values[0])) {
+                return values.flat() as PatientsEntry[];
+            }
+            return values as PatientsEntry[];
+        }
+
+        return [];
+    }, [patients]);
+
+// Add this debug code temporarily
+useEffect(() => {
+    const missingPatientIds = allAppointments
+        .map(a => a.patientId)
+        .filter(patientId => !allPatients.find(p => p._id === patientId));
+    
+    if (missingPatientIds.length > 0) {
+        console.log('⚠️ Appointments reference these missing patient IDs:', missingPatientIds);
+        console.log('Available patient IDs:', allPatients.map(p => p._id));
+    }
+}, [allAppointments, allPatients]);
 
     // Fetch appointments and patients when component mounts if not already loaded
     useEffect(() => {
@@ -59,15 +88,15 @@ export const AllAppointments: FC = () => {
             try {
                 // Fetch both appointments and patients as we need patient data for display
                 const promises = [];
-                
+
                 if (!appointmentsHasLoaded) {
                     promises.push(fetchAppointments());
                 }
-                
+
                 if (!patientsHasLoaded) {
                     promises.push(getAllPatients());
                 }
-                
+
                 if (promises.length > 0) {
                     await Promise.all(promises);
                 }
@@ -99,7 +128,15 @@ export const AllAppointments: FC = () => {
     };
 
     const getPatientName = useCallback((patientId: string) => {
-        const patient = allPatients.find(p => p._id === patientId);
+        if (!patientId) return 'Unknown Patient';
+
+        const patient = allPatients.find(p =>
+            p._id === patientId ||
+            (p as any).id === patientId ||
+            p._id === String(patientId) ||
+            (p as any).id === String(patientId)
+        );
+
         return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
     }, [allPatients]);
 
@@ -127,7 +164,7 @@ export const AllAppointments: FC = () => {
 
     const handleRowClick = (appointment: AppointmentsEntry) => {
         const patientName = getPatientName(appointment.patientId);
-        
+
         // NEW: Add to recent items
         addRecentItem({
             id: appointment.id ?? '',
@@ -141,7 +178,7 @@ export const AllAppointments: FC = () => {
                 type: appointment.type,
             },
         });
-        
+
         navigate(`/appointments/${appointment.id}`);
     };
 
@@ -250,10 +287,10 @@ export const AllAppointments: FC = () => {
             label: 'Status',
             minWidth: 120,
             render: (value: string) => (
-                <Chip 
-                    label={value} 
-                    size="small" 
-                    color={getStatusColor(value) as any} 
+                <Chip
+                    label={value}
+                    size="small"
+                    color={getStatusColor(value) as any}
                 />
             ),
         },
