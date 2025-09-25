@@ -22,6 +22,7 @@ import DeleteModal from "../../../components/delete-modal";
 import { Column, ReusableTable } from "../../../components/table/component";
 import { useRecentItems } from "../../../hooks/recent-items";
 import FavoriteButton from "../../../components/favorite-buttons";
+import { useClinicContext } from "../../../providers/clinic/context";
 
 export const AllDepartments: FC = () => {
   const { departments, deleteDepartment, fetchDepartments, hasLoaded } = useDepartmentsContext();
@@ -32,22 +33,25 @@ export const AllDepartments: FC = () => {
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const { selectedClinic } = useClinicContext();
   const { addRecentItem } = useRecentItems();
 
-  // Fetch departments when component mounts if not already loaded
   useEffect(() => {
-    if (!hasLoaded) {
+    if (selectedClinic?._id && !hasLoaded) {
       fetchDepartments();
     }
-  }, [hasLoaded, fetchDepartments]);
+  }, [selectedClinic, hasLoaded, fetchDepartments]);
 
   useEffect(() => {
     setFilteredDepartments(departments);
   }, [departments]);
 
   const handleRefresh = async () => {
-    await fetchDepartments(); // Force refresh
+    if (selectedClinic?._id) {
+      await fetchDepartments();
+    } else {
+      console.warn('No clinic selected');
+    }
   };
 
   const handleSearch = (query: string) => {
@@ -68,7 +72,6 @@ export const AllDepartments: FC = () => {
   };
 
   const handleRowClick = (department: IDepartments) => {
-    // NEW: Add to recent items
     addRecentItem({
       id: department.id ?? '',
       type: 'department',
@@ -233,7 +236,7 @@ export const AllDepartments: FC = () => {
       sortable: false,
       render: (_: unknown, row: IDepartments) => {
         const favoriteItem = {
-          id: row.id ?? '', // Ensure id is always a string
+          id: row.id ?? '',
           type: 'department' as const,
           title: row.name,
           subtitle: row.description || '',

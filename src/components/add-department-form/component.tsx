@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Paper, Typography } from "@mui/material";
 import { FC } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useDepartmentsContext } from '../../providers/departments/context';
-// import { IDepartments } from '../../providers/departments/types';
 import { useDoctorsContext } from '../../providers/doctor/context';
 import { useAssistentsContext } from '../../providers/assistent/context';
 import DepartmentBasicInfo from './components/basic-informations';
@@ -20,14 +19,22 @@ const initialFormData = {
 
 export const AddDepartmentForm: FC = () => {
   const { addDepartment } = useDepartmentsContext();
-  const { doctors } = useDoctorsContext();
-  const { assistents } = useAssistentsContext();
+  const { doctors, fetchDoctors, hasLoaded: doctorsLoaded } = useDoctorsContext();
+  const { assistents, fetchAssistents, hasLoaded: assistentsLoaded } = useAssistentsContext();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Form validation
+  useEffect(() => {
+    if (!doctorsLoaded) {
+      fetchDoctors();
+    }
+    if (!assistentsLoaded) {
+      fetchAssistents();
+    }
+  }, [doctorsLoaded, assistentsLoaded, fetchDoctors, fetchAssistents]);
+
   const isFormValid = useMemo(() => {
     const requiredFields = [
       formData.name.trim(),
@@ -82,12 +89,10 @@ export const AddDepartmentForm: FC = () => {
     if (validateForm()) {
       const newDepartment = {
         ...formData,
-        // createdAt: new Date().toISOString(),
       };
       
        addDepartment(newDepartment);
       
-      // Reset form
       setFormData(initialFormData);
       setErrors({});
       
@@ -101,7 +106,6 @@ export const AddDepartmentForm: FC = () => {
     navigate('/departments/all');
   };
 
-  // Prepare doctor options for autocomplete
   const doctorOptions = doctors.map(doctor => ({
     id: doctor.id ?? '',
     label: `Dr. ${doctor.firstName} ${doctor.lastName}`,
@@ -109,7 +113,6 @@ export const AddDepartmentForm: FC = () => {
     specialty: doctor.designation || 'General'
   }));
 
-  // Prepare assistant options for autocomplete
   const assistentOptions = assistents.map(assistant => ({
     id: assistant.id ?? '',
     label: `${assistant.firstName} ${assistant.lastName}`,
@@ -117,7 +120,6 @@ export const AddDepartmentForm: FC = () => {
     experience: `${assistant.yearsOfExperience} years`
   }));
 
-  // Get selected doctors and assistants for display
   const selectedDoctors = doctorOptions.filter(doctor => formData.doctors.includes(doctor.id));
   const selectedAssistents = assistentOptions.filter(assistant => formData.assistants.includes(assistant.id));
 

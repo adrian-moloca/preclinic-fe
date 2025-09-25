@@ -1,7 +1,8 @@
-import React, { FC, ReactNode, useState, useCallback, useRef } from 'react';
+import React, { FC, ReactNode, useState, useCallback, useRef, useEffect } from 'react';
 import { IDepartments } from './types';
 import { DepartmentsContext } from './context';
 import axios from 'axios';
+import { useClinicContext } from '../clinic/context';
 
 interface DepartmentState {
   departments: IDepartments[];
@@ -17,12 +18,12 @@ export const DepartmentsProvider: FC<{ children: ReactNode }> = ({ children }) =
     error: null,
     hasLoaded: false
   });
+  const { selectedClinic } = useClinicContext();
   
   const isFetchingRef = useRef(false);
 
-  // Helper function to map backend response to frontend format
   const mapDepartmentFromBackend = (dept: any): IDepartments => ({
-    id: dept._id || dept.id,  // Map _id to id
+    id: dept._id || dept.id,
     name: dept.name,
     description: dept.description,
     status: dept.status,
@@ -32,58 +33,91 @@ export const DepartmentsProvider: FC<{ children: ReactNode }> = ({ children }) =
     updatedAt: dept.updatedAt,
   });
 
-  // Stable function using useCallback with force parameter
-  const fetchDepartments = useCallback(async (force: boolean = false) => {
-    // Prevent duplicate fetches unless forced
-    if ((state.hasLoaded && !force) || isFetchingRef.current) {
-      return;
-    }
+ const fetchDepartments = useCallback(async (force: boolean = false) => {
+  if (!selectedClinic?._id) {
+    console.warn('No clinic selected, cannot fetch departments');
+    return;
+  }
+  
+  if ((state.hasLoaded && !force) || isFetchingRef.current) {
+    return;
+  }
+  
+  isFetchingRef.current = true;
+  setState(prev => ({ ...prev, loading: true, error: null }));
+  
+  try {
+    const clinicId = selectedClinic._id;
+    const response = await axios.get(`/api/department/getAllByClinic/${clinicId}`);
     
-    isFetchingRef.current = true;
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    const mappedDepartments = response.data.map((dept: any) => {
+      const mapped = mapDepartmentFromBackend(dept);
+      return mapped;
+    });
     
-    try {
-      const response = await axios.get('/api/department/getAll');
-      const mappedDepartments = response.data.map(mapDepartmentFromBackend);
-      setState({
-        departments: mappedDepartments,
-        loading: false,
-        error: null,
-        hasLoaded: true
-      });
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch departments',
-        hasLoaded: true // Mark as loaded even on error to prevent infinite retries
-      }));
-    } finally {
-      isFetchingRef.current = false;
-    }
-  }, [state.hasLoaded]);
+    setState({
+      departments: mappedDepartments,
+      loading: false,
+      error: null,
+      hasLoaded: true
+    });
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    setState(prev => ({
+      ...prev,
+      loading: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch departments',
+      hasLoaded: true
+    }));
+  } finally {
+    isFetchingRef.current = false;
+  }
+}, [state.hasLoaded, selectedClinic]);
+useEffect(() => {
+  setState({
+    departments: [],
+    loading: false,
+    error: null,
+    hasLoaded: false
+  });
+  
+  if (selectedClinic?._id) {
+    const timer = setTimeout(() => {
+      fetchDepartments(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }
+  //eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedClinic?._id]);
 
-  const addDepartment = useCallback(async (newDepartment: Omit<IDepartments, 'id'>) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      const response = await axios.post('/api/department/create', newDepartment);
-      const mappedDepartment = mapDepartmentFromBackend(response.data);
-      setState(prev => ({
-        ...prev,
-        departments: [...prev.departments, mappedDepartment],
-        loading: false,
-        error: null
-      }));
-      return mappedDepartment;
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to add department'
-      }));
-      throw error; // Re-throw to allow component-level handling
-    }
-  }, []);
+const addDepartment = useCallback(async (newDepartment: Omit<IDepartments, 'id'>) => {
+  setState(prev => ({ ...prev, loading: true, error: null }));
+  try {
+    const requestData = {
+      ...newDepartment,
+      clinic: selectedClinic?._id
+    };
+    
+    const response = await axios.post('/api/department/create', requestData);
+    const mappedDepartment = mapDepartmentFromBackend(response.data);
+    setState(prev => ({
+      ...prev,
+      departments: [...prev.departments, mappedDepartment],
+      loading: false,
+      error: null
+    }));
+    
+    return mappedDepartment;
+  } catch (error) {
+    setState(prev => ({
+      ...prev,
+      loading: false,
+      error: error instanceof Error ? error.message : 'Failed to add department'
+    }));
+    throw error;
+  }
+}, [selectedClinic]);
 
   const updateDepartment = useCallback(async (id: string, updatedDepartment: Partial<IDepartments>) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
@@ -135,24 +169,6 @@ export const DepartmentsProvider: FC<{ children: ReactNode }> = ({ children }) =
       hasLoaded: false
     });
   }, []);
-
-  // REMOVED automatic useEffect - data will be fetched when component needs it
-  // useEffect(() => {
-  //   let mounted = true;
-  //   
-  //   const loadDepartments = async () => {
-  //     if (mounted) {
-  //       await fetchDepartments();
-  //     }
-  //   };
-  //   
-  //   loadDepartments();
-  //   
-  //   return () => {
-  //     mounted = false;
-  //   };
-  //   //eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, []); // Empty dependency array - only runs once
 
   return (
     <DepartmentsContext.Provider
