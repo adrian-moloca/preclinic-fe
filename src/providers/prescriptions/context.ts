@@ -10,6 +10,9 @@ export const PrescriptionContext = createContext<PrescriptionsContextType>({
   deletePrescription: () => {},
   resetPrescription: () => {},
   setPrescription: () => {},
+  fetchPrescriptions: async () => {},
+  loading: false,
+  hasLoaded: false,
 });
 
 export const usePrescriptionContext = () => useContext(PrescriptionContext);

@@ -90,9 +90,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
       
       const transformedData = patientsArray.map((patient, index) => {
-        console.log(`Patient ${index} raw data:`, patient);
         const transformed = transformPatientData(patient);
-        console.log(`Patient ${index} transformed:`, transformed);
         return transformed;
       });
       
@@ -175,7 +173,7 @@ export const PatientsProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const response = await axios.put(`/api/patient/patch/${userId}`, patientData);
 
       if (response.status === 200) {
-        await getAllPatients(true); // Force refresh
+        await getAllPatients(true);
         return response.data._id || _id;
       } else {
         console.error("Unexpected response:", response);

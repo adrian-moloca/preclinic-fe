@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Button,
@@ -22,11 +22,18 @@ import { useWorkflowEvents } from "../../providers/workflow-automation/integrati
 
 export const PrescriptionForm: FC = () => {
   const { addPrescription } = usePrescriptionContext();
-  const { patients } = usePatientsContext();
+  const { patients, getAllPatients, hasLoaded: patientsLoaded } = usePatientsContext();
   const navigate = useNavigate();
   const { emitPrescriptionAdded } = useWorkflowEvents();
 
   const [safetyAlerts, setSafetyAlerts] = useState<MedicalAlert[]>([]);
+  
+  useEffect(() => {
+    if (!patientsLoaded) {
+      getAllPatients();
+    }
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientsLoaded]);
 
   const isFormValid = () => {
     return (
@@ -160,11 +167,14 @@ export const PrescriptionForm: FC = () => {
   const handleSubmit = () => {
     if (!validate()) return;
 
-    addPrescription(prescription);
+    // Exclude id from the request
+    const { id, ...prescriptionWithoutId } = prescription;
+    
+    addPrescription(prescriptionWithoutId);
 
     const patient = patientsArray.find(p => p._id === prescription.patientId);
     if (patient) {
-      emitPrescriptionAdded(prescription, patient);
+      emitPrescriptionAdded(prescriptionWithoutId, patient);
     }
     setPrescription({
       id: crypto.randomUUID(),
@@ -187,6 +197,17 @@ export const PrescriptionForm: FC = () => {
       },
     },
   };
+
+  // Memoize medication names to prevent recreation on every render
+  const medicationNames = useMemo(
+    () => prescription.medications.map(med => med.name).filter(Boolean),
+    [prescription.medications]
+  );
+
+  // Memoize the callback to prevent recreation
+  const handleAlertsChange = useCallback((alerts: MedicalAlert[]) => {
+    setSafetyAlerts(alerts);
+  }, []);
 
   const criticalAlerts = safetyAlerts.filter(alert => alert.severity === 'critical');
   const hasBlockingAlerts = criticalAlerts.length > 0;
@@ -278,8 +299,8 @@ export const PrescriptionForm: FC = () => {
           <Box sx={{ mb: 3, maxWidth: 1020, mx: 'auto' }}>
             <PrescriptionSafetyChecker
               patientId={prescription.patientId}
-              medications={prescription.medications.map(med => med.name).filter(Boolean)}
-              onAlertsChange={setSafetyAlerts}
+              medications={medicationNames}
+              onAlertsChange={handleAlertsChange}
             />
           </Box>
         )}

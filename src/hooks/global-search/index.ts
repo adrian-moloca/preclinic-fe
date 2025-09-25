@@ -138,7 +138,7 @@ export const useGlobalSearch = () => {
 
             if (searchFields.some(field => field?.includes(normalizedQuery))) {
               results.push({
-                id: prescriptionItem.id,
+                id: prescriptionItem.id ?? '',
                 type: 'prescription',
                 title: `Prescription - ${patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : 'Unknown Patient'}`,
                 subtitle: prescriptionItem.diagnosis || 'No diagnosis',

@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Button,
@@ -156,6 +156,7 @@ export const EditPrescriptionForm: FC = () => {
   const handleSubmit = () => {
     if (!form) return;
     if (!validate()) return;
+    if (!form.id) return;
 
     updatePrescription(form.id, form);
     navigate("/prescriptions/all");
@@ -169,6 +170,16 @@ export const EditPrescriptionForm: FC = () => {
       },
     },
   };
+
+  const medicationNames = useMemo(
+    () => form ? form.medications.map(med => med.name).filter(Boolean) : [],
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+    [form?.medications]
+  );
+
+  const handleAlertsChange = useCallback((alerts: MedicalAlert[]) => {
+    setSafetyAlerts(alerts);
+  }, []);
 
   const criticalAlerts = safetyAlerts.filter(alert => alert.severity === 'critical');
   const hasBlockingAlerts = criticalAlerts.length > 0;
@@ -186,7 +197,7 @@ export const EditPrescriptionForm: FC = () => {
         <TextField
           select
           label="Select Patient"
-          value={form.patientId}
+          value={form.patientId || ""}
           onChange={(e) => handleChange("patientId", e.target.value)}
           error={errors.patientId}
           helperText={errors.patientId && "Please select a patient"}
@@ -226,7 +237,7 @@ export const EditPrescriptionForm: FC = () => {
           label="Date Issued"
           type="date"
           InputLabelProps={{ shrink: true }}
-          value={form.dateIssued}
+          value={form.dateIssued || ""}
           onChange={(e) => handleChange("dateIssued", e.target.value)}
           error={errors.dateIssued}
           helperText={errors.dateIssued && "Date is required"}
@@ -236,7 +247,7 @@ export const EditPrescriptionForm: FC = () => {
 
         <TextField
           label="Diagnosis"
-          value={form.diagnosis}
+          value={form.diagnosis || ""}
           onChange={(e) => handleChange("diagnosis", e.target.value)}
           error={errors.diagnosis}
           helperText={errors.diagnosis && "Diagnosis is required"}
@@ -246,7 +257,7 @@ export const EditPrescriptionForm: FC = () => {
 
         <TextField
           label="Notes"
-          value={form.notes}
+          value={form.notes || ""}
           onChange={(e) => handleChange("notes", e.target.value)}
           error={errors.notes}
           helperText={errors.notes && "Notes are required"}
@@ -260,8 +271,8 @@ export const EditPrescriptionForm: FC = () => {
         <Box sx={{ mb: 3, maxWidth: 1020, mx: 'auto' }}>
           <PrescriptionSafetyChecker
             patientId={form.patientId}
-            medications={form.medications.map(med => med.name).filter(Boolean)}
-            onAlertsChange={setSafetyAlerts}
+            medications={medicationNames}
+            onAlertsChange={handleAlertsChange}
           />
         </Box>
       )}
@@ -283,7 +294,7 @@ export const EditPrescriptionForm: FC = () => {
           <PatentDetailsWrapper>
             <TextField
               label="Name"
-              value={med.name}
+              value={med.name || ""}
               onChange={(e) =>
                 handleMedicationChange(index, "name", e.target.value)
               }
@@ -294,7 +305,7 @@ export const EditPrescriptionForm: FC = () => {
             />
             <TextField
               label="Dosage"
-              value={med.dosage}
+              value={med.dosage || ""}
               onChange={(e) =>
                 handleMedicationChange(index, "dosage", e.target.value)
               }
@@ -305,7 +316,7 @@ export const EditPrescriptionForm: FC = () => {
             />
             <TextField
               label="Frequency"
-              value={med.frequency}
+              value={med.frequency || ""}
               onChange={(e) =>
                 handleMedicationChange(index, "frequency", e.target.value)
               }
@@ -316,7 +327,7 @@ export const EditPrescriptionForm: FC = () => {
             />
             <TextField
               label="Duration"
-              value={med.duration}
+              value={med.duration || ""}
               onChange={(e) =>
                 handleMedicationChange(index, "duration", e.target.value)
               }
@@ -327,7 +338,7 @@ export const EditPrescriptionForm: FC = () => {
             />
             <TextField
               label="Instructions"
-              value={med.instructions}
+              value={med.instructions || ""}
               onChange={(e) =>
                 handleMedicationChange(index, "instructions", e.target.value)
               }
@@ -342,7 +353,6 @@ export const EditPrescriptionForm: FC = () => {
         </Box>
       ))}
 
-      {/* UPDATED BUTTON SECTION WITH SAFETY ALERTS */}
       <Box display="flex" gap={2} justifyContent={"center"} flexDirection="column" alignItems="center">
         <Box display="flex" gap={2}>
           <Button variant="outlined" onClick={addMedication}>

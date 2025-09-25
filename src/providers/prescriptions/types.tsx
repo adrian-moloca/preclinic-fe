@@ -7,7 +7,7 @@ export interface Medication {
 }
 
 export interface Prescription {
-  id: string;
+  id?: string;
   patientId: string;
   dateIssued: string;
   diagnosis: string;
@@ -22,4 +22,7 @@ export interface PrescriptionsContextType {
   deletePrescription: (id: string) => void;
   resetPrescription: () => void;
   setPrescription: React.Dispatch<React.SetStateAction<Record<string, Prescription>>>;
+  fetchPrescriptions: (force?: boolean) => Promise<void>;
+  loading: boolean;
+  hasLoaded: boolean;
 }

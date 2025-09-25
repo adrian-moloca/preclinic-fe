@@ -19,7 +19,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [clinicsLoaded, setClinicsLoaded] = useState(false);
 
-  // MEMOIZE the filtered clinics to prevent recreation on every render
   const clinics = useMemo(() => {
     if (!user) return [];
     const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
@@ -54,13 +53,11 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
     }
   };
 
-  // Load all clinics from localStorage on mount - ONCE
   useEffect(() => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
         const parsedClinics = JSON.parse(stored);
-        console.log('Loaded clinics from localStorage:', parsedClinics);
         setAllClinics(parsedClinics);
       } catch {
         console.warn('Failed to parse clinics from localStorage');
@@ -69,55 +66,43 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
     setClinicsLoaded(true);
   }, []);
 
-  // Save all clinics to localStorage when they change
   useEffect(() => {
     if (clinicsLoaded && allClinics.length > 0) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allClinics));
     }
   }, [allClinics, clinicsLoaded]);
 
-  // Load selected clinic for the current user - IMPROVED LOGIC
   useEffect(() => {
-    // Don't proceed if clinics haven't been loaded yet or no user
     if (!clinicsLoaded || !user) {
       if (!user) setSelectedClinic(null);
       return;
     }
 
-    // If we already have a selected clinic for this user, don't reload
     if (selectedClinic && selectedClinic.ownerId) {
       const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
       if (possibleUserIds.includes(selectedClinic.ownerId)) {
-        return; // Already have the right clinic selected
+        return;
       }
     }
 
-    // Try to load from user-specific localStorage key
     const userSelectedKey = `${SELECTED_CLINIC_KEY}_${user.id}`;
     const selectedStored = localStorage.getItem(userSelectedKey);
     
     if (selectedStored) {
       try {
         const parsedClinic = JSON.parse(selectedStored);
-        console.log('Loading selected clinic from localStorage:', parsedClinic);
         
         const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
         
-        // Verify ownership
         if (possibleUserIds.includes(parsedClinic.ownerId)) {
-          // Find the clinic in allClinics to get the most up-to-date version
           const currentClinic = allClinics.find(c => (c as any)._id === (parsedClinic as any)._id);
           if (currentClinic) {
-            console.log('Setting selected clinic:', currentClinic);
             setSelectedClinic(currentClinic);
           } else {
-            // Use the stored version if not found in allClinics
-            console.log('Using stored version of selected clinic');
             setSelectedClinic(parsedClinic);
           }
           return;
         } else {
-          console.log('Stored clinic does not belong to current user');
           localStorage.removeItem(userSelectedKey);
         }
       } catch (e) {
@@ -126,7 +111,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       }
     }
 
-    // Try legacy selected clinic key (backward compatibility)
     const legacySelected = localStorage.getItem(SELECTED_CLINIC_KEY);
     if (legacySelected && !selectedStored) {
       try {
@@ -134,10 +118,9 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         const possibleUserIds = [user.id, (user as any)._id, (user as any).backendId, (user as any).tempId].filter(Boolean);
         
         if (possibleUserIds.includes(parsedClinic.ownerId)) {
-          console.log('Migrating legacy selected clinic to user-specific key');
           setSelectedClinic(parsedClinic);
           localStorage.setItem(userSelectedKey, JSON.stringify(parsedClinic));
-          localStorage.removeItem(SELECTED_CLINIC_KEY); // Clean up legacy key
+          localStorage.removeItem(SELECTED_CLINIC_KEY);
           return;
         }
       } catch {
@@ -145,21 +128,17 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       }
     }
 
-    // Auto-select first available clinic if user has clinics
     if (clinics.length > 0 && !selectedClinic) {
       const firstClinic = clinics[0];
-      console.log('Auto-selecting first available clinic:', firstClinic);
       setSelectedClinic(firstClinic);
       localStorage.setItem(userSelectedKey, JSON.stringify(firstClinic));
     }
     //eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, clinicsLoaded, allClinics]); // Removed selectedClinic from deps to prevent loops
+  }, [user, clinicsLoaded, allClinics]);
 
-  // Save selected clinic when it changes
   useEffect(() => {
     if (selectedClinic && user && clinicsLoaded) {
       const userSelectedKey = `${SELECTED_CLINIC_KEY}_${user.id}`;
-      console.log('Saving selected clinic to localStorage:', selectedClinic);
       localStorage.setItem(userSelectedKey, JSON.stringify(selectedClinic));
     }
   }, [selectedClinic, user, clinicsLoaded]);
@@ -197,8 +176,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         throw new Error('User not authenticated - please log in again');
       }
       
-      console.log('Found authenticated user:', currentUser.tempId);
-      
       const { settings, ...apiData } = clinicData as any;
       
       const requestData = {
@@ -206,11 +183,7 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         businessHours: apiData.businessHours || defaultBusinessHours,
       };
       
-      console.log('Sending to API:', requestData);
-      
       const response = await axios.post('/api/clinic/create', requestData);
-      
-      console.log('API Response:', response);
       
       let newClinic = response.data;
       
@@ -261,7 +234,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
       setLoading(false);
       setError(null);
       
-      console.log('Clinic created successfully:', newClinic);
       return newClinic;
       
     } catch (error) {
@@ -355,8 +327,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
         }
       }
       
-      console.log('Sending update to API:', updatePayload);
-
       const response = await axios.patch<Clinic>(`/api/clinic/patch/${id}`, updatePayload);
       let updatedClinic = response.data;
       
@@ -443,7 +413,6 @@ export const ClinicProvider: FC<ClinicProviderProps> = ({ children }) => {
     });
     
     if (clinic) {
-      console.log('Manually selecting clinic:', clinic);
       setSelectedClinic(clinic);
       if (user) {
         const userSelectedKey = `${SELECTED_CLINIC_KEY}_${user.id}`;
