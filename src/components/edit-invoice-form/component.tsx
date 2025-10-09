@@ -225,7 +225,7 @@ export const EditInvoiceForm: FC = () => {
             return;
         }
 
-        const product = productsArray.find(p => p.id === currentProduct.productId);
+        const product = productsArray.find(p => p._id === currentProduct.productId);
         if (!product) return;
 
         // Check if requested quantity is available
@@ -240,7 +240,7 @@ export const EditInvoiceForm: FC = () => {
         const amount = product.averagePrice * currentProduct.quantity; // Use averagePrice instead of unitPrice
         
         const invoiceProduct: InvoiceProduct = {
-            productId: product.id,
+            productId: product._id ?? '',
             productName: `${product.name} - ${product.manufacturer}`, // Enhanced product name
             unitCost: product.averagePrice, // Use averagePrice
             quantity: currentProduct.quantity,
@@ -270,7 +270,7 @@ export const EditInvoiceForm: FC = () => {
 
         // Validate product stock availability
         for (const selectedProduct of selectedProducts) {
-            const product = productsArray.find(p => p.id === selectedProduct.productId);
+            const product = productsArray.find(p => p._id === selectedProduct.productId);
             if (product && selectedProduct.quantity > product.totalQuantity) {
                 newErrors.products = `Insufficient stock for ${product.name}. Available: ${product.totalQuantity} ${product.unit}`;
                 break;

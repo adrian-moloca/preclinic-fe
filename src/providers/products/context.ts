@@ -1,29 +1,7 @@
 import { createContext, useContext } from "react";
 import { ProductsContextType } from "./types";
 
-export const ProductsContext = createContext<ProductsContextType>({
-    products: [],
-    stockBatches: [],
-    
-    addProduct: () => {},
-    updateProduct: () => {},
-    deleteProduct: () => {},
-    getProduct: () => undefined,
-    
-    addStockBatch: () => {},
-    updateStockBatch: () => {},
-    deleteStockBatch: () => {},
-    
-    getProductWithStock: () => undefined,
-    getAllProductsWithStock: () => [],
-    getTotalQuantityForProduct: () => 0,
-    getBatchesForProduct: () => [],
-    getExpiringBatches: () => [],
-    getLowStockProducts: () => [],
-    getProductsByType: () => [],
-    getProductsByCategory: () => [],
-    
-});
+export const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export const useProductsContext = () => {
     const context = useContext(ProductsContext);

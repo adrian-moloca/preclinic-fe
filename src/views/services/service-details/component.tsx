@@ -99,7 +99,7 @@ export const ServiceDetails: FC = () => {
   const getServiceProducts = () => {
     if (!service || !service.products.length) return [];
     return service.products
-      .map(productId => products.find(product => product.id === productId))
+      .map(productId => products.find(product => product._id === productId))
       .filter((product): product is MedicalProduct => product !== undefined);
   };
 

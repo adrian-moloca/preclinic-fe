@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -24,25 +24,78 @@ import { useNavigate } from 'react-router-dom';
 import SearchBar from '../../../components/search-bar';
 import DeleteModal from '../../../components/delete-modal';
 import { Column, ReusableTable } from '../../../components/table/component';
+import { useClinicContext } from '../../../providers/clinic/context';
 
 export const AllProducts: React.FC = () => {
   const navigate = useNavigate();
-  const { getAllProductsWithStock, deleteProduct } = useProductsContext();
+  const { selectedClinic } = useClinicContext();
+  const { 
+    getAllProductsWithStock, 
+    deleteProduct,
+    getAllProductsByClinic,
+    getAllBatchesStockByClinic,
+    products,
+    stockBatches 
+  } = useProductsContext();
   
-  // Local state
   const [searchQuery, setSearchQuery] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithStock | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [filteredServices, setFilteredServices] = useState<ProductWithStock[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Only fetch if there's a selected clinic
+      if (!selectedClinic?._id) {
+        console.warn('No clinic selected, skipping data fetch');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          getAllProductsByClinic(),
+          getAllBatchesStockByClinic()
+        ]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClinic?._id]); // Only depend on selectedClinic._id
+
+  // Add debugging to see what data we have
+  useEffect(() => {
+    console.log('Products from context:', products);
+    console.log('Stock batches from context:', stockBatches);
+    
+    // Check if there's a mismatch in IDs
+    if (products.length > 0 && stockBatches.length > 0) {
+      console.log('Sample product ID:', products[0]._id);
+      console.log('Sample batch productId:', stockBatches[0].productId);
+      console.log('Do they match?', products[0]._id === stockBatches[0].productId);
+    }
+  }, [products, stockBatches]);
 
   const productList = useMemo(() => {
     const products = getAllProductsWithStock();
+    console.log('Products with stock calculated:', products);
     return products;
   }, [getAllProductsWithStock]);
 
-   const handleSearch = (query: string) => {
+  useEffect(() => {
+    setFilteredServices(productList);
+  }, [productList]);
+
+  const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query) {
       setFilteredServices(productList);
@@ -216,19 +269,19 @@ export const AllProducts: React.FC = () => {
   };
 
   const handleRowClick = (row: ProductWithStock) => {
-    navigate(`/products/${row.id}`);
+    navigate(`/products/${row._id}`);
   };
 
   const handleEditProduct = () => {
     if (selectedProduct) {
-      navigate(`/products/edit/${selectedProduct.id}`);
+      navigate(`/products/edit/${selectedProduct._id}`);
     }
     handleMenuClose();
   };
 
   const handleViewDetails = () => {
     if (selectedProduct) {
-      navigate(`/products/${selectedProduct.id}`);
+      navigate(`/products/${selectedProduct._id}`);
     }
     handleMenuClose();
   };
@@ -245,7 +298,11 @@ export const AllProducts: React.FC = () => {
 
     setIsDeleting(true);
     try {
-      deleteProduct(selectedProduct.id);
+       deleteProduct(selectedProduct._id ?? '');
+      await Promise.all([
+        getAllProductsByClinic(),
+        getAllBatchesStockByClinic()
+      ]);
       setDeleteModalOpen(false);
       setSelectedProduct(null);
     } catch (error) {
@@ -259,6 +316,24 @@ export const AllProducts: React.FC = () => {
     setDeleteModalOpen(false);
     setSelectedProduct(null);
   };
+
+  if (!selectedClinic) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Alert severity="warning">
+          Please select a clinic to view products.
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Typography>Loading products...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>

@@ -283,7 +283,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
             return;
         }
 
-        const selectedProductData = productsArray.find(p => p.id === currentProduct.productId);
+        const selectedProductData = productsArray.find(p => p._id === currentProduct.productId);
         if (!selectedProductData) return;
 
         // Check if requested quantity is available
@@ -315,7 +315,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
             setSelectedProducts(updatedProducts);
         } else {
             const newProduct: InvoiceProduct = {
-                productId: selectedProductData.id,
+                productId: selectedProductData._id ?? '',
                 productName: `${selectedProductData.name} - ${selectedProductData.manufacturer}`, // Enhanced product name
                 unitCost: selectedProductData.averagePrice, // Use averagePrice instead of unitPrice
                 quantity: currentProduct.quantity,
@@ -356,7 +356,7 @@ export const AddInvoiceForm: FC<AddInvoiceFormProps> = ({
 
         // Validate product stock availability
         for (const selectedProduct of selectedProducts) {
-            const product = productsArray.find(p => p.id === selectedProduct.productId);
+            const product = productsArray.find(p => p._id === selectedProduct.productId);
             if (product && selectedProduct.quantity > product.totalQuantity) {
                 newErrors.products = `Insufficient stock for ${product.name}. Available: ${product.totalQuantity} ${product.unit}`;
                 break;

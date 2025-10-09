@@ -42,7 +42,7 @@ export const ProductDetails: FC = () => {
       
       const productsWithStock = getAllProductsWithStock();
       
-      const foundProduct = productsWithStock.find(p => p.id === id);
+      const foundProduct = productsWithStock.find(p => p._id === id);
       
       if (foundProduct) {
         setProduct(foundProduct);
@@ -56,7 +56,7 @@ export const ProductDetails: FC = () => {
   }, [id, getAllProductsWithStock]);
 
   const handleBack = () => {
-    navigate('/products');
+    navigate('/products/all');
   };
 
   const handleEdit = () => {
@@ -73,7 +73,7 @@ export const ProductDetails: FC = () => {
     setIsDeleting(true);
     try {
       deleteProduct(id);
-      navigate('/products');
+      navigate('/products/all');
     } catch (error) {
       console.error('Error deleting product:', error);
     } finally {
@@ -276,7 +276,7 @@ export const ProductDetails: FC = () => {
                   Created
                 </Typography>
                 <Typography variant="body1">
-                  {formatDate(product.createdAt)}
+                  {formatDate(product.createdAt ?? '')}
                 </Typography>
               </Box>
             </Grid>
@@ -418,7 +418,7 @@ export const ProductDetails: FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 {product.batches.map((batch) => (
-                  <Grid key={batch.id}>
+                  <Grid key={batch._id}>
                     <Card variant="outlined">
                       <CardContent sx={{ p: 2 }}>
                         <Typography variant="subtitle2" fontWeight="bold">

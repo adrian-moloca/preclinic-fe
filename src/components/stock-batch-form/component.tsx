@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { v4 as uuidv4 } from 'uuid';
 import { StockBatch, BatchStatus } from '../../providers/products/types';
 import { useProductsContext } from '../../providers/products';
 
@@ -66,7 +65,7 @@ export const StockBatchForm: FC<StockBatchFormProps> = ({
     setIsSubmitting(true);
     try {
       const newBatch: StockBatch = {
-        id: uuidv4(),
+        // _id: uuidv4(),
         productId,
         batchNumber: formData.batchNumber,
         expiryDate: formData.expiryDate,

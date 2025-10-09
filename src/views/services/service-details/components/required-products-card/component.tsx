@@ -32,7 +32,7 @@ export const RequiredProductsCard: FC<RequiredProductsCardProps> = ({
         
         <Grid container spacing={2} sx={{ height: "100%", padding: 2 }}>
           {serviceProducts.map((product, index) => (
-            <Grid key={product?.id || index}>
+            <Grid key={product?._id || index}>
               <Paper elevation={1} sx={{ p: 2, height: '100%', width: "200px" }}>
                 <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                   {product?.name}

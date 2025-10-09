@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { 
   Product, 
   StockBatch, 
@@ -6,166 +6,156 @@ import {
   ProductsContextType, 
   ProductType,
 } from './types';
+import axios from 'axios';
+import { useClinicContext } from '../clinic/context';
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
-
-const PRODUCTS_LOCAL_STORAGE_KEY = 'preclinic_products';
-const STOCK_BATCHES_LOCAL_STORAGE_KEY = 'preclinic_stock_batches';
-
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'prod_001',
-    name: 'Paracetamol',
-    type: 'medication',
-    category: 'Analgesic',
-    manufacturer: 'Pharma Corp',
-    activeIngredient: 'Paracetamol',
-    dosageForm: 'tablet',
-    strength: '500mg',
-    unit: 'tablets',
-    description: 'Pain reliever and fever reducer',
-    prescriptionRequired: false,
-    storageConditions: 'Store in cool, dry place',
-    barcode: '123456789012',
-    supplierInfo: {
-      name: 'Medical Supply Co',
-      contactNumber: '0123456789',
-      email: 'orders@medsupply.com',
-      address: '123 Medical St, City'
-    },
-    status: 'active',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z'
-  }
-];
-
-const MOCK_STOCK_BATCHES: StockBatch[] = [
-  {
-    id: 'batch_001',
-    productId: 'prod_001',
-    batchNumber: 'PAR2024001',
-    expiryDate: '2025-12-31',
-    quantity: 100,
-    unitPrice: 0.25,
-    receivedDate: '2024-01-15T00:00:00.000Z',
-    status: 'active',
-    createdAt: '2024-01-15T00:00:00.000Z',
-    updatedAt: '2024-01-15T00:00:00.000Z'
-  },
-  {
-    id: 'batch_002',
-    productId: 'prod_001',
-    batchNumber: 'PAR2024002',
-    expiryDate: '2024-06-30',
-    quantity: 50,
-    unitPrice: 0.23,
-    receivedDate: '2024-02-01T00:00:00.000Z',
-    status: 'active',
-    createdAt: '2024-02-01T00:00:00.000Z',
-    updatedAt: '2024-02-01T00:00:00.000Z'
-  }
-];
 
 export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [stockBatches, setStockBatches] = useState<StockBatch[]>([]);
+  const { selectedClinic } = useClinicContext();
 
-  useEffect(() => {
+  const addProduct = async (product: Product) => {
     try {
-      const storedProducts = localStorage.getItem(PRODUCTS_LOCAL_STORAGE_KEY);
-      const storedBatches = localStorage.getItem(STOCK_BATCHES_LOCAL_STORAGE_KEY);
-
-      let loadedProducts = [...MOCK_PRODUCTS];
-      let loadedBatches = [...MOCK_STOCK_BATCHES];
-
-      if (storedProducts) {
-        const parsedProducts = JSON.parse(storedProducts);
-        if (Array.isArray(parsedProducts)) {
-          const userProducts = parsedProducts.filter(p => !MOCK_PRODUCTS.find(mp => mp.id === p.id));
-          loadedProducts = [...MOCK_PRODUCTS, ...userProducts];
-        }
-      }
-
-      if (storedBatches) {
-        const parsedBatches = JSON.parse(storedBatches);
-        if (Array.isArray(parsedBatches)) {
-          const userBatches = parsedBatches.filter(b => !MOCK_STOCK_BATCHES.find(mb => mb.id === b.id));
-          loadedBatches = [...MOCK_STOCK_BATCHES, ...userBatches];
-        }
-      }
-
-      setProducts(loadedProducts);
-      setStockBatches(loadedBatches);
+      const response = await axios.post('/api/product/create', product);
+      const newProduct = response.data;
+      setProducts(prev => [...prev, newProduct]);
     } catch (error) {
-      setProducts(MOCK_PRODUCTS);
-      setStockBatches(MOCK_STOCK_BATCHES);
+      console.error('Failed to add product:', error);
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    if (products.length > 0) {
-      try {
-        const userProducts = products.filter(p => !MOCK_PRODUCTS.find(mp => mp.id === p.id));
-        localStorage.setItem(PRODUCTS_LOCAL_STORAGE_KEY, JSON.stringify(userProducts));
-      } catch (error) {
-        // Ignore localStorage errors
+  const updateProduct = async (id: string, updatedProduct: Partial<Product>) => {
+    try {
+      const response = await axios.put(`/api/product/patch/${id}`, updatedProduct);
+      const updated = response.data;
+      setProducts(prev => prev.map(product => product._id === id ? updated : product));
+    } catch (error) {
+      console.error('Failed to update product:', error);
+    }
+  }
+
+  const deleteProduct = async (id: string) => {
+    try {
+      const response = await axios.delete(`/api/product/delete/${id}`);
+      const deletedProduct = response.data;
+      setProducts(prev => prev.filter(product => product._id !== deletedProduct._id));
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  }
+
+  const getAllProductsByClinic = async () => {
+    try {
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.warn('No clinic selected, cannot fetch products');
+        setProducts([]);
+        return;
       }
+      
+      const response = await axios.get(`/api/product/getAllByClinic/${clinicId}`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
     }
-  }, [products]);
+  }
 
-  useEffect(() => {
-    if (stockBatches.length > 0) {
-      try {
-        const userBatches = stockBatches.filter(b => !MOCK_STOCK_BATCHES.find(mb => mb.id === b.id));
-        localStorage.setItem(STOCK_BATCHES_LOCAL_STORAGE_KEY, JSON.stringify(userBatches));
-      } catch (error) {
-        // Ignore localStorage errors
+  const addStockBatch = async (batch: StockBatch) => {
+    try {
+      const batchWithClinic = {
+        ...batch,
+        clinicId: selectedClinic?._id,
+        productId: batch.productId  
+      };
+      
+      const response = await axios.post('/api/stockBatch/create', batchWithClinic);
+      const newBatch = response.data;
+      setStockBatches(prev => [...prev, newBatch]);
+    } catch (error) {
+      console.error('Failed to add stock batch:', error);
+      throw error;
+    }
+  }
+
+  const addProductWithBatch = async (
+    productData: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>, 
+    batchData: Omit<StockBatch, 'productId' | 'clinicId' | '_id' | 'createdAt' | 'updatedAt'>
+  ) => {
+    try {
+      // Step 1: Create the product with clinic ID
+      const productWithClinic = {
+        ...productData,
+        clinic: selectedClinic?._id
+      };
+      
+      const productResponse = await axios.post('/api/product/create', productWithClinic);
+      const newProduct = productResponse.data;
+      
+      const batchWithIds = {
+        ...batchData,
+        productId: newProduct._id,
+        clinicId: selectedClinic?._id
+      };
+      
+      const batchResponse = await axios.post('/api/stockBatch/create', batchWithIds);
+      const newBatch = batchResponse.data;
+      
+      setProducts(prev => [...prev, newProduct]);
+      setStockBatches(prev => [...prev, newBatch]);
+      
+      return { product: newProduct, batch: newBatch };
+      
+    } catch (error) {
+      console.error('Failed to add product with batch:', error);
+      throw error;
+    }
+  };
+
+  const getAllBatchesStockByClinic = async () => {
+    try {
+      const clinicId = selectedClinic?._id;
+      
+      if (!clinicId) {
+        console.warn('No clinic selected, cannot fetch stock batches');
+        setStockBatches([]);
+        return;
       }
+      
+      const response = await axios.get(`/api/stockBatch/getAllByClinic/${clinicId}`);
+      setStockBatches(response.data);
+    } catch (error) {
+      console.error('Failed to fetch stock batches:', error);
     }
-  }, [stockBatches]);
+  }
 
-  const addProduct = useCallback((product: Product) => {
-    setProducts(prev => [...prev, product]);
-  }, []);
+const updateStockBatch = async (id: string, updatedBatch: Partial<StockBatch>) => {
+  try {
+    // Check if ID is valid before making the request
+    if (!id) {
+      console.error('Cannot update batch: No ID provided');
+      return;
+    }
+    
+    const response = await axios.put(`/api/stockBatch/patch/${id}`, updatedBatch);
+    const updated = response.data;
+    setStockBatches(prev => prev.map(batch => batch._id === id ? updated : batch));
+  } catch (error) {
+    console.error('Failed to update stock batch:', error);
+  }
+}
 
-  const updateProduct = useCallback((id: string, productUpdate: Partial<Product>) => {
-    setProducts(prev =>
-      prev.map(product =>
-        product.id === id
-          ? { ...product, ...productUpdate, updatedAt: new Date().toISOString() }
-          : product
-      )
-    );
-  }, []);
-
-  const deleteProduct = useCallback((id: string) => {
-    if (MOCK_PRODUCTS.some(mp => mp.id === id)) return;
-    setProducts(prev => prev.filter(product => product.id !== id));
-    setStockBatches(prev => prev.filter(batch => batch.productId !== id));
-  }, []);
-
-  const getProduct = useCallback((id: string): Product | undefined => {
-    return products.find(product => product.id === id);
-  }, [products]);
-
-  const addStockBatch = useCallback((batch: StockBatch) => {
-    setStockBatches(prev => [...prev, batch]);
-  }, []);
-
-  const updateStockBatch = useCallback((id: string, batchUpdate: Partial<StockBatch>) => {
-    setStockBatches(prev =>
-      prev.map(batch =>
-        batch.id === id
-          ? { ...batch, ...batchUpdate, updatedAt: new Date().toISOString() }
-          : batch
-      )
-    );
-  }, []);
-
-  const deleteStockBatch = useCallback((id: string) => {
-    if (MOCK_STOCK_BATCHES.some(mb => mb.id === id)) return;
-    setStockBatches(prev => prev.filter(batch => batch.id !== id));
-  }, []);
+  const deleteStockBatch = async (id: string) => {
+    try {
+      const response = await axios.delete(`/api/stockBatch/delete/${id}`);
+      const deletedBatch = response.data;
+      setStockBatches(prev => prev.filter(batch => batch._id !== deletedBatch.id));
+    } catch (error) {
+      console.error('Failed to delete stock batch:', error);
+    }
+  }
 
   const getBatchesForProduct = useCallback((productId: string): StockBatch[] => {
     return stockBatches.filter(batch => batch.productId === productId);
@@ -178,7 +168,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [getBatchesForProduct]);
 
   const getProductWithStock = useCallback((productId: string): ProductWithStock | undefined => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find(p => p._id === productId);
     if (!product) return undefined;
 
     const batches = getBatchesForProduct(productId);
@@ -207,7 +197,7 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const getAllProductsWithStock = useCallback((): ProductWithStock[] => {
     return products.map(product => {
-      const productWithStock = getProductWithStock(product.id);
+      const productWithStock = getProductWithStock(product._id ?? '');
       return productWithStock;
     }).filter(Boolean) as ProductWithStock[];
   }, [products, getProductWithStock]);
@@ -240,10 +230,11 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
     addProduct,
     updateProduct,
     deleteProduct,
-    getProduct,
     addStockBatch,
     updateStockBatch,
+    getAllProductsByClinic,
     deleteStockBatch,
+    addProductWithBatch,
     getProductWithStock,
     getAllProductsWithStock,
     getTotalQuantityForProduct,
@@ -251,7 +242,8 @@ export const ProductsProvider: React.FC<{ children: ReactNode }> = ({ children }
     getExpiringBatches,
     getLowStockProducts,
     getProductsByType,
-    getProductsByCategory
+    getProductsByCategory,
+    getAllBatchesStockByClinic
   };
 
   return (

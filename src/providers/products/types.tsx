@@ -1,5 +1,6 @@
 export interface Product {
-  id: string;
+  _id?: string;
+  clinic: string;
   name: string;
   type: ProductType;
   category: string;
@@ -14,13 +15,14 @@ export interface Product {
   barcode?: string;
   supplierInfo: SupplierInfo;
   status: ProductStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+
 }
 
 export interface StockBatch {
-  id: string;
-  productId: string;
+  _id?: string;
+  productId?: string;
   batchNumber: string;
   expiryDate: string;
   quantity: number;
@@ -92,7 +94,7 @@ export interface ProductsContextType {
   addProduct: (product: Product) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
-  getProduct: (id: string) => Product | undefined;
+  getAllProductsByClinic: () => Promise<void>;
   
   addStockBatch: (batch: StockBatch) => void;
   updateStockBatch: (id: string, batch: Partial<StockBatch>) => void;
@@ -106,6 +108,12 @@ export interface ProductsContextType {
   getLowStockProducts: (threshold?: number) => ProductWithStock[];
   getProductsByType: (type: ProductType) => ProductWithStock[];
   getProductsByCategory: (category: string) => ProductWithStock[];
+  getAllBatchesStockByClinic: () => Promise<void>;
+
+    addProductWithBatch: (
+    productData: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>,
+    batchData: Omit<StockBatch, 'productId' | 'clinicId' | '_id' | 'createdAt' | 'updatedAt'>
+  ) => Promise<{ product: Product; batch: StockBatch }>;
 }
 
 export interface MedicalProduct extends Product {

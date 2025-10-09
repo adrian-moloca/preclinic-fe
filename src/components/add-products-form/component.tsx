@@ -6,15 +6,15 @@ import {
   Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
 import ProductBasicInfo from './components/basic-info';
 import MedicationDetails from './components/medications-details';
 import InventoryPricing from './components/inventory-component';
 import SupplierInfo from './components/supplier-info';
 import AdditionalInfo from './components/additional-info';
 import ProductFormActions from './components/form-actions';
-import { DosageForm, MeasurementUnit, Product, ProductType, StockBatch } from '../../providers/products/types';
+import { DosageForm, MeasurementUnit, ProductType } from '../../providers/products/types';
 import { useProductsContext } from '../../providers/products/provider';
+import { useClinicContext } from '../../providers/clinic/context';
 
 interface FormData {
   name: string;
@@ -44,7 +44,8 @@ interface FormData {
 
 export const CreateProductForm: React.FC = () => {
   const navigate = useNavigate();
-  const { addProduct, addStockBatch, getAllProductsWithStock } = useProductsContext();
+  const { selectedClinic } = useClinicContext();
+  const { addProductWithBatch, getAllProductsWithStock } = useProductsContext();
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -129,10 +130,12 @@ export const CreateProductForm: React.FC = () => {
     setError(null);
 
     try {
-      const productId = uuidv4();
-      const newProduct: Product = {
-        id: productId,
+      const clinicId = selectedClinic?._id || 'default-clinic-id';
+      
+      // Prepare product data
+      const productData = {
         name: formData.name.trim(),
+        clinic: clinicId,
         type: formData.type,
         category: formData.category.trim(),
         manufacturer: formData.manufacturer.trim(),
@@ -150,28 +153,21 @@ export const CreateProductForm: React.FC = () => {
           email: formData.supplierInfo.email.trim(),
           address: formData.supplierInfo.address.trim()
         },
-        status: formData.status,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        status: formData.status
       };
 
-      addProduct(newProduct);
-
-      const batchId = uuidv4();
-      const newBatch: StockBatch = {
-        id: batchId,
-        productId,
+      // Prepare batch data
+      const batchData = {
         batchNumber: formData.batchNumber.trim(),
         expiryDate: formData.expiryDate,
         quantity: formData.quantity,
         unitPrice: formData.unitPrice,
         receivedDate: new Date().toISOString(),
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        status: 'active' as const
       };
 
-      addStockBatch(newBatch);
+      // Use the combined function
+      await addProductWithBatch(productData, batchData);
 
       setTimeout(() => {
         getAllProductsWithStock();

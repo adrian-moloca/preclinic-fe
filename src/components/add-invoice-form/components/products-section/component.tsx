@@ -77,7 +77,7 @@ export const ProductsSection: FC<ProductsSectionProps> = ({
                                 {productsArray
                                     .filter(product => product.totalQuantity > 0)
                                     .map((product) => (
-                                    <MenuItem key={product.id} value={product.id}>
+                                    <MenuItem key={product._id} value={product._id}>
                                         {product.name} - {product.manufacturer} (Stock: {product.totalQuantity} {product.unit})
                                     </MenuItem>
                                 ))}

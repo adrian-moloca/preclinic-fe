@@ -48,7 +48,15 @@ interface FormData {
 export const EditProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getProduct, getBatchesForProduct, updateProduct, updateStockBatch, getAllProductsWithStock } = useProductsContext();
+  const { 
+    products, 
+    getBatchesForProduct, 
+    updateProduct, 
+    updateStockBatch, 
+    getAllProductsWithStock,
+    getAllProductsByClinic,
+    getAllBatchesStockByClinic 
+  } = useProductsContext();
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -84,51 +92,73 @@ export const EditProductForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [productNotFound, setProductNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dataFetched, setDataFetched] = useState(false);
 
+  // First effect: Fetch products and batches once
   useEffect(() => {
-    if (id) {
-      const product = getProduct(id);
-      const batches = getBatchesForProduct(id);
-
-      if (product) {
-        setOriginalProduct(product);
-        setOriginalBatches(batches);
-
-        const activeBatches = batches.filter(b => b.status === 'active');
-        const latestBatch = activeBatches.length > 0 
-          ? activeBatches.sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())[0]
-          : null;
-
-        setPrimaryBatch(latestBatch);
-
-        setFormData({
-          name: product.name,
-          type: product.type,
-          category: product.category,
-          manufacturer: product.manufacturer,
-          activeIngredient: product.activeIngredient || '',
-          dosageForm: product.dosageForm || 'tablet',
-          strength: product.strength || '',
-          unit: product.unit,
-          description: product.description,
-          prescriptionRequired: product.prescriptionRequired,
-          storageConditions: product.storageConditions,
-          barcode: product.barcode || '',
-          supplierInfo: product.supplierInfo,
-          status: product.status,
-          batchNumber: latestBatch?.batchNumber || '',
-          expiryDate: latestBatch?.expiryDate.split('T')[0] || '',
-          quantity: latestBatch?.quantity || 0,
-          unitPrice: latestBatch?.unitPrice || 0
-        });
-
-        setIsLoading(false);
-      } else {
-        setProductNotFound(true);
-        setIsLoading(false);
-      }
+    if (!dataFetched) {
+      const fetchData = async () => {
+        try {
+          await Promise.all([
+            getAllProductsByClinic(),
+            getAllBatchesStockByClinic()
+          ]);
+          setDataFetched(true);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          setIsLoading(false);
+        }
+      };
+      fetchData();
     }
-  }, [id, getProduct, getBatchesForProduct]);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataFetched]); // Only depend on dataFetched flag
+
+  // Second effect: Load product data when products are available
+  useEffect(() => {
+    if (!id || !dataFetched || products.length === 0) return;
+
+    const product = products.find(p => p._id === id);
+    const batches = getBatchesForProduct(id);
+
+    if (product) {
+      setOriginalProduct(product);
+      setOriginalBatches(batches);
+
+      const activeBatches = batches.filter(b => b.status === 'active');
+      const latestBatch = activeBatches.length > 0 
+        ? activeBatches.sort((a, b) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime())[0]
+        : null;
+
+      setPrimaryBatch(latestBatch);
+
+      setFormData({
+        name: product.name,
+        type: product.type,
+        category: product.category,
+        manufacturer: product.manufacturer,
+        activeIngredient: product.activeIngredient || '',
+        dosageForm: product.dosageForm || 'tablet',
+        strength: product.strength || '',
+        unit: product.unit,
+        description: product.description,
+        prescriptionRequired: product.prescriptionRequired,
+        storageConditions: product.storageConditions,
+        barcode: product.barcode || '',
+        supplierInfo: product.supplierInfo,
+        status: product.status,
+        batchNumber: latestBatch?.batchNumber || '',
+        expiryDate: latestBatch?.expiryDate.split('T')[0] || '',
+        quantity: latestBatch?.quantity || 0,
+        unitPrice: latestBatch?.unitPrice || 0
+      });
+
+      setIsLoading(false);
+    } else {
+      setProductNotFound(true);
+      setIsLoading(false);
+    }
+  }, [id, products, dataFetched, getBatchesForProduct]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -204,10 +234,10 @@ export const EditProductForm: React.FC = () => {
           address: formData.supplierInfo.address.trim()
         },
         status: formData.status,
-        updatedAt: new Date().toISOString()
+        // updatedAt: new Date().toISOString()
       };
 
-      updateProduct(id, updatedProduct);
+      await updateProduct(id, updatedProduct);
 
       if (primaryBatch) {
         const updatedBatch: Partial<StockBatch> = {
@@ -218,12 +248,12 @@ export const EditProductForm: React.FC = () => {
           updatedAt: new Date().toISOString()
         };
 
-        updateStockBatch(primaryBatch.id, updatedBatch);
+       updateStockBatch(primaryBatch._id ?? '', updatedBatch);
       }
 
       setTimeout(() => {
         getAllProductsWithStock();
-        navigate('/products');
+        navigate('/products/all');
       }, 500);
 
     } catch (err) {
@@ -271,7 +301,7 @@ export const EditProductForm: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/products/all')}
         >
           Back to Products
         </Button>
@@ -283,7 +313,7 @@ export const EditProductForm: React.FC = () => {
     <Box>
       <Box p={3}>
         <Box display="flex" alignItems="center" mb={3} gap={2}>
-          <IconButton onClick={() => navigate('/products')}>
+          <IconButton onClick={() => navigate('/products/all')}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" fontWeight={600}>
@@ -346,7 +376,7 @@ export const EditProductForm: React.FC = () => {
             </Typography>
             {originalBatches.map((batch) => (
               <Box
-                key={batch.id}
+                key={batch._id}
                 sx={{
                   mb: 2,
                   p: 2,

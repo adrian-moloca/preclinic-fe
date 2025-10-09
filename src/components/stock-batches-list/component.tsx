@@ -103,7 +103,7 @@ export const StockBatchesList: FC<StockBatchesListProps> = ({
               {batches
                 .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime())
                 .map((batch) => (
-                <TableRow key={batch.id}>
+                <TableRow key={batch._id}>
                   <TableCell>
                     <Typography variant="body2" fontWeight={500}>
                       {batch.batchNumber}
@@ -164,7 +164,7 @@ export const StockBatchesList: FC<StockBatchesListProps> = ({
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => onDeleteBatch(batch.id)}
+                            onClick={() => onDeleteBatch(batch._id ?? '')}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>

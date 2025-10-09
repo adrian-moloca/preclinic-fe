@@ -130,9 +130,9 @@ export const AddServiceForm: FC = () => {
 
   // Updated to work with ProductWithStock objects
   const productOptions = productsWithStock
-    .filter(product => product.status === 'active' && product.totalQuantity > 0) // Only show active products with stock
+    .filter(product => product.status === 'active' && product.totalQuantity > 0 && typeof product._id === 'string' && product._id !== undefined) // Only show active products with stock and valid id
     .map(product => ({
-      id: product.id,
+      id: product._id as string,
       label: `${product.name} - ${product.manufacturer} (Stock: ${product.totalQuantity} ${product.unit})`, // Enhanced label with stock info
       price: product.averagePrice, // Use averagePrice from ProductWithStock
       category: product.category || 'General',

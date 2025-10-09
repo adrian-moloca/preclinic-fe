@@ -186,7 +186,7 @@ export const StockOverview: FC = () => {
             </TableHead>
             <TableBody>
               {allProducts.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow key={product._id}>
                   <TableCell>
                     <Box>
                       <Typography variant="body1" fontWeight={500}>
@@ -259,7 +259,7 @@ export const StockOverview: FC = () => {
               </TableHead>
               <TableBody>
                 {lowStockProducts.map((product) => (
-                  <TableRow key={product.id}>
+                  <TableRow key={product._id}>
                     <TableCell>
                       <Box>
                         <Typography variant="body1" fontWeight={500}>
@@ -312,9 +312,9 @@ export const StockOverview: FC = () => {
                 {expiringBatches
                   .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime())
                   .map((batch) => {
-                    const product = allProducts.find(p => p.id === batch.productId);
+                    const product = allProducts.find(p => p._id === batch.productId);
                     return (
-                      <TableRow key={batch.id}>
+                      <TableRow key={batch._id}>
                         <TableCell>
                           <Box>
                             <Typography variant="body1" fontWeight={500}>
